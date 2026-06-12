@@ -247,34 +247,6 @@ export class AudioSynth {
     this.tone(880, { at: 0.1, type: 'square', dur: 0.08, gain: 0.04 });
   }
 
-  /** Very quiet CRT room tone for the title screen; returns a stop function. */
-  titleAmbience(): () => void {
-    const ctx = this.ensureCtx();
-    if (!ctx || !this.master) return () => {};
-    const src = ctx.createBufferSource();
-    src.buffer = this.noiseBuffer(1.5);
-    src.loop = true;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = 2400;
-    filter.Q.value = 0.6;
-    const g = ctx.createGain();
-    g.gain.value = 0.008 * this.volume;
-    src.connect(filter).connect(g).connect(this.master);
-    try {
-      src.start();
-    } catch {
-      return () => {};
-    }
-    return () => {
-      try {
-        src.stop();
-      } catch {
-        /* already stopped */
-      }
-    };
-  }
-
   dispose(): void {
     this.removeUnlockListeners();
     void this.ctx?.close();

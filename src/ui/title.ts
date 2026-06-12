@@ -273,7 +273,6 @@ export function showTitle(
   parent.appendChild(el);
 
   const disposers: (() => void)[] = [];
-  if (audio) disposers.push(audio.titleAmbience());
   disposers.push(startParallax(el));
 
   const canvas = el.querySelector<HTMLCanvasElement>('.title-crt');
