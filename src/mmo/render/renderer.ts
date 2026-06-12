@@ -36,6 +36,24 @@ interface ClickMarker {
   red: boolean;
 }
 
+/** Rising reward text, e.g. "+9gp" over a dead goblin. */
+interface CoinPop {
+  x: number;
+  y: number;
+  text: string;
+  until: number;
+}
+
+/** 2x2 pixel particle with simple ballistics (wood chips, poofs, petals). */
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  until: number;
+}
+
 /** Smoothly displayed entity positions, in world pixels. */
 type DispMap = Map<string, { x: number; y: number }>;
 
@@ -58,6 +76,9 @@ export class MmoRenderer {
   /** Mouse position in canvas pixels, or null when the cursor is elsewhere. */
   mouse: Point | null = null;
   private markers: ClickMarker[] = [];
+  private coinPops: CoinPop[] = [];
+  private particles: Particle[] = [];
+  private vignette: HTMLCanvasElement | null = null;
   private camX = 0;
   private tickMs: number;
 
@@ -71,6 +92,38 @@ export class MmoRenderer {
     if (!ctx) throw new Error('2d context unavailable');
     this.ctx = ctx;
     ctx.imageSmoothingEnabled = false;
+    this.buildVignette();
+  }
+
+  /** Pre-rendered soft dark corners for the world viewport (tube feel). */
+  private buildVignette(): void {
+    const v = document.createElement('canvas');
+    v.width = VIEW_W;
+    v.height = CANVAS_H;
+    const vc = v.getContext('2d');
+    if (!vc) return;
+    const grad = vc.createRadialGradient(
+      VIEW_W / 2, CANVAS_H / 2, CANVAS_H * 0.46,
+      VIEW_W / 2, CANVAS_H / 2, CANVAS_H * 0.88,
+    );
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.26)');
+    vc.fillStyle = grad;
+    vc.fillRect(0, 0, VIEW_W, CANVAS_H);
+    this.vignette = v;
+  }
+
+  private spawnBurst(x: number, y: number, colors: string[], count: number, now: number, lifeMs: number): void {
+    for (let i = 0; i < count; i++) {
+      this.particles.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 0.045,
+        vy: -0.01 - Math.random() * 0.04,
+        color: colors[i % colors.length] ?? '#fff',
+        until: now + lifeMs * (0.7 + Math.random() * 0.5),
+      });
+    }
   }
 
   setTickMs(ms: number): void {
@@ -120,15 +173,25 @@ export class MmoRenderer {
           this.hitsplats.push({ x: d.x + 8, y: d.y + 8, dmg: ev.damage, until: now + 700 });
           break;
         }
-        case 'goblinDied':
+        case 'goblinDied': {
           this.postMessage(`The goblin drops ${ev.coins} coins.`, now);
+          const g = this.sim.goblinById(ev.goblinId);
+          if (g) {
+            const d = this.disp.get(ev.goblinId) ?? { x: g.pos.x * TILE, y: g.pos.y * TILE };
+            this.coinPops.push({ x: d.x + 8, y: d.y + 2, text: `+${ev.coins}gp`, until: now + 900 });
+            this.spawnBurst(d.x + 8, d.y + 8, ['#5f8f3e', '#456b2c', '#9a9a9a'], 6, now, 450);
+          }
           break;
-        case 'playerDied':
+        }
+        case 'playerDied': {
           this.postMessage(
             ev.coinsLost > 0 ? `Oh dear, you are dead! (-${ev.coinsLost} coins)` : 'Oh dear, you are dead!',
             now,
           );
+          const d = this.disp.get('player');
+          if (d) this.spawnBurst(d.x + 8, d.y + 8, ['#c0c0c0', '#8a8a8a'], 8, now, 550);
           break;
+        }
         case 'invFull':
           this.postMessage("Your backpack is full.", now);
           break;
@@ -142,9 +205,27 @@ export class MmoRenderer {
         case 'openTrade':
           this.tradeOpen = true;
           break;
-        case 'chop':
+        case 'chop': {
+          // chips fly off the tree under the axe (intent still points at it)
+          const intent = this.sim.player.intent;
+          let cx = this.sim.player.pos.x;
+          let cy = this.sim.player.pos.y;
+          if (intent?.kind === 'chop') {
+            const tree = this.sim.trees.find((t) => t.id === intent.treeId);
+            if (tree) {
+              cx = tree.pos.x;
+              cy = tree.pos.y;
+            }
+          }
+          this.spawnBurst(cx * TILE + 8, cy * TILE + 9, ['#caa86a', '#8a6a3a'], 6, now, 480);
+          break;
+        }
+        case 'flax': {
+          const d = this.disp.get('player');
+          if (d) this.spawnBurst(d.x + 8, d.y + 10, ['#7fa8e8', '#cfe0ff'], 4, now, 500);
+          break;
+        }
         case 'log':
-        case 'flax':
         case 'eat':
           break;
       }
@@ -215,15 +296,23 @@ export class MmoRenderer {
 
     this.drawTerrain();
     this.drawStatics(now);
-    this.drawGoblins(dtMs);
+    this.drawGoblins(now, dtMs);
 
-    drawSprite(ctx, PLAYER_SPRITE, Math.round(pd.x) + 2, Math.round(pd.y) + 1);
+    const pMoving =
+      Math.abs(pd.x - sim.player.pos.x * TILE) > 0.5 || Math.abs(pd.y - sim.player.pos.y * TILE) > 0.5;
+    const pBob = pMoving && Math.floor(now / 140) % 2 === 0 ? 1 : 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(Math.round(pd.x) + 3, Math.round(pd.y) + 14, 10, 2);
+    drawSprite(ctx, PLAYER_SPRITE, Math.round(pd.x) + 2, Math.round(pd.y) + 1 - pBob);
 
-    this.drawTreeTops();
+    this.drawTreeTops(now);
     this.drawMarkers(now);
+    this.drawParticles(now, dtMs);
+    this.drawCoinPops(now);
     this.drawHitsplats(now);
     ctx.restore();
 
+    if (this.vignette) ctx.drawImage(this.vignette, 0, 0);
     this.drawObjectiveBanner(now);
     this.drawMessage(now);
     this.drawHoverText();
@@ -252,6 +341,28 @@ export class MmoRenderer {
         if (h > 0.8) {
           ctx.fillStyle = inPen ? '#76603f' : '#3f6829';
           ctx.fillRect(px + Math.floor(h * 13), py + Math.floor(hash2(y, x) * 13), 2, 2);
+        }
+        // flora on plain grass: tufts, tiny flowers, the odd pebble
+        if (!inPen && ch === '.') {
+          const d = hash2(x * 7 + 3, y * 5 + 1);
+          const ox = px + 3 + Math.floor(hash2(x + 11, y) * 9);
+          const oy = py + 3 + Math.floor(hash2(x, y + 11) * 9);
+          if (d > 0.94) {
+            ctx.fillStyle = hash2(y, x) > 0.5 ? '#e8d44f' : '#e8e0f0';
+            ctx.fillRect(ox, oy, 2, 2);
+            ctx.fillStyle = '#3c7a2e';
+            ctx.fillRect(ox, oy + 2, 1, 2);
+          } else if (d > 0.87) {
+            ctx.fillStyle = '#3f6829';
+            ctx.fillRect(ox, oy, 1, 3);
+            ctx.fillRect(ox + 2, oy + 1, 1, 2);
+            ctx.fillRect(ox - 2, oy + 1, 1, 2);
+          } else if (d < 0.035) {
+            ctx.fillStyle = '#8a8a82';
+            ctx.fillRect(ox, oy, 2, 2);
+            ctx.fillStyle = '#a8a89e';
+            ctx.fillRect(ox, oy, 1, 1);
+          }
         }
       }
     }
@@ -309,6 +420,14 @@ export class MmoRenderer {
             ctx.fillRect(px + 5, py + 4, 6, 6);
             ctx.fillStyle = flick ? '#f5c542' : '#f0a832';
             ctx.fillRect(px + 6, py + 2 + (flick ? 0 : 1), 4, 5);
+            // drifting smoke
+            for (let i = 0; i < 3; i++) {
+              const ph = (now / 1600 + i / 3) % 1;
+              const sy = py + 1 - ph * 12;
+              const sx = px + 7 + Math.round(Math.sin((ph * 3 + i) * 4) * 2);
+              ctx.fillStyle = `rgba(200,198,190,${(0.4 * (1 - ph)).toFixed(2)})`;
+              ctx.fillRect(sx, Math.round(sy), 2, 2);
+            }
             break;
           }
           case 'b': {
@@ -325,11 +444,13 @@ export class MmoRenderer {
             break;
           }
           case 'Y': {
-            // trader stall + Wyn
+            // trader stall + Wyn (striped awning, like a proper market stall)
             ctx.fillStyle = '#8a5a2e';
             ctx.fillRect(px - 2, py + 11, 20, 5);
-            ctx.fillStyle = '#a04444';
-            ctx.fillRect(px - 2, py - 3, 20, 3);
+            for (let i = 0; i < 5; i++) {
+              ctx.fillStyle = i % 2 === 0 ? '#a04444' : '#d8cfc0';
+              ctx.fillRect(px - 2 + i * 4, py - 3, 4, 3);
+            }
             ctx.fillStyle = '#c8c0a0';
             ctx.fillRect(px - 2, py - 1, 20, 1);
             drawSprite(this.ctx, TRADER_SPRITE, px + 2, py - 1);
@@ -360,26 +481,65 @@ export class MmoRenderer {
   }
 
   /** Tree canopies drawn after actors so they overlap a little (depth flavour). */
-  private drawTreeTops(): void {
+  private drawTreeTops(now: number): void {
     const ctx = this.ctx;
     for (const t of this.sim.trees) {
       if (t.chopped) continue;
       const px = t.pos.x * TILE;
       const py = t.pos.y * TILE;
+      // each tree sways on its own slow phase
+      const phase = Math.sin(now / 900 + hash2(t.pos.x, t.pos.y) * 6.28);
+      const sway = phase > 0.6 ? 1 : phase < -0.6 ? -1 : 0;
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(px + 1, py + 13, 14, 3);
       ctx.fillStyle = '#2e5c1e';
-      ctx.fillRect(px - 1, py - 4, 18, 12);
+      ctx.fillRect(px - 1 + sway, py - 4, 18, 12);
       ctx.fillStyle = '#3c7a2e';
-      ctx.fillRect(px + 1, py - 6, 14, 10);
+      ctx.fillRect(px + 1 + sway, py - 6, 14, 10);
       ctx.fillStyle = '#4d9438';
-      ctx.fillRect(px + 3, py - 5, 7, 5);
+      ctx.fillRect(px + 3 + sway, py - 5, 7, 5);
     }
   }
 
-  private drawGoblins(dtMs: number): void {
+  private drawParticles(now: number, dtMs: number): void {
+    this.particles = this.particles.filter((p) => p.until > now);
+    const ctx = this.ctx;
+    for (const p of this.particles) {
+      p.x += p.vx * dtMs;
+      p.y += p.vy * dtMs;
+      p.vy += 0.00035 * dtMs;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);
+    }
+  }
+
+  private drawCoinPops(now: number): void {
+    this.coinPops = this.coinPops.filter((c) => c.until > now);
+    const ctx = this.ctx;
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const c of this.coinPops) {
+      const t = 1 - (c.until - now) / 900;
+      const y = c.y - t * 10;
+      ctx.fillStyle = '#241a06';
+      ctx.fillText(c.text, c.x + 1, y + 1);
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillText(c.text, c.x, y);
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  private drawGoblins(now: number, dtMs: number): void {
     for (const g of this.sim.goblins) {
       if (!g.alive) continue;
       const d = this.displayed(g.id, g.pos, dtMs);
-      drawSprite(this.ctx, GOBLIN_SPRITE, Math.round(d.x) + 2, Math.round(d.y) + 2);
+      const moving = Math.abs(d.x - g.pos.x * TILE) > 0.5 || Math.abs(d.y - g.pos.y * TILE) > 0.5;
+      const bob = moving && Math.floor(now / 150 + g.home.x) % 2 === 0 ? 1 : 0;
+      this.ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      this.ctx.fillRect(Math.round(d.x) + 3, Math.round(d.y) + 14, 10, 2);
+      drawSprite(this.ctx, GOBLIN_SPRITE, Math.round(d.x) + 2, Math.round(d.y) + 2 - bob);
       if (g.hp < 3) {
         // tiny hp bar
         this.ctx.fillStyle = '#900';
@@ -489,6 +649,8 @@ export class MmoRenderer {
     ctx.beginPath();
     ctx.arc(x0 + 12, 12, 3, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = '#fff4c8';
+    ctx.fillRect(x0 + 9, 9, 2, 1);
     ctx.fillStyle = '#3a2c18';
     ctx.font = '8px monospace';
     ctx.textBaseline = 'middle';
@@ -504,6 +666,11 @@ export class MmoRenderer {
       ctx.beginPath();
       ctx.arc(ox, oy, 4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#4a3a26';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(ox, oy, 4.5, 0, Math.PI * 2);
+      ctx.stroke();
       if (i < hp) {
         ctx.fillStyle = '#e87a7a';
         ctx.fillRect(ox - 2, oy - 2, 2, 2);
@@ -523,6 +690,8 @@ export class MmoRenderer {
       ctx.fillRect(sx, sy, slot - 2, slot - 2);
       ctx.strokeStyle = '#8a754f';
       ctx.strokeRect(sx + 0.5, sy + 0.5, slot - 3, slot - 3);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillRect(sx + 1, sy + 1, slot - 4, 1);
       const item = inv[i];
       if (item === 'log') {
         ctx.fillStyle = '#7a5a30';
@@ -539,6 +708,8 @@ export class MmoRenderer {
       }
     }
 
+    ctx.fillStyle = '#8a754f';
+    ctx.fillRect(x0 + 8, CANVAS_H - 26, PANEL_W - 16, 1);
     ctx.fillStyle = '#7a6444';
     ctx.font = '7px monospace';
     ctx.textBaseline = 'top';

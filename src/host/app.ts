@@ -62,6 +62,9 @@ export class HostApp {
     this.crtScreen = document.createElement('div');
     this.crtScreen.className = 'crt-screen';
     this.crtScreen.appendChild(this.mmo.canvas);
+    const crtFlicker = document.createElement('div');
+    crtFlicker.className = 'crt-flicker';
+    this.crtScreen.appendChild(crtFlicker);
     const crtLabel = document.createElement('div');
     crtLabel.className = 'crt-label';
     crtLabel.textContent = 'ESC / Q — STAND UP';
@@ -83,8 +86,22 @@ export class HostApp {
     deskKb.className = 'crt-kb';
     const deskMouse = document.createElement('div');
     deskMouse.className = 'crt-mouse';
+    // Wall props mirroring the 3D room's north wall (sticky notes left of the
+    // monitor, calendar to the right).
+    const wallNote = document.createElement('div');
+    wallNote.className = 'crt-wall-note';
+    wallNote.textContent = 'dinner @ 7';
+    const wallNote2 = document.createElement('div');
+    wallNote2.className = 'crt-wall-note crt-wall-note-2';
+    wallNote2.textContent = 'hydrate??';
+    const wallCal = document.createElement('div');
+    wallCal.className = 'crt-wall-calendar';
+    wallCal.textContent = 'JUNE';
     deskProps.appendChild(deskKb);
     deskProps.appendChild(deskMouse);
+    deskProps.appendChild(wallNote);
+    deskProps.appendChild(wallNote2);
+    deskProps.appendChild(wallCal);
     this.pcWrap.appendChild(bezel);
     this.pcWrap.appendChild(crtStand);
     this.pcWrap.appendChild(deskProps);

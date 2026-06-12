@@ -33,6 +33,7 @@ body {
   justify-content: flex-end;
   background:
     radial-gradient(ellipse at 28% 10%, rgba(255, 196, 110, 0.16), transparent 52%),
+    radial-gradient(ellipse at 97% 36%, rgba(90, 130, 220, 0.11), transparent 38%),
     radial-gradient(ellipse at center, #271e15 0%, #0a0810 80%);
 }
 
@@ -146,6 +147,68 @@ body {
   border-top-color: rgba(40, 34, 26, 0.55);
   border-radius: 50%;
   transform: rotate(-30deg);
+}
+
+.crt-flicker {
+  /* faint phosphor glow that wavers, like a real tube */
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(190, 255, 190, 0.05), transparent 75%);
+  animation: crtflicker 4.2s steps(1) infinite;
+}
+
+@keyframes crtflicker {
+  0%, 100% { opacity: 0.55; }
+  8% { opacity: 0.9; }
+  9% { opacity: 0.4; }
+  34% { opacity: 0.75; }
+  56% { opacity: 0.5; }
+  57% { opacity: 0.85; }
+  80% { opacity: 0.65; }
+}
+
+.crt-wall-note {
+  position: absolute;
+  top: 24%;
+  left: 7%;
+  width: 58px;
+  height: 58px;
+  padding: 8px 5px;
+  background: linear-gradient(170deg, #efe28a 0%, #e3d272 100%);
+  transform: rotate(-5deg);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.45);
+  font: 400 11px/1.2 'Segoe Print', 'Comic Sans MS', cursive;
+  color: #4a4030;
+  text-align: center;
+  filter: brightness(0.72);
+}
+
+.crt-wall-note-2 {
+  top: 34%;
+  left: 10%;
+  transform: rotate(4deg);
+  background: linear-gradient(170deg, #a4dcb2 0%, #8cc89c 100%);
+}
+
+.crt-wall-calendar {
+  position: absolute;
+  top: 25%;
+  right: 7%;
+  width: 74px;
+  height: 96px;
+  background:
+    repeating-linear-gradient(to right, transparent 0 17px, rgba(90, 80, 64, 0.35) 17px 18px) 0 38px / 100% 58px no-repeat,
+    repeating-linear-gradient(to bottom, transparent 0 13px, rgba(90, 80, 64, 0.35) 13px 14px) 0 38px / 100% 58px no-repeat,
+    linear-gradient(to bottom, #a03028 0 22px, #ddd6c4 22px 100%);
+  transform: rotate(1.5deg);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.45);
+  font: 700 10px/22px 'Segoe UI', sans-serif;
+  letter-spacing: 3px;
+  color: #efe6cf;
+  text-align: center;
+  filter: brightness(0.72);
 }
 
 .crt-bezel {
