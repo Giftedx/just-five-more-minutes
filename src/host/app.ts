@@ -38,6 +38,9 @@ export class HostApp {
   private monitorTex: THREE.CanvasTexture;
   private monitorRefreshAcc = 0;
   private currentPrompt: { label: string; actionable: boolean } | null = null;
+  /** 2D stand-ins for the chore items on the 3D desk, keyed by item id. */
+  private deskItemEls = new Map<string, HTMLElement>();
+  private deskItemOrig = new Map<string, THREE.Vector3>();
 
   constructor(root: HTMLElement, opts: { speed?: number; seed?: number } = {}) {
     this.root = root;
@@ -86,22 +89,66 @@ export class HostApp {
     deskKb.className = 'crt-kb';
     const deskMouse = document.createElement('div');
     deskMouse.className = 'crt-mouse';
-    // Wall props mirroring the 3D room's north wall (sticky notes left of the
-    // monitor, calendar to the right).
+    // Wall props mirroring the 3D room's north wall: three sticky notes left
+    // of the monitor (yellow/green/pink, same as buildRoom), calendar right,
+    // book shelf + trophy directly above.
     const wallNote = document.createElement('div');
     wallNote.className = 'crt-wall-note';
     wallNote.textContent = 'dinner @ 7';
     const wallNote2 = document.createElement('div');
     wallNote2.className = 'crt-wall-note crt-wall-note-2';
     wallNote2.textContent = 'hydrate??';
+    const wallNote3 = document.createElement('div');
+    wallNote3.className = 'crt-wall-note crt-wall-note-3';
+    wallNote3.textContent = 'feed goblins';
     const wallCal = document.createElement('div');
     wallCal.className = 'crt-wall-calendar';
     wallCal.textContent = 'JUNE';
+    const shelf = document.createElement('div');
+    shelf.className = 'crt-shelf';
+    const bookWidths = [9, 11, 12, 9, 11];
+    const bookHeights = [42, 52, 49, 46, 42];
+    const bookColors = ['#8f3c50', '#3c6e8f', '#c8a040', '#4a8f3c', '#6e4a8c'];
+    for (let i = 0; i < 5; i++) {
+      const b = document.createElement('span');
+      b.className = 'crt-book';
+      b.style.width = `${bookWidths[i]}px`;
+      b.style.height = `${bookHeights[i]}px`;
+      b.style.background = bookColors[i] ?? '#888';
+      shelf.appendChild(b);
+    }
+    const leanBook = document.createElement('span');
+    leanBook.className = 'crt-book crt-book-lean';
+    shelf.appendChild(leanBook);
+    const trophy = document.createElement('span');
+    trophy.className = 'crt-trophy';
+    shelf.appendChild(trophy);
     deskProps.appendChild(deskKb);
     deskProps.appendChild(deskMouse);
     deskProps.appendChild(wallNote);
     deskProps.appendChild(wallNote2);
+    deskProps.appendChild(wallNote3);
     deskProps.appendChild(wallCal);
+    deskProps.appendChild(shelf);
+    const deskPad = document.createElement('div');
+    deskPad.className = 'crt-mousepad';
+    deskProps.insertBefore(deskPad, deskMouse);
+    // Chore items that live on the 3D desk, mirrored here while they're
+    // actually still sitting there (synced on every sit-down).
+    const deskItems: [string, string][] = [
+      ['mug0', 'crt-mug crt-mug-blue'],
+      ['mug1', 'crt-mug crt-mug-red'],
+      ['mug2', 'crt-mug crt-mug-green crt-mug-rear'],
+      ['wrap3', 'crt-wrapper'],
+    ];
+    for (const [id, cls] of deskItems) {
+      const el = document.createElement('div');
+      el.className = cls;
+      deskProps.appendChild(el);
+      this.deskItemEls.set(id, el);
+      const obj = this.room.itemObjects.get(id);
+      if (obj) this.deskItemOrig.set(id, obj.position.clone());
+    }
     this.pcWrap.appendChild(bezel);
     this.pcWrap.appendChild(crtStand);
     this.pcWrap.appendChild(deskProps);
@@ -145,8 +192,21 @@ export class HostApp {
     return this.currentPrompt;
   }
 
+  /** Show a 2D desk item only while it's genuinely still on the 3D desk. */
+  private syncDeskProps(): void {
+    for (const [id, el] of this.deskItemEls) {
+      const item = this.interact.tracker.item(id);
+      const obj = this.room.itemObjects.get(id);
+      const orig = this.deskItemOrig.get(id);
+      const onDesk =
+        !!item && item.state === 'world' && !!obj && !!orig && obj.position.distanceToSquared(orig) < 0.01;
+      el.style.display = onDesk ? 'block' : 'none';
+    }
+  }
+
   enterPc(): void {
     if (this.mode === 'pc') return;
+    this.syncDeskProps();
     this.mode = 'pc';
     this.router.mode = 'pc';
     this.player.clearKeys();
@@ -242,5 +302,8 @@ export class HostApp {
     const clusterH = 240 * scale + 110; // screen + bezel padding + stand
     const pad = Math.max(24, Math.min(0.12 * window.innerHeight, window.innerHeight - clusterH - 24));
     this.pcWrap.style.paddingBottom = `${pad}px`;
+    // Anchor wall/desk props to the bezel regardless of scale.
+    this.pcWrap.style.setProperty('--crt-half', `${160 * scale + 30}px`);
+    this.pcWrap.style.setProperty('--crt-top', `${pad + 240 * scale + 110}px`);
   }
 }

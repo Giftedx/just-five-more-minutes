@@ -45,7 +45,7 @@ body {
   right: 0;
   bottom: 0;
   height: 17%;
-  background: linear-gradient(to bottom, #6e5230 0%, #4a3518 55%, #2a1e0e 100%);
+  background: linear-gradient(to bottom, #7a5a38 0%, #4a3518 55%, #2a1e0e 100%);
   border-top: 1px solid rgba(255, 206, 130, 0.22);
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
 }
@@ -169,15 +169,17 @@ body {
   80% { opacity: 0.65; }
 }
 
+/* sticky notes — same colors/layout as the 3D wall: yellow high, green
+   lower-right, pink lower-left (all left of the monitor) */
 .crt-wall-note {
   position: absolute;
-  top: 24%;
-  left: 7%;
+  bottom: calc(var(--crt-top, 540px) - 150px);
+  left: calc(50% - var(--crt-half, 350px) - 130px);
   width: 58px;
   height: 58px;
   padding: 8px 5px;
-  background: linear-gradient(170deg, #efe28a 0%, #e3d272 100%);
-  transform: rotate(-5deg);
+  background: linear-gradient(170deg, #f0e060 0%, #e3d272 100%);
+  transform: rotate(-7deg);
   box-shadow: 0 3px 7px rgba(0, 0, 0, 0.45);
   font: 400 11px/1.2 'Segoe Print', 'Comic Sans MS', cursive;
   color: #4a4030;
@@ -186,16 +188,23 @@ body {
 }
 
 .crt-wall-note-2 {
-  top: 34%;
-  left: 10%;
-  transform: rotate(4deg);
-  background: linear-gradient(170deg, #a4dcb2 0%, #8cc89c 100%);
+  bottom: calc(var(--crt-top, 540px) - 218px);
+  left: calc(50% - var(--crt-half, 350px) - 68px);
+  transform: rotate(8deg);
+  background: linear-gradient(170deg, #88d8a0 0%, #79c28e 100%);
+}
+
+.crt-wall-note-3 {
+  bottom: calc(var(--crt-top, 540px) - 224px);
+  left: calc(50% - var(--crt-half, 350px) - 168px);
+  transform: rotate(3deg);
+  background: linear-gradient(170deg, #f0a0b0 0%, #df8d9e 100%);
 }
 
 .crt-wall-calendar {
   position: absolute;
-  top: 25%;
-  right: 7%;
+  bottom: calc(var(--crt-top, 540px) - 170px);
+  left: calc(50% + var(--crt-half, 350px) + 78px);
   width: 74px;
   height: 96px;
   background:
@@ -209,6 +218,134 @@ body {
   color: #efe6cf;
   text-align: center;
   filter: brightness(0.72);
+}
+
+.crt-wall-calendar::before {
+  /* binder ring, as on the 3D calendar */
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 8px;
+  border-radius: 3px;
+  background: #4a4640;
+}
+
+/* shelf with books + trophy, directly above the monitor (as in the 3D room) */
+.crt-shelf {
+  position: absolute;
+  bottom: calc(var(--crt-top, 540px) + 26px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--crt-half, 350px) * 1.2);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  border-bottom: 9px solid #6a4e30;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
+  filter: brightness(0.8);
+}
+
+.crt-book {
+  display: block;
+  border-radius: 2px 2px 0 0;
+  box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.35);
+}
+
+.crt-book-lean {
+  width: 9px;
+  height: 48px;
+  background: #b86a50;
+  transform: rotate(-24deg) translate(7px, 3px);
+  transform-origin: bottom left;
+}
+
+.crt-trophy {
+  display: block;
+  width: 24px;
+  height: 32px;
+  margin-left: 16px;
+  background: linear-gradient(to bottom, #f0d060 0%, #e8c33f 55%, #4a4640 80%, #4a4640 100%);
+  clip-path: polygon(12% 0, 88% 0, 72% 48%, 58% 58%, 58% 74%, 78% 100%, 22% 100%, 42% 74%, 42% 58%, 28% 48%);
+}
+
+/* desk chore items mirrored from the 3D room (synced with the tracker) */
+.crt-mug {
+  position: absolute;
+  width: 34px;
+  height: 38px;
+  border-radius: 5px 5px 8px 8px;
+  z-index: 2;
+  box-shadow:
+    inset -6px -4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 3px 0 rgba(255, 255, 255, 0.25),
+    0 5px 7px rgba(0, 0, 0, 0.4);
+}
+
+.crt-mug::after {
+  /* handle */
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: -13px;
+  width: 16px;
+  height: 18px;
+  border: 5px solid;
+  border-color: inherit;
+  border-radius: 50%;
+  clip-path: inset(0 0 0 50%);
+}
+
+.crt-mug-blue {
+  bottom: 4%;
+  left: calc(50% - var(--crt-half, 350px) - 36px);
+  background: linear-gradient(160deg, #4c82a8 0%, #3c6e8f 60%, #2e5670 100%);
+  border-color: #3c6e8f;
+}
+
+.crt-mug-red {
+  bottom: 3.6%;
+  left: calc(50% + var(--crt-half, 350px) - 4px);
+  background: linear-gradient(160deg, #a64c62 0%, #8f3c50 60%, #702e3e 100%);
+  border-color: #8f3c50;
+}
+
+.crt-mug-green.crt-mug-rear {
+  width: 26px;
+  height: 29px;
+  bottom: 12.6%;
+  z-index: 0;
+  left: calc(50% + var(--crt-half, 350px) - 8px);
+  background: linear-gradient(160deg, #5aa64c 0%, #4a8f3c 60%, #3a702e 100%);
+  border-color: #4a8f3c;
+  filter: brightness(0.85);
+}
+
+.crt-wrapper {
+  position: absolute;
+  bottom: 12.8%;
+  left: calc(50% - var(--crt-half, 350px) - 42px);
+  width: 26px;
+  height: 17px;
+  z-index: 0;
+  background: linear-gradient(150deg, #9ce85c 0%, #8ad84a 55%, #6cb036 100%);
+  clip-path: polygon(8% 42%, 32% 4%, 78% 16%, 96% 58%, 70% 96%, 22% 86%);
+  filter: brightness(0.85);
+}
+
+.crt-mousepad {
+  position: absolute;
+  bottom: 1.7%;
+  left: calc(50% + 196px);
+  width: 112px;
+  height: 60px;
+  border-radius: 9px;
+  background: linear-gradient(to bottom, #404b58 0%, #343e49 60%, #2a323b 100%);
+  box-shadow: 0 5px 9px rgba(0, 0, 0, 0.4);
+  transform: perspective(320px) rotateX(38deg);
 }
 
 .crt-bezel {
