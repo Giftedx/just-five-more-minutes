@@ -114,6 +114,18 @@ export class ChoreTracker {
     return events;
   }
 
+  /**
+   * Drop the carried item back into the world, nowhere in particular.
+   * Reverses pickUp: progress and the started/completed latches are untouched.
+   */
+  putDown(): boolean {
+    const it = this.carried;
+    if (!it) return false;
+    it.state = 'world';
+    this.carriedId = null;
+    return true;
+  }
+
   /** Place the carried item on its matching target. */
   placeCarried(): ChoreTrackerEvent[] {
     const it = this.carried;

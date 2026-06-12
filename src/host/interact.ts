@@ -39,34 +39,46 @@ export class InteractSystem {
 
   /**
    * Find the interactable under the crosshair. While carrying, hits on other
-   * items are skipped so a full tray/bin doesn't block placing onto it.
+   * items are skipped for *action* resolution so a full tray/bin doesn't block
+   * placing onto it; the first skipped item is remembered for prompt purposes.
    */
-  private resolveTarget(camera: THREE.Camera): { obj: THREE.Object3D; interact: Interactable } | null {
+  private resolveTarget(camera: THREE.Camera): {
+    action: { obj: THREE.Object3D; interact: Interactable } | null;
+    skippedItem: Interactable | null;
+  } {
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const candidates = this.room.interactables.filter((o) => o !== this.carriedObj);
     const hits = this.raycaster.intersectObjects(candidates, true);
     const carrying = this.tracker.carried !== null;
+    let skippedItem: Interactable | null = null;
     for (const hit of hits) {
       let cur: THREE.Object3D | null = hit.object;
       while (cur) {
         const tag = cur.userData['interact'] as Interactable | undefined;
         if (tag) {
-          if (carrying && tag.type === 'item') break; // look through items while carrying
-          return { obj: cur, interact: tag };
+          if (carrying && tag.type === 'item') {
+            skippedItem ??= tag; // look through items while carrying
+            break;
+          }
+          return { action: { obj: cur, interact: tag }, skippedItem };
         }
         cur = cur.parent;
       }
     }
-    return null;
+    return { action: null, skippedItem };
   }
 
   /** The interactable in the crosshair plus its prompt, or null. */
   update(camera: THREE.Camera, nowMs = 0): InteractPrompt | null {
-    const found = this.resolveTarget(camera);
-    const target = found?.obj ?? null;
-    const interact = found?.interact ?? null;
+    const { action, skippedItem } = this.resolveTarget(camera);
+    const target = action?.obj ?? null;
+    const interact = action?.interact ?? null;
 
-    const prompt = interact ? this.promptFor(interact) : null;
+    let prompt = interact ? this.promptFor(interact) : null;
+    if (!prompt && skippedItem) prompt = this.promptFor(skippedItem);
+    if (!prompt && this.tracker.carried) {
+      prompt = { label: `E — Put down the ${this.carriedName()}`, actionable: true };
+    }
     this.setHighlight(prompt && prompt.actionable ? target : null);
     // gentle pulse on whatever is highlighted
     if (this.hovered && nowMs > 0) {
@@ -89,9 +101,20 @@ export class InteractSystem {
 
   /** Press E. Returns true when something happened. */
   act(camera: THREE.Camera): boolean {
-    const found = this.resolveTarget(camera);
-    if (!found) return false;
-    const { obj, interact } = found;
+    const { action, skippedItem } = this.resolveTarget(camera);
+    if (!action) {
+      // Carrying and aiming at nothing actionable: put the item down at the
+      // player's feet (guaranteed in-bounds and outside every collider).
+      if (skippedItem || !this.carriedObj) return false;
+      const obj = this.carriedObj;
+      if (!this.tracker.putDown()) return false;
+      obj.position.set(camera.position.x, 0, camera.position.z);
+      obj.rotation.set(0, Math.random() * Math.PI * 2, 0);
+      this.carriedObj = null;
+      this.onAct?.('place');
+      return true;
+    }
+    const { obj, interact } = action;
 
     switch (interact.type) {
       case 'pc':
@@ -131,7 +154,7 @@ export class InteractSystem {
         return { label: 'E — Sit down at Mudwick Online', actionable: true };
       case 'item': {
         if (this.tracker.carried) {
-          return { label: 'Hands full', actionable: false };
+          return { label: `Hands full — carrying the ${this.carriedName()}`, actionable: false };
         }
         return { label: `E — Pick up ${interact.name}`, actionable: true };
       }
@@ -141,13 +164,19 @@ export class InteractSystem {
           const def = CHORE_DEFS[interact.accepts];
           return { label: `${interact.name} (${def.noun}s go here)`, actionable: false };
         }
-        const carriedName = this.room.items.find((i) => i.id === carried.id)?.name ?? 'item';
+        const carriedName = this.carriedName();
         if (carried.chore !== interact.accepts) {
           return { label: `The ${carriedName} doesn't go there`, actionable: false };
         }
         return { label: `E — Put ${carriedName} in ${interact.name}`, actionable: true };
       }
     }
+  }
+
+  private carriedName(): string {
+    const carried = this.tracker.carried;
+    if (!carried) return 'item';
+    return this.room.items.find((i) => i.id === carried.id)?.name ?? 'item';
   }
 
   private takeSlot(target: 'tray' | 'bin' | 'basket'): number {

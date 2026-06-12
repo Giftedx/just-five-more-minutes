@@ -112,4 +112,49 @@ describe('ChoreTracker', () => {
     t.request('mugs');
     expect(t.request('mugs')).toEqual([]);
   });
+
+  describe('putDown', () => {
+    it('returns false when nothing is carried', () => {
+      const t = makeTracker();
+      expect(t.putDown()).toBe(false);
+    });
+
+    it('clears the carried item without changing progress', () => {
+      const t = makeTracker();
+      t.request('mugs');
+      t.pickUp('mug0');
+      t.placeCarried();
+      t.pickUp('mug1');
+      expect(t.putDown()).toBe(true);
+      expect(t.carried).toBeNull();
+      expect(t.item('mug1')?.state).toBe('world');
+      expect(t.progress('mugs')).toEqual({ done: 1, total: 3 });
+    });
+
+    it('does not touch the started latch and allows re-pickup', () => {
+      const t = makeTracker();
+      t.request('wrappers');
+      t.pickUp('wrap0'); // emits choreStarted
+      t.putDown();
+      expect(t.isStarted('wrappers')).toBe(true); // latched
+      const again = t.pickUp('wrap0');
+      expect(again.some((e) => e.type === 'choreStarted')).toBe(false); // no double-start
+      expect(t.carried?.id).toBe('wrap0');
+    });
+
+    it('completion stays latched when a placed item is picked up and put down', () => {
+      const t = makeTracker();
+      t.request('mugs');
+      for (const id of ['mug0', 'mug1', 'mug2']) {
+        t.pickUp(id);
+        t.placeCarried();
+      }
+      expect(t.isCompleted('mugs')).toBe(true);
+      t.pickUp('mug0');
+      t.putDown();
+      expect(t.isCompleted('mugs')).toBe(true); // latched — no take-backs
+      expect(t.progress('mugs').done).toBe(2);
+      expect(t.item('mug0')?.state).toBe('world');
+    });
+  });
 });
