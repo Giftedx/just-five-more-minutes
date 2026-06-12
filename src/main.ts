@@ -3,6 +3,7 @@ import { runMmoDev } from './devmmo';
 import { runRoomDev } from './devroom';
 import { runHostDev } from './devhost';
 import { Game } from './game';
+import { installGate } from './ui/gate';
 
 const params = new URLSearchParams(location.search);
 const speed = Math.max(0.1, Number(params.get('speed') ?? '1') || 1);
@@ -19,6 +20,7 @@ if (params.get('dev') === 'mmo') {
 } else if (params.get('dev') === 'host') {
   runHostDev(app, speed);
 } else {
+  installGate(document.body);
   const game = new Game(app, { speed, startAt, skipTitle });
   (window as unknown as Record<string, unknown>)['__game'] = game;
   game.start();

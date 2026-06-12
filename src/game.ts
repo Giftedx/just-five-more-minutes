@@ -37,6 +37,11 @@ export class Game {
   private raf = 0;
   private overlays: HTMLElement[] = [];
   private disposed = false;
+  /** Pointer lock has been held at least once (real keyboard+mouse session). */
+  private hadPointerLock = false;
+  private hiddenPause = false;
+  private pauseOverlay: HTMLDivElement | null = null;
+  private docListeners: [string, () => void][] = [];
 
   constructor(root: HTMLElement, opts: GameOptions) {
     this.root = root;
@@ -60,6 +65,46 @@ export class Game {
     }
 
     this.wire();
+    this.wirePause();
+  }
+
+  private wirePause(): void {
+    const onLockChange = (): void => {
+      if (document.pointerLockElement) this.hadPointerLock = true;
+      this.syncPauseOverlay();
+    };
+    const onVisibility = (): void => {
+      // Dev runs (?speed>1) skip the hidden-pause so headless smoke tests
+      // can drive a backgrounded tab to the scorecard.
+      if (this.opts.speed === 1) this.hiddenPause = document.hidden;
+      this.syncPauseOverlay();
+    };
+    document.addEventListener('pointerlockchange', onLockChange);
+    document.addEventListener('visibilitychange', onVisibility);
+    this.docListeners.push(['pointerlockchange', onLockChange], ['visibilitychange', onVisibility]);
+  }
+
+  /** True while the director AND the sim should both be frozen. */
+  private get paused(): boolean {
+    if (this.state !== 'playing') return false;
+    if (this.hiddenPause) return true;
+    // Losing pointer lock in Room Mode pauses; PC Mode has no lock and never pauses.
+    return this.host.mode === 'room' && this.hadPointerLock && !this.host.pointerLocked;
+  }
+
+  private syncPauseOverlay(): void {
+    const show = this.paused && !document.hidden;
+    if (show && !this.pauseOverlay) {
+      const el = document.createElement('div');
+      el.className = 'pause-overlay';
+      el.textContent = 'Click to resume';
+      el.addEventListener('click', () => this.host.requestPointerLock());
+      this.root.appendChild(el);
+      this.pauseOverlay = el;
+    } else if (!show && this.pauseOverlay) {
+      this.pauseOverlay.remove();
+      this.pauseOverlay = null;
+    }
   }
 
   start(): void {
@@ -175,6 +220,7 @@ export class Game {
         this.hud.openPrompt(this.nowMs, (PROMPT_DURATION * 1000) / this.opts.speed);
         this.host.router.promptActive = true;
         this.host.room.npcSilhouette.visible = true;
+        this.host.room.setHallLight(true);
         this.silhouetteHideAt = this.nowMs + 6000 / this.opts.speed;
         this.audio.knock();
         const syllables = Math.min(6, Math.max(3, Math.round(ev.text.split(' ').length / 2.5)));
@@ -265,6 +311,8 @@ export class Game {
   dispose(): void {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
+    for (const [type, fn] of this.docListeners) document.removeEventListener(type, fn);
+    this.pauseOverlay?.remove();
     for (const el of this.overlays) el.remove();
     this.hud.dispose();
     this.audio.dispose();
@@ -284,13 +332,15 @@ export class Game {
     this.last = now;
     this.nowMs = now;
 
-    if (this.state === 'playing') {
+    const paused = this.paused;
+    this.host.paused = paused || this.state !== 'playing';
+    if (this.state === 'playing' && !paused) {
       for (const ev of this.director.update((dtMs / 1000) * this.opts.speed)) {
         this.handleDirectorEvent(ev);
       }
     }
     if (this.state !== 'ended') {
-      this.host.update(this.state === 'playing' ? dtMs : 0);
+      this.host.update(dtMs);
     }
 
     // HUD upkeep
@@ -301,9 +351,10 @@ export class Game {
       this.hud.setInteractLabel(prompt?.label ?? null, prompt?.actionable ?? true);
       if (this.host.room.npcSilhouette.visible && now > this.silhouetteHideAt) {
         this.host.room.npcSilhouette.visible = false;
+        this.host.room.setHallLight(false);
       }
     }
-    this.hud.update(now);
+    if (!paused) this.hud.update(now);
 
     this.raf = requestAnimationFrame(this.tick);
   };

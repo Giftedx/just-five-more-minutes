@@ -24,6 +24,8 @@ export interface Room {
   slots: Record<'tray' | 'bin' | 'basket', THREE.Vector3[]>;
   monitorScreen: THREE.Mesh;
   npcSilhouette: THREE.Object3D;
+  /** Toggle the warm hallway light behind the door (NPC presence). */
+  setHallLight: (on: boolean) => void;
   playerSpawn: THREE.Vector3;
 }
 
@@ -224,7 +226,10 @@ export function buildRoom(): Room {
   scene.add(rugInner);
 
   // ---- door + dark hallway + NPC silhouette anchor
-  const doorway = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 2.05), lambert(0x07060a));
+  // Hallway is near-black until the NPC appears; then the hall light comes
+  // on so her silhouette reads (see setHallLight).
+  const doorwayMat = new THREE.MeshBasicMaterial({ color: 0x0a0810 });
+  const doorway = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 2.05), doorwayMat);
   doorway.position.set(-0.8, 1.02, 2.01);
   doorway.rotation.y = Math.PI;
   scene.add(doorway);
@@ -235,7 +240,7 @@ export function buildRoom(): Room {
   const silTex = makeSilhouetteTexture();
   const silMat = new THREE.MeshBasicMaterial({ map: silTex, transparent: true, depthWrite: false });
   const sil = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 1.8), silMat);
-  sil.position.set(-0.78, 0.95, 2.06);
+  sil.position.set(-0.78, 0.95, 1.97); // just inside the doorway, in front of the hall plane
   sil.rotation.y = Math.PI;
   sil.visible = false;
   scene.add(sil);
@@ -434,6 +439,10 @@ export function buildRoom(): Room {
   windowLight.position.set(2.1, 1.6, 0.4);
   scene.add(windowLight);
 
+  const setHallLight = (on: boolean): void => {
+    doorwayMat.color.setHex(on ? 0x4a3826 : 0x0a0810);
+  };
+
   return {
     scene,
     colliders,
@@ -443,6 +452,7 @@ export function buildRoom(): Room {
     slots,
     monitorScreen: screen,
     npcSilhouette: sil,
+    setHallLight,
     playerSpawn: new THREE.Vector3(-0.6, 0, 0.9),
   };
 }

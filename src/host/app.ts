@@ -127,12 +127,15 @@ export class HostApp {
     this.player.clearKeys();
     this.pcWrap.style.display = 'none';
     this.renderer.domElement.style.display = 'block';
-    this.renderer.domElement.requestPointerLock();
+    this.requestPointerLock();
     this.hooks.onModeChange?.('room');
   }
 
   requestPointerLock(): void {
-    this.renderer.domElement.requestPointerLock();
+    // Chrome enforces a cooldown after Esc-exiting pointer lock; the request
+    // can reject. The pause overlay stays up, so the player just clicks again.
+    const p = this.renderer.domElement.requestPointerLock() as unknown;
+    if (p instanceof Promise) p.catch(() => undefined);
   }
 
   get pointerLocked(): boolean {
