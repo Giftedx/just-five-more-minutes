@@ -37,26 +37,34 @@ export class InteractSystem {
     this.raycaster.far = REACH;
   }
 
-  /** The interactable in the crosshair plus its prompt, or null. */
-  update(camera: THREE.Camera, nowMs = 0): InteractPrompt | null {
+  /**
+   * Find the interactable under the crosshair. While carrying, hits on other
+   * items are skipped so a full tray/bin doesn't block placing onto it.
+   */
+  private resolveTarget(camera: THREE.Camera): { obj: THREE.Object3D; interact: Interactable } | null {
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const candidates = this.room.interactables.filter((o) => o !== this.carriedObj);
     const hits = this.raycaster.intersectObjects(candidates, true);
-    let target: THREE.Object3D | null = null;
-    let interact: Interactable | null = null;
-    const hit = hits[0];
-    if (hit) {
+    const carrying = this.tracker.carried !== null;
+    for (const hit of hits) {
       let cur: THREE.Object3D | null = hit.object;
       while (cur) {
         const tag = cur.userData['interact'] as Interactable | undefined;
         if (tag) {
-          target = cur;
-          interact = tag;
-          break;
+          if (carrying && tag.type === 'item') break; // look through items while carrying
+          return { obj: cur, interact: tag };
         }
         cur = cur.parent;
       }
     }
+    return null;
+  }
+
+  /** The interactable in the crosshair plus its prompt, or null. */
+  update(camera: THREE.Camera, nowMs = 0): InteractPrompt | null {
+    const found = this.resolveTarget(camera);
+    const target = found?.obj ?? null;
+    const interact = found?.interact ?? null;
 
     const prompt = interact ? this.promptFor(interact) : null;
     this.setHighlight(prompt && prompt.actionable ? target : null);
@@ -81,24 +89,9 @@ export class InteractSystem {
 
   /** Press E. Returns true when something happened. */
   act(camera: THREE.Camera): boolean {
-    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-    const candidates = this.room.interactables.filter((o) => o !== this.carriedObj);
-    const hits = this.raycaster.intersectObjects(candidates, true);
-    const hit = hits[0];
-    if (!hit) return false;
-    let cur: THREE.Object3D | null = hit.object;
-    let interact: Interactable | null = null;
-    let obj: THREE.Object3D | null = null;
-    while (cur) {
-      const tag = cur.userData['interact'] as Interactable | undefined;
-      if (tag) {
-        interact = tag;
-        obj = cur;
-        break;
-      }
-      cur = cur.parent;
-    }
-    if (!interact || !obj) return false;
+    const found = this.resolveTarget(camera);
+    if (!found) return false;
+    const { obj, interact } = found;
 
     switch (interact.type) {
       case 'pc':
