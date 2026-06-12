@@ -3,7 +3,9 @@
 [![CI](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml/badge.svg)](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**[▶ Play in your browser](https://just-five-more-minutes.pages.dev/)** — no install, no login, no microtransactions. Just goblins.
+**[▶ Play in your browser](https://ha.ggis.xyz/just-five-more-minutes/)** — no install, no login, no microtransactions. Just goblins.
+
+Also on [Cloudflare Pages](https://just-five-more-minutes.pages.dev/) if you prefer the direct link.
 
 Dinner is in five minutes, and your room is a mild disgrace. Unfortunately, the goblins of **Mudwick Online** — a lovingly stupid, 2004-flavoured mini-MMO that lives inside your bedroom PC — are not going to grind themselves.
 
@@ -79,7 +81,9 @@ Smoke test (optional, needs Playwright + Chromium): run `npm run preview`, then 
 
 ## Deploying
 
-The live build is on **Cloudflare Pages**: https://just-five-more-minutes.pages.dev/
+The live build is on **ha.ggis.xyz**: https://ha.ggis.xyz/just-five-more-minutes/
+
+A standalone mirror also lives on Cloudflare Pages: https://just-five-more-minutes.pages.dev/
 
 The build is fully static and self-contained (`base: './'`, no network assets). Connect the repo in the Cloudflare dashboard, or deploy from the CLI:
 

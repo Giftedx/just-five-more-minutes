@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:hub": "tsc --noEmit && vite build --base /just-five-more-minutes/",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
