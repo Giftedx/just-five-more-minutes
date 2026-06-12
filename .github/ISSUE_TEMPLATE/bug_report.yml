@@ -1,0 +1,54 @@
+name: Bug report
+description: Something broke, desynced, or fell through the floor
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing. If it's a gameplay bug, note whether you were in **Room Mode** or **PC Mode (Mudwick)**.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you expect vs. what actually happened?
+      placeholder: "I sat at the PC, clicked a goblin, and..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a new session
+        2. Press E at the CRT
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome / Chromium
+        - Firefox
+        - Safari
+        - Edge
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or release (if known)
+      placeholder: master @ abc1234
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Console errors, query params used (`?speed=`, `?dev=`, etc.), screenshots

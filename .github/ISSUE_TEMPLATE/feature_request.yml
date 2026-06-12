@@ -1,0 +1,31 @@
+name: Feature request
+description: A new chore, goblin, retort, or household incident
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's missing?
+      description: What would make the next five minutes more interesting?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed idea
+      description: How might it work in Room Mode, Mudwick, or the scorecard?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Which layer?
+      options:
+        - label: 3D bedroom (Room Mode)
+        - label: Mudwick Online (PC Mode)
+        - label: Mum / chores / dialogue
+        - label: Scorecard / end-of-session
+        - label: Audio / UI polish

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Play the game
+    url: https://giftedx.github.io/just-five-more-minutes/
+    about: Open the live build in your browser
+  - name: Discussions
+    url: https://github.com/Giftedx/just-five-more-minutes/discussions
+    about: Ask questions or share run results (enable Discussions in repo settings if missing)
