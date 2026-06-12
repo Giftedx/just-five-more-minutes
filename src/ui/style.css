@@ -1228,12 +1228,12 @@ body {
 
 .title-crt-brand {
   position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font: 600 6px 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: 0.8px;
-  color: rgba(60, 52, 40, 0.75);
+  bottom: 4px;
+  left: 14px;
+  font: 800 6px 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 1px;
+  color: #7a7060;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
   white-space: nowrap;
 }
 
