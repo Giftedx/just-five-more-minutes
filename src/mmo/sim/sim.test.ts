@@ -270,7 +270,7 @@ describe('context menus', () => {
     expect(labels[labels.length - 1]).toBe('Cancel');
     const examine = opts.find((o) => o.act.kind === 'examine');
     if (examine?.act.kind === 'examine') {
-      expect(examine.act.text).toBe('It has a five-year plan.');
+      expect(examine.act.text).toBe('It has a five-year plan. And poor impulse control.');
     }
   });
 
@@ -281,7 +281,7 @@ describe('context menus', () => {
     const grown = sim.optionsAt(tree.pos.x, tree.pos.y);
     expect(grown.some((o) => o.label === 'Chop Tree')).toBe(true);
     const ex = grown.find((o) => o.act.kind === 'examine');
-    if (ex?.act.kind === 'examine') expect(ex.act.text).toBe('Contains wood, allegedly.');
+    if (ex?.act.kind === 'examine') expect(ex.act.text).toBe('Contains wood, allegedly. The economy runs on allegedly.');
     tree.chopped = true;
     const stump = sim.optionsAt(tree.pos.x, tree.pos.y);
     expect(stump.some((o) => o.label === 'Chop Tree')).toBe(false);

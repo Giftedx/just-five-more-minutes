@@ -5,6 +5,25 @@ export interface Point {
 
 export type ItemKind = 'log' | 'flax';
 
+export type SkillName = 'woodcutting' | 'attack' | 'foraging';
+
+export type QuestKind = 'logs' | 'flax' | 'goblins';
+
+export interface Quest {
+  kind: QuestKind;
+  target: number;
+  progress: number;
+  reward: number;
+  /** True once the player has claimed the reward at the trader. */
+  claimed: boolean;
+}
+
+export interface Skills {
+  woodcutting: number;
+  attack: number;
+  foraging: number;
+}
+
 export interface Goblin {
   id: string;
   /** Home spawn tile. */
@@ -35,6 +54,7 @@ export interface PlayerState {
   /** Remaining tiles to walk, first entry is the next step. */
   path: Point[];
   intent: Intent | null;
+  skills: Skills;
 }
 
 export type Intent =
@@ -47,7 +67,7 @@ export type Intent =
 export type SimEvent =
   | { type: 'playerSwing'; damage: number; goblinId: string }
   | { type: 'goblinSwing'; damage: number; goblinId: string }
-  | { type: 'goblinDied'; goblinId: string; coins: number }
+  | { type: 'goblinDied'; goblinId: string; coins: number; streakBonus: number }
   | { type: 'playerDied'; coinsLost: number; whileAway: boolean }
   | { type: 'chop' }
   | { type: 'log' }
@@ -56,7 +76,12 @@ export type SimEvent =
   | { type: 'trade'; sold: number; gained: number; item: ItemKind }
   | { type: 'openTrade' }
   | { type: 'invFull' }
-  | { type: 'objectiveHit' };
+  | { type: 'objectiveHit' }
+  | { type: 'levelUp'; skill: SkillName; level: number }
+  | { type: 'questProgress'; kind: QuestKind; progress: number; target: number }
+  | { type: 'questReady' }
+  | { type: 'questComplete'; reward: number; kind: QuestKind }
+  | { type: 'questAssigned'; kind: QuestKind; target: number; reward: number };
 
 export interface SimStats {
   deaths: number;
@@ -65,6 +90,10 @@ export interface SimStats {
   logsSold: number;
   flaxSold: number;
   objectiveHit: boolean;
+  /** Consecutive goblin kills without dying — drives bonus coin drops. */
+  killStreak: number;
+  /** Best streak this session. */
+  bestStreak: number;
 }
 
 /** What a tile resolves to for clicks / hover / context menus. */
@@ -76,6 +105,7 @@ export type TileThing =
   | { kind: 'trader'; pos: Point }
   | { kind: 'bread'; pos: Point }
   | { kind: 'campfire'; pos: Point }
+  | { kind: 'sign'; pos: Point }
   | { kind: 'fence'; pos: Point }
   | { kind: 'ground'; pos: Point };
 

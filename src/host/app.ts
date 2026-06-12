@@ -70,7 +70,7 @@ export class HostApp {
     this.crtScreen.appendChild(crtFlicker);
     const crtLabel = document.createElement('div');
     crtLabel.className = 'crt-label';
-    crtLabel.textContent = 'ESC / Q — STAND UP';
+    crtLabel.textContent = 'E — STAND UP';
     const crtBrand = document.createElement('div');
     crtBrand.className = 'crt-brand';
     crtBrand.textContent = 'VISIONMASTER 240';
@@ -97,7 +97,7 @@ export class HostApp {
     wallNote.textContent = 'dinner @ 7';
     const wallNote2 = document.createElement('div');
     wallNote2.className = 'crt-wall-note crt-wall-note-2';
-    wallNote2.textContent = 'hydrate??';
+    wallNote2.textContent = 'hydrate?';
     const wallNote3 = document.createElement('div');
     wallNote3.className = 'crt-wall-note crt-wall-note-3';
     wallNote3.textContent = 'feed goblins';
@@ -106,14 +106,15 @@ export class HostApp {
     wallCal.textContent = 'JUNE';
     const shelf = document.createElement('div');
     shelf.className = 'crt-shelf';
-    const bookWidths = [9, 11, 12, 9, 11];
-    const bookHeights = [42, 52, 49, 46, 42];
+    // Exact 3D book dimensions in meters, scaled by the --wall px/m variable.
+    const bookWidths = [0.034, 0.041, 0.048, 0.034, 0.041];
+    const bookHeights = [0.16, 0.202, 0.188, 0.174, 0.16];
     const bookColors = ['#8f3c50', '#3c6e8f', '#c8a040', '#4a8f3c', '#6e4a8c'];
     for (let i = 0; i < 5; i++) {
       const b = document.createElement('span');
       b.className = 'crt-book';
-      b.style.width = `${bookWidths[i]}px`;
-      b.style.height = `${bookHeights[i]}px`;
+      b.style.width = `calc(var(--wall, 420px) * ${bookWidths[i]})`;
+      b.style.height = `calc(var(--wall, 420px) * ${bookHeights[i]})`;
       b.style.background = bookColors[i] ?? '#888';
       shelf.appendChild(b);
     }
@@ -251,6 +252,7 @@ export class HostApp {
         this.player.update(dt);
         this.currentPrompt = this.interact.update(this.camera, performance.now());
         this.interact.updateCarried(this.camera);
+        this.room.npcTick(performance.now()); // door swing + mum idle
       }
       this.monitorRefreshAcc += dtMs;
       if (this.monitorRefreshAcc >= MONITOR_REFRESH_MS) {
@@ -291,19 +293,31 @@ export class HostApp {
   };
 
   private fitCrt(): void {
+    // Reserve ~280px of vertical breathing room (desk + shelf above the
+    // monitor) when picking the integer pixel scale for the screen.
     const scale = Math.max(
       1,
-      Math.floor(Math.min((window.innerWidth - 140) / 320, (window.innerHeight - 220) / 240)),
+      Math.floor(Math.min((window.innerWidth - 140) / 320, (window.innerHeight - 280) / 240)),
     );
     this.crtScreen.style.width = `${320 * scale}px`;
     this.crtScreen.style.height = `${240 * scale}px`;
     // Rest the monitor on the desk: bottom padding sinks the stand foot just
     // past the desk's top edge, clamped so the bezel never spills off-screen.
     const clusterH = 240 * scale + 110; // screen + bezel padding + stand
-    const pad = Math.max(24, Math.min(0.12 * window.innerHeight, window.innerHeight - clusterH - 24));
+    // Keep ~200px above the bezel for the shelf before granting desk padding,
+    // but never sink the monitor so low it swallows the keyboard (floor 56px).
+    const pad = Math.max(56, Math.min(0.12 * window.innerHeight, window.innerHeight - clusterH - 200));
     this.pcWrap.style.paddingBottom = `${pad}px`;
     // Anchor wall/desk props to the bezel regardless of scale.
-    this.pcWrap.style.setProperty('--crt-half', `${160 * scale + 30}px`);
-    this.pcWrap.style.setProperty('--crt-top', `${pad + 240 * scale + 110}px`);
+    const half = 160 * scale + 30;
+    const crtTop = pad + 240 * scale + 110;
+    this.pcWrap.style.setProperty('--crt-half', `${half}px`);
+    this.pcWrap.style.setProperty('--crt-top', `${crtTop}px`);
+    // Wall scale (px per meter of 3D wall) for the shelf: true perspective
+    // scale is ~2.06*half, shrunk if needed so the tallest book (0.202m) plus
+    // the shelf board (0.035m) fits in the headroom above the bezel.
+    const headroom = window.innerHeight - crtTop - 24;
+    const wall = Math.max(220, Math.min(2.06 * half, headroom / 0.24));
+    this.pcWrap.style.setProperty('--wall', `${wall.toFixed(0)}px`);
   }
 }

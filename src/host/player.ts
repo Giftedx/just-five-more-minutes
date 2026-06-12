@@ -3,6 +3,9 @@ import * as THREE from 'three';
 const EYE_HEIGHT = 1.55;
 const SPEED = 2.6;
 const RADIUS = 0.28;
+/** Movement smoothing time constants (s): quick to start, quicker to stop. */
+const ACCEL_TAU = 0.055;
+const DECEL_TAU = 0.075;
 
 /** First-person controller: WASD + mouse look, AABB push-out collision. */
 export class PlayerController {
@@ -11,6 +14,7 @@ export class PlayerController {
   pitch = 0;
   pos: THREE.Vector3;
   private keys = new Set<string>();
+  private vel = new THREE.Vector2(0, 0); // world-space ground velocity
   private colliders: THREE.Box3[];
   private bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
 
@@ -36,6 +40,7 @@ export class PlayerController {
 
   clearKeys(): void {
     this.keys.clear();
+    this.vel.set(0, 0);
   }
 
   mouseLook(dx: number, dy: number): void {
@@ -52,17 +57,33 @@ export class PlayerController {
     if (this.keys.has('KeyS')) fz -= 1;
     if (this.keys.has('KeyA')) fx -= 1;
     if (this.keys.has('KeyD')) fx += 1;
-    if (fx !== 0 || fz !== 0) {
+
+    // target world-space velocity from input
+    let tx = 0;
+    let tz = 0;
+    const moving = fx !== 0 || fz !== 0;
+    if (moving) {
       const len = Math.hypot(fx, fz);
       fx /= len;
       fz /= len;
       const sin = Math.sin(this.yaw);
       const cos = Math.cos(this.yaw);
       // forward = (-sin, -cos), right = (cos, -sin) on the ground plane
-      const dx = -sin * fz + cos * fx;
-      const dz = -cos * fz - sin * fx;
-      this.pos.x += dx * SPEED * dt;
-      this.pos.z += dz * SPEED * dt;
+      tx = (-sin * fz + cos * fx) * SPEED;
+      tz = (-cos * fz - sin * fx) * SPEED;
+    }
+
+    // exponential approach: brisk ramp-up, slightly snappier stop — kills the
+    // harsh start/stop jerk without feeling floaty
+    const tau = moving ? ACCEL_TAU : DECEL_TAU;
+    const a = 1 - Math.exp(-dt / tau);
+    this.vel.x += (tx - this.vel.x) * a;
+    this.vel.y += (tz - this.vel.y) * a;
+    if (!moving && this.vel.lengthSq() < 0.0004) this.vel.set(0, 0);
+
+    if (this.vel.lengthSq() > 0) {
+      this.pos.x += this.vel.x * dt;
+      this.pos.z += this.vel.y * dt;
       this.collide();
     }
     this.apply();
@@ -71,6 +92,12 @@ export class PlayerController {
   private collide(): void {
     this.pos.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, this.pos.x));
     this.pos.z = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, this.pos.z));
+    // Two relaxation passes so push-out from one box can't leave us inside a
+    // neighbouring one (stops corner jitter between adjacent colliders).
+    for (let pass = 0; pass < 2; pass++) this.pushOut();
+  }
+
+  private pushOut(): void {
     for (const b of this.colliders) {
       const nx = Math.max(b.min.x, Math.min(b.max.x, this.pos.x));
       const nz = Math.max(b.min.z, Math.min(b.max.z, this.pos.z));

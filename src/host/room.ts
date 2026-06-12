@@ -24,6 +24,8 @@ export interface Room {
   slots: Record<'tray' | 'bin' | 'basket', THREE.Vector3[]>;
   monitorScreen: THREE.Mesh;
   npcSilhouette: THREE.Object3D;
+  /** Per-frame room animation: door swing easing + mum's idle when visible. */
+  npcTick: (nowMs: number) => void;
   /** Toggle the warm hallway light behind the door (NPC presence). */
   setHallLight: (on: boolean) => void;
   playerSpawn: THREE.Vector3;
@@ -73,35 +75,156 @@ function colliderAt(x: number, z: number, w: number, d: number, h = 2): THREE.Bo
 
 function makePosterTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
-  c.width = 128;
-  c.height = 192;
+  c.width = 256;
+  c.height = 384;
   const ctx = c.getContext('2d');
   if (ctx) {
-    ctx.fillStyle = '#1a2418';
-    ctx.fillRect(0, 0, 128, 192);
-    ctx.fillStyle = '#0e140d';
-    ctx.fillRect(4, 4, 120, 184);
-    // big goblin face
-    ctx.fillStyle = '#5f8f3e';
-    ctx.fillRect(34, 40, 60, 52);
-    ctx.fillRect(20, 48, 14, 18); // ears
-    ctx.fillRect(94, 48, 14, 18);
-    ctx.fillStyle = '#e8d44f';
-    ctx.fillRect(46, 56, 12, 10);
-    ctx.fillRect(70, 56, 12, 10);
-    ctx.fillStyle = '#222';
-    ctx.fillRect(50, 59, 5, 5);
-    ctx.fillRect(74, 59, 5, 5);
-    ctx.fillRect(48, 78, 32, 6); // deadpan mouth
-    ctx.fillStyle = '#e8c33f';
-    ctx.font = 'bold 16px monospace';
+    // pixel-art scene drawn at 2x blocks for the chunky retro box-art look
+    const px = (x: number, y: number, w: number, h: number, col: string): void => {
+      ctx.fillStyle = col;
+      ctx.fillRect(x * 2, y * 2, w * 2, h * 2);
+    };
+
+    // frame
+    px(0, 0, 128, 192, '#1a2418');
+    px(3, 3, 122, 186, '#0e140d');
+
+    // night sky gradient (banded, like a 16-colour palette)
+    const skyBands = ['#0e1426', '#121a2c', '#182232', '#1f2a34', '#27332e', '#2e3c26'];
+    for (const [i, band] of skyBands.entries()) {
+      px(4, 4 + i * 19, 120, 19, band);
+    }
+
+    // stars (deterministic scatter)
+    for (let i = 0; i < 34; i++) {
+      const sx = 8 + ((i * 37 + 13) % 112);
+      const sy = 7 + ((i * 53 + 29) % 78);
+      px(sx, sy, 1, 1, i % 5 === 0 ? '#cfe0ff' : '#8fa0c0');
+    }
+
+    // moon with craters + glow (left, clear of the title)
+    px(16, 50, 18, 18, '#2a3448');
+    px(18, 48, 14, 22, '#2a3448');
+    px(14, 52, 22, 14, '#2a3448');
+    px(19, 51, 12, 16, '#e8e4cf');
+    px(17, 53, 16, 12, '#e8e4cf');
+    px(21, 55, 3, 3, '#cfcab2');
+    px(27, 59, 2, 2, '#cfcab2');
+    px(23, 62, 2, 2, '#cfcab2');
+
+    // distant hills
+    px(4, 104, 120, 14, '#1c2616');
+    px(4, 100, 40, 6, '#1c2616');
+    px(80, 99, 44, 8, '#1c2616');
+
+    // the Mudwick keep on the right hill
+    px(88, 76, 26, 26, '#141c12');
+    px(86, 70, 8, 32, '#141c12'); // left tower
+    px(108, 66, 9, 36, '#10180e'); // right tower
+    px(85, 67, 10, 4, '#141c12'); // battlements
+    px(107, 63, 11, 4, '#10180e');
+    px(96, 72, 7, 4, '#141c12');
+    // lit windows
+    px(89, 76, 2, 3, '#e8c33f');
+    px(111, 73, 2, 3, '#e8c33f');
+    px(97, 84, 2, 3, '#f0d860');
+    px(104, 88, 2, 3, '#e8c33f');
+    // banner on the tall tower
+    px(110, 58, 1, 6, '#3a3026');
+    px(111, 58, 5, 4, '#a03828');
+
+    // ground
+    px(4, 118, 120, 70, '#222e16');
+    px(4, 118, 120, 3, '#2e3c1e');
+    // winding path to the keep
+    px(58, 182, 26, 6, '#4a4430');
+    px(62, 174, 22, 8, '#46402c');
+    px(68, 164, 18, 10, '#423c2a');
+    px(74, 152, 15, 12, '#3e3828');
+    px(80, 138, 12, 14, '#3a3426');
+    px(86, 124, 9, 14, '#363022');
+    // tufts of grass
+    for (let i = 0; i < 14; i++) {
+      const gx = 8 + ((i * 41 + 7) % 110);
+      const gy = 124 + ((i * 29 + 11) % 58);
+      px(gx, gy, 2, 1, '#384a22');
+    }
+
+    // ---- goblin hero (front-left, holding his trusty club)
+    const G = '#5f8f3e';
+    const GD = '#4a7330';
+    // legs + feet
+    px(38, 158, 7, 12, '#3e5e2a');
+    px(50, 158, 7, 12, '#3e5e2a');
+    px(36, 168, 9, 4, '#2e2418');
+    px(50, 168, 9, 4, '#2e2418');
+    // body (little leather vest)
+    px(34, 136, 27, 24, G);
+    px(38, 140, 19, 18, '#6e5230');
+    px(46, 140, 3, 18, '#5a4226');
+    // arms
+    px(28, 138, 7, 16, G);
+    px(60, 138, 7, 14, G);
+    // club arm raised — club resting on shoulder
+    px(64, 124, 6, 16, GD);
+    ctx.save();
+    ctx.translate(140, 250);
+    ctx.rotate(-0.6);
+    ctx.fillStyle = '#6e4f28';
+    ctx.fillRect(-5, -64, 10, 64); // handle
+    ctx.fillStyle = '#7e5c30';
+    ctx.fillRect(-9, -84, 18, 26); // head
+    ctx.fillStyle = '#9a9a9a';
+    ctx.fillRect(-9, -78, 18, 3); // iron band
+    ctx.restore();
+    // head
+    px(36, 108, 24, 26, G);
+    px(26, 114, 10, 8, G); // ears
+    px(60, 114, 10, 8, G);
+    px(28, 116, 4, 4, GD);
+    px(64, 116, 4, 4, GD);
+    // eyes — deadpan as ever
+    px(40, 116, 6, 5, '#e8d44f');
+    px(50, 116, 6, 5, '#e8d44f');
+    px(42, 118, 3, 3, '#222');
+    px(52, 118, 3, 3, '#222');
+    // heavy brow
+    px(39, 114, 8, 2, GD);
+    px(49, 114, 8, 2, GD);
+    // mouth + snaggle tooth
+    px(41, 127, 14, 3, '#222');
+    px(43, 125, 3, 2, '#e8e4cf');
+
+    // ---- tiny goblin mate waving by the path
+    px(95, 142, 10, 9, G);
+    px(92, 144, 4, 3, G);
+    px(105, 144, 4, 3, G);
+    px(97, 145, 2, 2, '#e8d44f');
+    px(101, 145, 2, 2, '#e8d44f');
+    px(96, 151, 8, 8, '#3e5e2a');
+    px(106, 137, 3, 7, G); // waving arm
+
+    // ---- title with drop shadow + gold gradient
     ctx.textAlign = 'center';
-    ctx.fillText('MUDWICK', 64, 118);
-    ctx.fillText('ONLINE', 64, 136);
-    ctx.fillStyle = '#b8b09a';
-    ctx.font = '9px monospace';
-    ctx.fillText('Your goblins', 64, 158);
-    ctx.fillText('miss you.', 64, 170);
+    ctx.font = 'bold 38px monospace';
+    ctx.fillStyle = '#0a0e08';
+    ctx.fillText('MUDWICK', 130, 50);
+    ctx.fillText('ONLINE', 130, 86);
+    const gold = ctx.createLinearGradient(0, 16, 0, 86);
+    gold.addColorStop(0, '#f6e08a');
+    gold.addColorStop(0.55, '#e0a83c');
+    gold.addColorStop(1, '#a86a20');
+    ctx.fillStyle = gold;
+    ctx.fillText('MUDWICK', 128, 48);
+    ctx.fillText('ONLINE', 128, 84);
+
+    // ---- tagline + review, over the ground
+    ctx.fillStyle = '#d8d0b0';
+    ctx.font = '15px monospace';
+    ctx.fillText('Your goblins miss you.', 128, 348);
+    ctx.fillStyle = '#8a8468';
+    ctx.font = '12px monospace';
+    ctx.fillText('"A game." — Mum', 128, 368);
   }
   const tex = new THREE.CanvasTexture(c);
   tex.magFilter = THREE.NearestFilter;
@@ -109,73 +232,525 @@ function makePosterTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function makeSilhouetteTexture(): THREE.CanvasTexture {
+function makeNightSkyTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
-  c.width = 64;
-  c.height = 128;
+  c.width = 256;
+  c.height = 224;
   const ctx = c.getContext('2d');
   if (ctx) {
-    ctx.clearRect(0, 0, 64, 128);
-    ctx.fillStyle = 'rgba(12,10,14,0.96)';
-    // head
+    // night gradient, lighter toward the horizon
+    const grad = ctx.createLinearGradient(0, 0, 0, 224);
+    grad.addColorStop(0, '#16244c');
+    grad.addColorStop(0.65, '#27416f');
+    grad.addColorStop(1, '#33517f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 224);
+    // stars (deterministic scatter, varied brightness)
+    for (let i = 0; i < 26; i++) {
+      const sx = ((i * 73 + 31) % 251) + 2;
+      const sy = ((i * 137 + 17) % 200) + 4;
+      const bright = 0.35 + ((i * 29) % 10) / 16;
+      ctx.fillStyle = `rgba(220, 230, 250, ${bright.toFixed(2)})`;
+      const sz = i % 7 === 0 ? 2 : 1;
+      ctx.fillRect(sx, sy, sz, sz);
+    }
+    // moon with a soft halo and craters
+    const mx = 78;
+    const my = 62;
+    const halo = ctx.createRadialGradient(mx, my, 10, mx, my, 42);
+    halo.addColorStop(0, 'rgba(216, 226, 240, 0.45)');
+    halo.addColorStop(1, 'rgba(216, 226, 240, 0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(mx - 42, my - 42, 84, 84);
+    ctx.fillStyle = '#dde6f2';
     ctx.beginPath();
-    ctx.arc(32, 22, 11, 0, Math.PI * 2);
+    ctx.arc(mx, my, 17, 0, Math.PI * 2);
     ctx.fill();
-    // shoulders / torso
+    ctx.fillStyle = '#c2cee0';
+    for (const [cx, cy, cr] of [
+      [-6, -3, 3.4],
+      [5, 6, 2.6],
+      [3, -7, 2],
+    ] as const) {
+      ctx.beginPath();
+      ctx.arc(mx + cx, my + cy, cr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // a couple of thin cloud wisps
+    ctx.fillStyle = 'rgba(150, 170, 205, 0.22)';
     ctx.beginPath();
-    ctx.moveTo(14, 44);
-    ctx.quadraticCurveTo(32, 30, 50, 44);
-    ctx.lineTo(48, 96);
-    ctx.lineTo(16, 96);
-    ctx.closePath();
+    ctx.ellipse(170, 120, 52, 7, -0.06, 0, Math.PI * 2);
     ctx.fill();
-    // arm holding a tea towel (deadpan domestic authority)
-    ctx.fillRect(10, 48, 8, 34);
-    ctx.fillRect(46, 48, 8, 30);
-    ctx.fillStyle = 'rgba(40,38,44,0.9)';
-    ctx.fillRect(44, 74, 14, 20);
-    // legs
-    ctx.fillStyle = 'rgba(12,10,14,0.96)';
-    ctx.fillRect(18, 96, 12, 32);
-    ctx.fillRect(34, 96, 12, 32);
+    ctx.beginPath();
+    ctx.ellipse(60, 168, 40, 5, 0.05, 0, Math.PI * 2);
+    ctx.fill();
   }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 
+/** Sticky note with the same handwriting as the 2D PC-mode notes. */
+function makeStickyTexture(bg: string, lines: string[]): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 96;
+  c.height = 96;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    const grad = ctx.createLinearGradient(0, 0, 12, 96);
+    grad.addColorStop(0, bg);
+    grad.addColorStop(1, shadeHex(bg, -14));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 96, 96);
+    ctx.fillStyle = '#4a4030';
+    ctx.font = '15px "Segoe Print", "Comic Sans MS", cursive';
+    ctx.textAlign = 'center';
+    const y0 = 48 - (lines.length - 1) * 10;
+    lines.forEach((ln, i) => ctx.fillText(ln, 48, y0 + i * 20));
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Hex CSS color lightened (+) or darkened (-) by `amt` per channel. */
+function shadeHex(hex: string, amt: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number): number => Math.max(0, Math.min(255, v + amt));
+  const r = ch((n >> 16) & 0xff);
+  const g = ch((n >> 8) & 0xff);
+  const b = ch(n & 0xff);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+/** JUNE calendar matching the 2D PC-mode wall calendar. */
+function makeCalendarTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 96;
+  c.height = 124;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#ddd6c4';
+    ctx.fillRect(0, 0, 96, 124);
+    ctx.fillStyle = '#a03028';
+    ctx.fillRect(0, 0, 96, 28);
+    ctx.fillStyle = '#efe6cf';
+    ctx.font = '700 12px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('J U N E', 48, 19);
+    // 7x5 day grid
+    ctx.strokeStyle = 'rgba(90, 80, 64, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < 7; i++) {
+      const gx = 6 + (i * 84) / 7;
+      ctx.moveTo(gx, 38);
+      ctx.lineTo(gx, 114);
+    }
+    for (let j = 1; j < 5; j++) {
+      const gy = 38 + (j * 76) / 5;
+      ctx.moveTo(6, gy);
+      ctx.lineTo(90, gy);
+    }
+    ctx.stroke();
+    ctx.strokeRect(6, 38, 84, 76);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Keycap grid + spacebar for the 3D keyboard top, matching the 2D one. */
+function makeKeyboardTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 168;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#c8c0b0';
+    ctx.fillRect(0, 0, 168, 64);
+    // keycap field
+    ctx.fillStyle = '#bcb2a0';
+    ctx.fillRect(8, 6, 152, 38);
+    ctx.strokeStyle = 'rgba(60, 52, 40, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let gx = 8; gx <= 160; gx += 13.8) {
+      ctx.moveTo(gx, 6);
+      ctx.lineTo(gx, 44);
+    }
+    for (let gy = 6; gy <= 44; gy += 12.7) {
+      ctx.moveTo(8, gy);
+      ctx.lineTo(160, gy);
+    }
+    ctx.stroke();
+    // spacebar
+    ctx.fillStyle = '#bcb2a0';
+    ctx.fillRect(42, 48, 84, 11);
+    ctx.strokeRect(42, 48, 84, 11);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Dashed vent strip like the one along the top of the 2D bezel. */
+function makeVentTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 8;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    ctx.clearRect(0, 0, 128, 8);
+    ctx.fillStyle = 'rgba(90, 82, 70, 0.6)';
+    for (let x = 2; x < 126; x += 7) ctx.fillRect(x, 2, 4, 4);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Tiny "VISIONMASTER 240" badge for the monitor bezel. */
+function makeBrandTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 16;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    ctx.clearRect(0, 0, 128, 16);
+    ctx.fillStyle = 'rgba(90, 82, 70, 0.9)';
+    ctx.font = '600 9px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('V I S I O N M A S T E R  2 4 0', 64, 11);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Mum's face: half-lowered lids, one raised brow, flat unimpressed mouth. */
+function makeMumFaceTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#e2b491';
+    ctx.fillRect(0, 0, 64, 64);
+    // soft cheek blush
+    ctx.fillStyle = 'rgba(214,120,110,0.22)';
+    ctx.beginPath();
+    ctx.arc(16, 43, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(48, 43, 6, 0, Math.PI * 2);
+    ctx.fill();
+    // brows — one raised, the universal mum eyebrow
+    ctx.strokeStyle = '#6e5648';
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(13, 26);
+    ctx.lineTo(25, 24);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(39, 21);
+    ctx.lineTo(51, 24);
+    ctx.stroke();
+    // eyes
+    ctx.fillStyle = '#3a2e26';
+    ctx.beginPath();
+    ctx.arc(19, 32, 2.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(45, 32, 2.7, 0, Math.PI * 2);
+    ctx.fill();
+    // half-lowered lids (deadpan)
+    ctx.fillStyle = '#e2b491';
+    ctx.fillRect(14, 27, 11, 3.5);
+    ctx.fillRect(40, 27, 11, 3.5);
+    // nose hint
+    ctx.strokeStyle = '#c89a78';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(32, 35);
+    ctx.lineTo(32, 41);
+    ctx.stroke();
+    // flat mouth: not angry, just… noting things down mentally
+    ctx.strokeStyle = '#9c5a50';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(25, 50);
+    ctx.lineTo(40, 50);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
+ * Mum, in full: cardigan, crossed arms, tea towel over one forearm, bun.
+ * Built facing +z (caller rotates her toward the room). Returns a tick fn
+ * for her idle: a slow weight-shift sway and a skeptical head tilt.
+ */
+function makeMum(): { group: THREE.Group; tick: (nowMs: number) => void } {
+  const g = new THREE.Group();
+  const SKIN = 0xe2b491;
+  const CARDIGAN = 0xa86878;
+  const CARDIGAN_DARK = 0x8f5565;
+  const SKIRT = 0x3e4a68;
+  const HAIR = 0x7a6050;
+  const TIGHTS = 0x4a4046;
+
+  // slippers + ankles
+  for (const fx of [-0.06, 0.06]) {
+    const s = makeSlipper(0xc46a78, 0xefe0d4);
+    s.position.set(fx, 0, 0.03);
+    s.scale.set(0.95, 0.95, 0.85);
+    g.add(s);
+  }
+  g.add(box(0.05, 0.18, 0.06, TIGHTS, -0.055, 0.16, 0));
+  g.add(box(0.05, 0.18, 0.06, TIGHTS, 0.055, 0.16, 0));
+
+  // skirt — a sensible A-line
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.175, 0.56, 14), lambert(SKIRT));
+  skirt.position.y = 0.53;
+  g.add(skirt);
+
+  // cardigan torso with a sliver of cream blouse
+  g.add(box(0.32, 0.4, 0.2, CARDIGAN, 0, 1.0, 0));
+  g.add(box(0.36, 0.1, 0.21, CARDIGAN, 0, 1.17, 0));
+  g.add(box(0.06, 0.34, 0.012, 0xefe6d4, 0, 1.02, 0.103));
+
+  // upper arms, angled in toward the fold
+  const armL = box(0.09, 0.26, 0.1, CARDIGAN_DARK, -0.185, 1.05, 0.01);
+  armL.rotation.z = -0.2;
+  const armR = box(0.09, 0.26, 0.1, CARDIGAN_DARK, 0.185, 1.05, 0.01);
+  armR.rotation.z = 0.2;
+  g.add(armL, armR);
+
+  // crossed forearms + hands
+  const fold = box(0.3, 0.085, 0.095, CARDIGAN_DARK, 0, 0.95, 0.125);
+  fold.rotation.z = 0.05;
+  g.add(fold);
+  g.add(box(0.055, 0.05, 0.06, SKIN, -0.155, 0.965, 0.13));
+  g.add(box(0.055, 0.05, 0.06, SKIN, 0.155, 0.935, 0.13));
+
+  // tea towel draped over the forearm (deadpan domestic authority)
+  g.add(box(0.09, 0.16, 0.02, 0xe8e2d0, -0.07, 0.86, 0.182));
+  g.add(box(0.092, 0.022, 0.022, 0xa04438, -0.07, 0.82, 0.182));
+
+  // neck + head (face texture on the +z side only)
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.07, 10), lambert(SKIN));
+  neck.position.y = 1.235;
+  g.add(neck);
+
+  const headG = new THREE.Group();
+  headG.position.y = 1.37;
+  const skinMat = lambert(SKIN);
+  const faceMat = new THREE.MeshLambertMaterial({ map: makeMumFaceTexture() });
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.2, 0.18), [
+    skinMat, skinMat, skinMat, skinMat, faceMat, skinMat,
+  ]);
+  headG.add(head);
+  // hair: swept cap, sides, back, and the load-bearing bun
+  headG.add(box(0.19, 0.075, 0.2, HAIR, 0, 0.1, -0.005));
+  headG.add(box(0.19, 0.045, 0.025, HAIR, 0, 0.075, 0.088));
+  // side panels sit a hair behind the face plane (z 0.08 < 0.09) so they
+  // never z-fight with the front of the head box
+  headG.add(box(0.022, 0.15, 0.19, HAIR, -0.087, 0.025, -0.015));
+  headG.add(box(0.022, 0.15, 0.19, HAIR, 0.087, 0.025, -0.015));
+  headG.add(box(0.19, 0.18, 0.035, HAIR, 0, 0.005, -0.098));
+  const bun = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), lambert(HAIR));
+  bun.position.set(0, 0.085, -0.105);
+  headG.add(bun);
+  // tiny gold studs
+  headG.add(box(0.012, 0.026, 0.012, 0xe8c33f, -0.092, -0.04, 0.01));
+  headG.add(box(0.012, 0.026, 0.012, 0xe8c33f, 0.092, -0.04, 0.01));
+  g.add(headG);
+
+  const tick = (nowMs: number): void => {
+    const t = nowMs / 1000;
+    g.rotation.z = Math.sin(t * 1.1) * 0.013; // weight shift, hip to hip
+    headG.rotation.z = Math.sin(t * 0.7 + 1) * 0.045; // slow skeptical tilt
+    headG.position.y = 1.37 + Math.sin(t * 2.1) * 0.004; // breathing
+  };
+
+  return { group: g, tick };
+}
+
 // ---------------------------------------------------------------- pieces
+
+/** Lighten/darken a packed RGB colour by `amt` per channel. */
+function shadeNum(color: number, amt: number): number {
+  const ch = (v: number): number => Math.max(0, Math.min(255, v + amt));
+  return (ch((color >> 16) & 0xff) << 16) | (ch((color >> 8) & 0xff) << 8) | ch(color & 0xff);
+}
 
 function makeMug(color: number): THREE.Group {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.09, 10), lambert(color));
-  body.position.y = 0.045;
-  const handle = box(0.015, 0.04, 0.03, color, 0.05, 0.05, 0);
-  g.add(body, handle);
+  // gently tapered body with a foot ring
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.092, 16), lambert(color));
+  body.position.y = 0.05;
+  const foot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.033, 0.034, 0.008, 16),
+    lambert(shadeNum(color, -28)),
+  );
+  foot.position.y = 0.004;
+  // glazed rim lip
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.0375, 0.0035, 6, 16),
+    lambert(shadeNum(color, 30)),
+  );
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.096;
+  // interior with the tell-tale ring of cold tea
+  const inside = new THREE.Mesh(new THREE.CircleGeometry(0.034, 16), lambert(shadeNum(color, -55)));
+  inside.rotation.x = -Math.PI / 2;
+  inside.position.y = 0.0955;
+  const tea = new THREE.Mesh(new THREE.CircleGeometry(0.027, 14), lambert(0x4a3018));
+  tea.rotation.x = -Math.PI / 2;
+  tea.position.y = 0.0957;
+  // proper loop handle
+  const handle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.022, 0.0065, 8, 14, Math.PI),
+    lambert(color),
+  );
+  handle.position.set(0.042, 0.052, 0);
+  handle.rotation.z = -Math.PI / 2; // opening faces the body
+  g.add(body, foot, rim, inside, tea, handle);
   return g;
 }
 
+/** Crumpled candy wrapper: flat foil base, twisted midsection, shiny inner fold. */
 function makeWrapper(color: number): THREE.Group {
   const g = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045, 0), lambert(color));
-  m.scale.set(1, 0.45, 0.8);
-  m.position.y = 0.02;
-  m.rotation.set(Math.random() * 0.6, Math.random() * Math.PI, 0);
-  const mat = m.material as THREE.MeshLambertMaterial;
-  mat.flatShading = true;
-  g.add(m);
+  const foil = shadeNum(color, 0);
+  const shine = shadeNum(color, 45);
+  g.add(box(0.055, 0.006, 0.075, foil, 0, 0.003, 0)); // flattened on the floor
+  const twist = box(0.038, 0.014, 0.032, shadeNum(color, -15), 0.012, 0.009, 0.018);
+  twist.rotation.set(0.25, 0.55, 0.15);
+  g.add(twist);
+  const tail = box(0.022, 0.008, 0.04, foil, -0.018, 0.006, -0.022);
+  tail.rotation.y = -0.7;
+  g.add(tail);
+  g.add(box(0.018, 0.005, 0.02, shine, 0.008, 0.012, 0.008)); // foil glint
+  g.rotation.y = Math.random() * Math.PI * 2;
   return g;
 }
 
-function makeCloth(color: number, long = false): THREE.Group {
+/**
+ * A proper slipper: sole, cosy toe dome, fleece trim at the opening, and a
+ * visible footbed at the heel. Toe points +z; origin at the heel end's floor.
+ */
+function makeSlipper(color: number, trim = 0xe8d8c0, sole = 0x5c352a): THREE.Group {
   const g = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.BoxGeometry(long ? 0.42 : 0.3, 0.045, long ? 0.3 : 0.24), lambert(color));
-  m.position.y = 0.025;
-  m.rotation.y = Math.random() * Math.PI;
-  const fold = new THREE.Mesh(new THREE.BoxGeometry(long ? 0.26 : 0.18, 0.04, 0.14), lambert(color));
-  fold.position.set(0.03, 0.06, 0.02);
-  fold.rotation.y = 0.5;
-  g.add(m, fold);
+  // sole, slightly proud of the upper
+  g.add(box(0.085, 0.022, 0.21, sole, 0, 0.011, 0));
+  // footbed peeking out at the heel
+  g.add(box(0.068, 0.01, 0.115, trim, 0, 0.027, -0.04));
+  // toe dome — a squashed hemisphere over the front half
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(0.05, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    lambert(color),
+  );
+  dome.scale.set(0.86, 0.66, 1.5);
+  dome.position.set(0, 0.022, 0.035);
+  g.add(dome);
+  // fleece trim band across the opening
+  const band = box(0.082, 0.02, 0.026, trim, 0, 0.034, -0.015);
+  band.rotation.x = -0.18;
+  g.add(band);
+  return g;
+}
+
+/** A t-shirt dumped flat: torso, sprawled sleeves, collar ring, crumple ridge. */
+function makeShirt(color: number): THREE.Group {
+  const g = new THREE.Group();
+  g.add(box(0.24, 0.04, 0.28, color, 0, 0.02, 0)); // torso
+  const wrinkle = box(0.17, 0.026, 0.12, shadeNum(color, 14), 0.015, 0.048, 0.035);
+  wrinkle.rotation.y = 0.35;
+  g.add(wrinkle);
+  for (const [sx, ry] of [
+    [-0.16, 0.55],
+    [0.16, -0.55],
+  ] as const) {
+    const sleeve = box(0.13, 0.034, 0.1, color, sx, 0.017, -0.085);
+    sleeve.rotation.y = ry;
+    g.add(sleeve);
+  }
+  const collar = new THREE.Mesh(
+    new THREE.TorusGeometry(0.034, 0.011, 6, 14),
+    lambert(shadeNum(color, -30)),
+  );
+  collar.rotation.x = Math.PI / 2;
+  collar.position.set(0, 0.042, -0.105);
+  g.add(collar);
+  return g;
+}
+
+/** A hoodie in a heap: deflated hood, kangaroo pocket, drawstrings, sleeves. */
+function makeHoodie(color: number): THREE.Group {
+  const g = new THREE.Group();
+  g.add(box(0.3, 0.05, 0.3, color, 0, 0.025, 0.02));
+  const ridge = box(0.22, 0.03, 0.14, shadeNum(color, 12), -0.02, 0.062, 0.05);
+  ridge.rotation.y = -0.3;
+  g.add(ridge);
+  // hood — a deflated dome at the top end
+  const hood = new THREE.Mesh(
+    new THREE.SphereGeometry(0.085, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    lambert(shadeNum(color, -20)),
+  );
+  hood.scale.set(1, 0.55, 0.9);
+  hood.position.set(0, 0.045, -0.13);
+  g.add(hood);
+  // drawstrings lying across the chest
+  for (const dx of [-0.022, 0.022]) {
+    const s = box(0.006, 0.006, 0.06, 0xe8e4d8, dx, 0.053, -0.045);
+    s.rotation.y = dx > 0 ? -0.2 : 0.25;
+    g.add(s);
+  }
+  // kangaroo pocket
+  g.add(box(0.14, 0.014, 0.1, shadeNum(color, -14), 0.01, 0.052, 0.08));
+  // sleeves sprawled either side, one flopped further out
+  const sl = box(0.18, 0.04, 0.095, color, -0.21, 0.02, 0.04);
+  sl.rotation.y = 0.85;
+  g.add(sl);
+  const sr = box(0.16, 0.04, 0.095, color, 0.2, 0.02, -0.02);
+  sr.rotation.y = -0.5;
+  g.add(sr);
+  // ribbed cuffs at the sleeve ends
+  const cl = box(0.04, 0.042, 0.085, shadeNum(color, 22), -0.265, 0.02, 0.105);
+  cl.rotation.y = 0.85;
+  g.add(cl);
+  const cr = box(0.04, 0.042, 0.085, shadeNum(color, 22), 0.265, 0.02, -0.06);
+  cr.rotation.y = -0.5;
+  g.add(cr);
+  return g;
+}
+
+/** A single lost sock, folded at the ankle, with a domed toe and ribbed cuff. */
+function makeSock(color: number): THREE.Group {
+  const g = new THREE.Group();
+  g.add(box(0.07, 0.03, 0.15, color, 0, 0.015, 0)); // foot
+  const toe = new THREE.Mesh(
+    new THREE.SphereGeometry(0.035, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    lambert(shadeNum(color, -18)),
+  );
+  toe.scale.set(1, 0.85, 1);
+  toe.position.set(0, 0.001, 0.075);
+  g.add(toe);
+  const heel = box(0.06, 0.026, 0.05, shadeNum(color, -18), 0, 0.013, -0.065);
+  g.add(heel);
+  // leg folded over at the ankle
+  const leg = box(0.065, 0.028, 0.11, color, 0.045, 0.014, -0.115);
+  leg.rotation.y = 0.7;
+  g.add(leg);
+  // ribbed cuff
+  const cuff = box(0.072, 0.034, 0.04, shadeNum(color, 28), 0.085, 0.017, -0.16);
+  cuff.rotation.y = 0.7;
+  g.add(cuff);
   return g;
 }
 
@@ -225,25 +800,93 @@ export function buildRoom(): Room {
   rugInner.position.set(0.1, 0.006, 0.4);
   scene.add(rugInner);
 
-  // ---- door + dark hallway + NPC silhouette anchor
-  // Hallway is near-black until the NPC appears; then the hall light comes
-  // on so her silhouette reads (see setHallLight).
-  const doorwayMat = new THREE.MeshBasicMaterial({ color: 0x0a0810 });
-  const doorway = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 2.05), doorwayMat);
-  doorway.position.set(-0.8, 1.02, 2.01);
-  doorway.rotation.y = Math.PI;
-  scene.add(doorway);
+  // ---- door + hallway recess + mum
+  // The hall is a shallow dark box behind the door opening. It stays
+  // near-black until mum appears; then the hall light comes on and she's lit
+  // warm from behind with a soft spill on her face (see setHallLight).
+  // Lambert so the hall light shades it naturally; oversized planes so no
+  // background ever bleeds through the seams.
+  // Hall is 1m deep so the door has room to swing fully open against the
+  // right hall wall.
+  const hallMat = new THREE.MeshLambertMaterial({ color: 0x3a2c20, side: THREE.DoubleSide });
+  const hallBack = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.4), hallMat);
+  hallBack.position.set(-0.8, 1.1, 3.0);
+  hallBack.rotation.y = Math.PI;
+  scene.add(hallBack);
+  // sides/floor/ceiling start at the wall plane (z=2) so nothing pokes into
+  // the room
+  // start a hair behind the wall plane (z 2.03 > 2) so their edges never
+  // stitch through the south wall
+  const hallSideL = new THREE.Mesh(new THREE.PlaneGeometry(0.97, 2.4), hallMat);
+  hallSideL.position.set(-1.26, 1.1, 2.515);
+  hallSideL.rotation.y = Math.PI / 2;
+  scene.add(hallSideL);
+  const hallSideR = new THREE.Mesh(new THREE.PlaneGeometry(0.97, 2.4), hallMat);
+  hallSideR.position.set(-0.34, 1.1, 2.515);
+  hallSideR.rotation.y = -Math.PI / 2;
+  scene.add(hallSideR);
+  const hallFloor = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.97), hallMat);
+  hallFloor.position.set(-0.8, 0.004, 2.515);
+  hallFloor.rotation.x = -Math.PI / 2;
+  scene.add(hallFloor);
+  const hallCeil = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.97), hallMat);
+  hallCeil.position.set(-0.8, 2.1, 2.515);
+  hallCeil.rotation.x = Math.PI / 2;
+  scene.add(hallCeil);
   const frameMat = lambert(WOOD_DARK);
   scene.add(box(0.08, 2.1, 0.12, frameMat, -1.24, 1.05, 2));
   scene.add(box(0.08, 2.1, 0.12, frameMat, -0.36, 1.05, 2));
   scene.add(box(0.96, 0.1, 0.12, frameMat, -0.8, 2.1, 2));
-  const silTex = makeSilhouetteTexture();
-  const silMat = new THREE.MeshBasicMaterial({ map: silTex, transparent: true, depthWrite: false });
-  const sil = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 1.8), silMat);
-  sil.position.set(-0.78, 0.95, 1.97); // just inside the doorway, in front of the hall plane
-  sil.rotation.y = Math.PI;
-  sil.visible = false;
-  scene.add(sil);
+  // keep the player on the bedroom side of the threshold
+  colliders.push(colliderAt(-0.8, 2.05, 0.95, 0.14));
+
+  // The door itself — closed, it's a panelled door with a brass knob; when
+  // mum appears it swings open into the hall (hinged on the right jamb).
+  const door = new THREE.Group();
+  door.position.set(-0.41, 0, 2.03);
+  const doorWood = lambert(0x6e4f28);
+  door.add(box(0.78, 2.05, 0.05, doorWood, -0.39, 1.025, 0));
+  const doorPanel = lambert(0x5a3f1f);
+  door.add(box(0.56, 0.72, 0.014, doorPanel, -0.39, 1.5, -0.026));
+  door.add(box(0.56, 0.72, 0.014, doorPanel, -0.39, 0.62, -0.026));
+  const knobMat = lambert(0xc8a040);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 8), knobMat);
+  knob.position.set(-0.72, 1.0, -0.046);
+  door.add(knob);
+  const knobHall = knob.clone();
+  knobHall.position.z = 0.046;
+  door.add(knobHall);
+  scene.add(door);
+  const DOOR_OPEN = 1.65; // ~95°, flat against the right hall wall
+  let doorAngle = 0;
+  let doorTarget = 0;
+
+  const mum = makeMum();
+  // a step back into the hall, beyond the door's swing arc
+  mum.group.position.set(-0.8, 0, 2.72);
+  mum.group.rotation.y = Math.PI; // facing into the room, obviously
+  mum.group.visible = false;
+  scene.add(mum.group);
+
+  // Always-on room tick: eases the door toward its target and runs mum's
+  // idle while she's visible.
+  let lastTickAt = 0;
+  const roomTick = (nowMs: number): void => {
+    const dt = lastTickAt === 0 ? 16 : Math.min(64, nowMs - lastTickAt);
+    lastTickAt = nowMs;
+    doorAngle += (doorTarget - doorAngle) * (1 - Math.exp(-dt / 150));
+    door.rotation.y = doorAngle;
+    if (mum.group.visible) mum.tick(nowMs);
+  };
+
+  // warm hall light behind her + soft spill onto her front, both off until
+  // she appears
+  const hallLight = new THREE.PointLight(0xffc080, 0, 3.0, 1.6);
+  hallLight.position.set(-0.8, 1.95, 2.92);
+  scene.add(hallLight);
+  const mumFill = new THREE.PointLight(0xffd8a8, 0, 2.8, 1.7);
+  mumFill.position.set(-0.8, 1.55, 1.6);
+  scene.add(mumFill);
 
   // ---- window (east wall) with night glow
   const winFrame = lambert(WOOD_DARK);
@@ -252,28 +895,16 @@ export function buildRoom(): Room {
   scene.add(box(0.08, 0.08, 1.3, winFrame, 2.47, 1.0, 0.4));
   scene.add(box(0.08, 1.18, 0.08, winFrame, 2.47, 1.55, -0.21));
   scene.add(box(0.08, 1.18, 0.08, winFrame, 2.47, 1.55, 1.01));
+  // Night sky as a single textured backdrop (moon/stars baked in, so there's
+  // no parallax swimming when viewed at an angle), oversized so the frame
+  // always covers its edges.
   const winGlow = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.18, 1.06),
-    new THREE.MeshBasicMaterial({ color: 0x2a4a80 }),
+    new THREE.PlaneGeometry(1.28, 1.16),
+    new THREE.MeshBasicMaterial({ map: makeNightSkyTexture() }),
   );
-  winGlow.position.set(2.49, 1.55, 0.4);
+  winGlow.position.set(2.495, 1.55, 0.4);
   winGlow.rotation.y = -Math.PI / 2;
   scene.add(winGlow);
-  // moon + stars
-  const moon = new THREE.Mesh(new THREE.CircleGeometry(0.1, 16), new THREE.MeshBasicMaterial({ color: 0xd8e2f0 }));
-  moon.position.set(2.485, 1.8, 0.15);
-  moon.rotation.y = -Math.PI / 2;
-  scene.add(moon);
-  for (const [sy, sz] of [
-    [1.32, 0.72],
-    [1.7, 0.85],
-    [1.18, 0.1],
-  ] as const) {
-    const star = new THREE.Mesh(new THREE.CircleGeometry(0.012, 6), new THREE.MeshBasicMaterial({ color: 0xc8d8f0 }));
-    star.position.set(2.485, sy, sz);
-    star.rotation.y = -Math.PI / 2;
-    scene.add(star);
-  }
   scene.add(box(0.05, 1.06, 0.05, winFrame, 2.45, 1.55, 0.4)); // mullion
   scene.add(box(0.05, 0.05, 1.18, winFrame, 2.45, 1.55, 0.4));
 
@@ -292,9 +923,10 @@ export function buildRoom(): Room {
   scene.add(desk);
   colliders.push(colliderAt(0.9, -1.55, 1.7, 0.8));
 
-  // CRT monitor
+  // CRT monitor — cream shell like the 2D bezel, with the same brand badge,
+  // control buttons, and power LED below the screen
   const crt = new THREE.Group();
-  const shellMat = lambert(0xb8b0a0);
+  const shellMat = lambert(0xd0c8b8);
   crt.add(box(0.5, 0.42, 0.46, shellMat, 0, 0.21, 0));
   crt.add(box(0.54, 0.05, 0.5, shellMat, 0, -0.02, 0));
   const screen = new THREE.Mesh(
@@ -303,19 +935,86 @@ export function buildRoom(): Room {
   );
   screen.position.set(0, 0.21, 0.235);
   crt.add(screen);
+  const brand = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.16, 0.02),
+    new THREE.MeshBasicMaterial({ map: makeBrandTexture(), transparent: true }),
+  );
+  brand.position.set(-0.08, 0.035, 0.2315);
+  crt.add(brand);
+  const vents = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.32, 0.018),
+    new THREE.MeshBasicMaterial({ map: makeVentTexture(), transparent: true }),
+  );
+  vents.position.set(0, 0.398, 0.2315);
+  crt.add(vents);
+  for (let i = 0; i < 3; i++) {
+    const dot = new THREE.Mesh(
+      new THREE.CircleGeometry(0.0065, 8),
+      new THREE.MeshBasicMaterial({ color: 0x8a8274 }),
+    );
+    dot.position.set(0.13 + i * 0.03, 0.035, 0.2315);
+    crt.add(dot);
+  }
+  const powerLed = new THREE.Mesh(
+    new THREE.CircleGeometry(0.0075, 8),
+    new THREE.MeshBasicMaterial({ color: 0x46d870 }),
+  );
+  powerLed.position.set(0.225, 0.035, 0.2315);
+  crt.add(powerLed);
   crt.position.set(0.9, 0.78, -1.72);
   scene.add(crt);
   tagInteract(crt, { type: 'pc' });
   interactables.push(crt);
 
-  // keyboard
+  // keyboard, with the same keycap grid + spacebar as the 2D one
   scene.add(box(0.42, 0.025, 0.16, lambert(0xc8c0b0), 0.9, 0.79, -1.32));
+  const keycaps = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.4, 0.145),
+    new THREE.MeshLambertMaterial({ map: makeKeyboardTexture() }),
+  );
+  keycaps.rotation.x = -Math.PI / 2;
+  keycaps.position.set(0.9, 0.8032, -1.32);
+  scene.add(keycaps);
 
-  // mousepad + mouse, to the right of the keyboard
-  scene.add(box(0.2, 0.006, 0.24, lambert(0x3a4450), 1.32, 0.784, -1.32));
-  const mouse = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), lambert(0xc8c0b0));
-  mouse.scale.set(1, 0.5, 1.35);
-  mouse.position.set(1.32, 0.8, -1.32);
+  // mousepad + mouse, to the right of the keyboard (same slate as 2D pad)
+  scene.add(box(0.2, 0.006, 0.24, lambert(0x404b58), 1.32, 0.784, -1.32));
+  // proper 90s two-button mouse: stepped cream body, humped back, split
+  // buttons with a seam, and a cable arcing off toward the monitor
+  const mouse = new THREE.Group();
+  const SHELL = 0xd8d0c0;
+  mouse.add(box(0.06, 0.013, 0.1, 0xb8b0a0, 0, 0.0065, 0)); // base
+  mouse.add(box(0.055, 0.013, 0.094, SHELL, 0, 0.019, 0)); // mid shell
+  const humpMat = lambert(SHELL);
+  humpMat.flatShading = true;
+  const hump = new THREE.Mesh(
+    new THREE.SphereGeometry(0.03, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    humpMat,
+  );
+  hump.scale.set(0.92, 0.78, 1.25);
+  hump.position.set(0, 0.024, 0.012);
+  mouse.add(hump);
+  // buttons (front), tipped slightly down, with a dark split between them
+  for (const bx2 of [-0.0145, 0.0145]) {
+    const btn = box(0.025, 0.009, 0.032, 0xe2dacb, bx2, 0.0285, -0.032);
+    btn.rotation.x = 0.14;
+    mouse.add(btn);
+  }
+  mouse.add(box(0.0025, 0.009, 0.03, 0x6a6354, 0, 0.0285, -0.032)); // seam
+  mouse.add(box(0.052, 0.003, 0.0025, 0x6a6354, 0, 0.0305, -0.015)); // button gap line
+  // cable: out the front, swinging left and away behind the monitor
+  const cablePath = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0.012, -0.05),
+    new THREE.Vector3(-0.01, 0.004, -0.13),
+    new THREE.Vector3(-0.09, 0.003, -0.21),
+    new THREE.Vector3(-0.24, 0.003, -0.3),
+  ]);
+  const cable = new THREE.Mesh(
+    new THREE.TubeGeometry(cablePath, 20, 0.0025, 6),
+    lambert(0x3e382e),
+  );
+  mouse.add(cable);
+  mouse.position.set(1.32, 0.787, -1.32);
+  mouse.rotation.y = 0.12; // resting at a casual angle, as mice do
   scene.add(mouse);
 
   // chair
@@ -409,9 +1108,9 @@ export function buildRoom(): Room {
   addItem('wrap2', 'wrappers', 'wrapper', makeWrapper(0xd84a8a), -0.55, 0, 1.1);
   addItem('wrap3', 'wrappers', 'wrapper', makeWrapper(0x8ad84a), 0.32, 0.78, -1.72);
 
-  addItem('cloth0', 'laundry', 'hoodie', makeCloth(0x4a5a8f, true), -0.9, 0, -0.2);
-  addItem('cloth1', 'laundry', 'sock', makeCloth(0x8f8f3c), -0.2, 0, 1.35);
-  addItem('cloth2', 'laundry', 'shirt', makeCloth(0x8f5a3c, true), -1.9, 0.48, 0.2);
+  addItem('cloth0', 'laundry', 'hoodie', makeHoodie(0x4a5a8f), -0.9, 0, -0.2);
+  addItem('cloth1', 'laundry', 'sock', makeSock(0x8f8f3c), -0.2, 0, 1.35);
+  addItem('cloth2', 'laundry', 'shirt', makeShirt(0x8f5a3c), -1.9, 0.48, 0.2);
 
   // ---- decoration pass (visual only: nothing here is interactable or solid)
 
@@ -443,26 +1142,27 @@ export function buildRoom(): Room {
   scene.add(box(0.02, 0.74, 0.02, cableMat, 1.08, 0.37, -1.92));
   scene.add(box(0.32, 0.02, 0.02, cableMat, 1.26, 0.012, -1.88));
 
-  // curtain rod + panels framing the window (east wall)
+  // curtain rod + panels framing the window (east wall); panels hang clear
+  // of the wall so they pass in front of the sill instead of through it
   const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.74, 8), lambert(WOOD_DARK));
   rod.rotation.x = Math.PI / 2;
-  rod.position.set(2.44, 2.26, 0.4);
+  rod.position.set(2.36, 2.26, 0.4);
   scene.add(rod);
   const curtainMat = lambert(0x6e4a8c);
   for (const cz of [-0.34, 1.14]) {
-    const panel = box(0.06, 1.42, 0.26, curtainMat, 2.43, 1.5, cz);
+    const panel = box(0.06, 1.42, 0.26, curtainMat, 2.36, 1.5, cz);
     scene.add(panel);
-    scene.add(box(0.045, 1.42, 0.1, curtainMat, 2.4, 1.46, cz + (cz < 0.4 ? 0.16 : -0.16)));
+    scene.add(box(0.045, 1.42, 0.1, curtainMat, 2.33, 1.46, cz + (cz < 0.4 ? 0.16 : -0.16)));
   }
 
-  // window sill + a small potted plant
+  // window sill + a small potted plant (centered on the sill)
   scene.add(box(0.1, 0.045, 1.34, lambert(WOOD_DARK), 2.44, 0.96, 0.4));
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.024, 0.07, 8), lambert(0xa05838));
-  pot.position.set(2.4, 1.02, 0.78);
+  pot.position.set(2.44, 1.02, 0.78);
   scene.add(pot);
   const plant = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), lambert(0x4a8f3c));
   plant.scale.set(1, 1.25, 1);
-  plant.position.set(2.4, 1.1, 0.78);
+  plant.position.set(2.44, 1.1, 0.78);
   scene.add(plant);
 
   // shelf above the desk: books (one leaning) + a small trophy
@@ -475,70 +1175,54 @@ export function buildRoom(): Room {
     scene.add(box(w, h, 0.15, lambert(bookColors[i] ?? 0x888888), bx + w / 2, 1.758 + h / 2, -1.88));
     bx += w + 0.012;
   }
-  const leaning = box(0.03, 0.18, 0.15, lambert(0xb86a50), bx + 0.05, 1.84, -1.88);
-  leaning.rotation.z = -0.42;
+  // leaning book: tilts top-LEFT so its upper corner rests against the last
+  // upright book (x placed so the rotated corner lands on that book's face,
+  // bottom corner grounded on the shelf top at y=1.7575)
+  const leaning = box(0.03, 0.18, 0.15, lambert(0xb86a50), bx + 0.0384, 1.8458, -1.88);
+  leaning.rotation.z = 0.42;
   scene.add(leaning);
   scene.add(box(0.07, 0.02, 0.07, lambert(0x4a4640), 1.22, 1.768, -1.88));
   const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.018, 0.055, 8), lambert(0xe8c33f, { emissive: 0x806820, emissiveIntensity: 0.35 }));
   cup.position.set(1.22, 1.806, -1.88);
   scene.add(cup);
 
-  // sticky notes + wall calendar near the desk (north wall)
-  const stickyColors = [0xf0e060, 0x88d8a0, 0xf0a0b0];
-  const stickyPos: [number, number, number][] = [
-    [0.34, 1.46, -0.12],
-    [0.5, 1.32, 0.14],
-    [0.27, 1.28, 0.05],
+  // sticky notes + wall calendar near the desk (north wall) — same colors,
+  // texts, and tilts as the 2D PC-mode wall props
+  const stickyDefs: { bg: string; lines: string[]; x: number; y: number; rot: number }[] = [
+    { bg: '#f0e060', lines: ['dinner', '@ 7'], x: 0.34, y: 1.46, rot: -0.12 },
+    { bg: '#88d8a0', lines: ['hydrate?'], x: 0.5, y: 1.32, rot: 0.14 },
+    { bg: '#f0a0b0', lines: ['feed', 'goblins'], x: 0.27, y: 1.28, rot: 0.05 },
   ];
-  stickyColors.forEach((c, i) => {
-    const p = stickyPos[i];
-    if (!p) return;
-    const note = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.075), new THREE.MeshLambertMaterial({ color: c }));
-    note.position.set(p[0], p[1], -1.995);
-    note.rotation.z = p[2];
+  for (const s of stickyDefs) {
+    const note = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.075, 0.075),
+      new THREE.MeshLambertMaterial({ map: makeStickyTexture(s.bg, s.lines) }),
+    );
+    note.position.set(s.x, s.y, -1.995);
+    note.rotation.z = s.rot;
     scene.add(note);
-  });
-  const calendar = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.22), lambert(0xe8e2d4));
+  }
+  const calendar = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.17, 0.22),
+    new THREE.MeshLambertMaterial({ map: makeCalendarTexture() }),
+  );
   calendar.position.set(1.66, 1.46, -1.995);
   scene.add(calendar);
-  const calHeader = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.05), lambert(0xa03028));
-  calHeader.position.set(1.66, 1.545, -1.994);
-  scene.add(calHeader);
   const calRing = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.018), lambert(0x4a4640));
   calRing.position.set(1.66, 1.578, -1.994);
   scene.add(calRing);
 
-  // headboard + slippers by the bed
+  // headboard + slippers by the bed (kicked off at slightly drunk angles,
+  // as worn slippers always are)
   scene.add(box(0.95, 0.55, 0.05, lambert(WOOD_DARK), -1.95, 0.45, -1.43));
   for (const [sx, sz, ry] of [
     [-1.36, 0.78, 0.25],
-    [-1.32, 0.95, -0.15],
+    [-1.32, 0.97, -0.45],
   ] as const) {
-    const slipper = box(0.09, 0.045, 0.2, lambert(0x9c4a3c), sx, 0.023, sz);
+    const slipper = makeSlipper(0x9c4a3c);
+    slipper.position.set(sx, 0, sz);
     slipper.rotation.y = ry;
     scene.add(slipper);
-  }
-
-  // glow-in-the-dark ceiling stars
-  const starMat = new THREE.MeshBasicMaterial({ color: 0xb8e8c8 });
-  for (const [gx, gz] of [
-    [-1.5, -1.2],
-    [0.6, -0.9],
-    [1.4, 0.3],
-    [-0.6, 0.5],
-    [0.2, -1.6],
-    [-1.8, 1.0],
-    [1.0, 1.2],
-    [-0.2, -0.1],
-    [1.9, -0.9],
-    [-1.1, -1.7],
-    [2.1, 1.5],
-    [-2.0, -0.3],
-  ] as const) {
-    const star = new THREE.Mesh(new THREE.CircleGeometry(0.016, 5), starMat);
-    star.position.set(gx, 2.595, gz);
-    star.rotation.x = Math.PI / 2;
-    scene.add(star);
   }
 
   // cord for the ceiling lamp
@@ -571,16 +1255,36 @@ export function buildRoom(): Room {
   const lamp = new THREE.PointLight(0xffc878, 14, 0, 1.8);
   lamp.position.set(-0.4, 2.25, -0.2);
   scene.add(lamp);
-  // visible lamp fixture
-  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.16, 12, 1, true), lambert(0xe8c878, { emissive: 0xffc878, emissiveIntensity: 0.6 }));
+  // visible lamp fixture — open cone needs DoubleSide or the inside face
+  // is culled and the shade vanishes when seen from below
+  const shadeMat = lambert(0xe8c878, { emissive: 0xffb868, emissiveIntensity: 0.32 });
+  shadeMat.side = THREE.DoubleSide;
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.16, 24, 1, true), shadeMat);
   shade.position.set(-0.4, 2.38, -0.2);
   scene.add(shade);
+  // dark rim around the shade mouth so it reads as a lamp (not a bright
+  // blob) when viewed from directly underneath
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.16, 0.009, 8, 28),
+    new THREE.MeshBasicMaterial({ color: 0x6a5026 }),
+  );
+  rim.rotation.x = Math.PI / 2;
+  rim.position.set(-0.4, 2.3, -0.2);
+  scene.add(rim);
+  const bulb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.035, 10, 8),
+    new THREE.MeshBasicMaterial({ color: 0xfff2cc }),
+  );
+  bulb.position.set(-0.4, 2.33, -0.2);
+  scene.add(bulb);
   const windowLight = new THREE.PointLight(0x4060a8, 2.2, 3.5, 1.6);
   windowLight.position.set(2.1, 1.6, 0.4);
   scene.add(windowLight);
 
   const setHallLight = (on: boolean): void => {
-    doorwayMat.color.setHex(on ? 0x4a3826 : 0x0a0810);
+    hallLight.intensity = on ? 2.4 : 0;
+    mumFill.intensity = on ? 1.8 : 0;
+    doorTarget = on ? DOOR_OPEN : 0;
   };
 
   return {
@@ -591,7 +1295,8 @@ export function buildRoom(): Room {
     items,
     slots,
     monitorScreen: screen,
-    npcSilhouette: sil,
+    npcSilhouette: mum.group,
+    npcTick: roomTick,
     setHallLight,
     playerSpawn: new THREE.Vector3(-0.6, 0, 0.9),
   };

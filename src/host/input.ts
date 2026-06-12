@@ -23,6 +23,9 @@ export class InputRouter {
 
   private roomCanvas: HTMLElement;
   private disposers: (() => void)[] = [];
+  /** Drop the first mousemove after (re)acquiring pointer lock — Chrome often
+   *  reports a giant bogus delta there, which reads as a camera "jump". */
+  private skipNextMove = false;
 
   constructor(roomCanvas: HTMLElement) {
     this.roomCanvas = roomCanvas;
@@ -54,7 +57,10 @@ export class InputRouter {
         }
         if (isMoveKey(e.code)) this.onMoveKey?.(e.code, true);
       } else {
-        if (e.code === 'Escape' || e.code === 'KeyQ') {
+        // E only — Esc is reserved by the browser for pointer-lock exit and
+        // triggers its re-lock cooldown, which surfaced as a bogus
+        // "Click to resume" pause when standing up from the PC.
+        if (e.code === 'KeyE') {
           e.preventDefault();
           this.onStandUp?.();
         }
@@ -66,10 +72,21 @@ export class InputRouter {
       if (isMoveKey(e.code)) this.onMoveKey?.(e.code, false);
     });
 
+    on('pointerlockchange', () => {
+      this.skipNextMove = true;
+    });
+
     on('mousemove', (e) => {
       if (!this.enabled) return;
       if (this.mode === 'room' && document.pointerLockElement === this.roomCanvas) {
-        this.onLook?.(e.movementX, e.movementY);
+        if (this.skipNextMove) {
+          this.skipNextMove = false;
+          return;
+        }
+        // Clamp residual spikes (legit flicks stay well under this).
+        const dx = Math.max(-180, Math.min(180, e.movementX));
+        const dy = Math.max(-180, Math.min(180, e.movementY));
+        this.onLook?.(dx, dy);
       }
     });
 

@@ -82,7 +82,9 @@ export class Hud {
     const s = Math.max(0, Math.ceil(secondsLeft));
     const m = Math.floor(s / 60);
     const ss = String(s % 60).padStart(2, '0');
-    this.clockEl.textContent = `Dinner in ${m}:${ss}`;
+    this.clockEl.innerHTML =
+      `<span class="hud-clock-cap">DINNER IN</span>` +
+      `<span class="hud-clock-digits">${m}:${ss}</span>`;
     this.clockEl.classList.toggle('hud-clock-late', s <= 90);
   }
 
@@ -102,12 +104,17 @@ export class Hud {
     this.promptEl.innerHTML = '';
     const hint = document.createElement('div');
     hint.className = 'hud-prompt-hint';
-    hint.textContent = 'Respond (1-4):';
+    hint.textContent = 'Mum is waiting — respond (1–4)';
     this.promptEl.appendChild(hint);
     RESPONSE_OPTIONS.forEach((text, i) => {
       const btn = document.createElement('button');
       btn.className = 'hud-prompt-option';
-      btn.textContent = `${i + 1}. ${text}`;
+      const key = document.createElement('span');
+      key.className = 'hud-key';
+      key.textContent = String(i + 1);
+      const label = document.createElement('span');
+      label.textContent = text;
+      btn.append(key, label);
       btn.addEventListener('click', () => this.onPromptClick?.(i + 1));
       this.promptEl.appendChild(btn);
     });
@@ -131,12 +138,27 @@ export class Hud {
   }
 
   setInteractLabel(label: string | null, actionable = true): void {
-    if (label === null) {
+    // While the 1-4 prompt is up it owns that part of the screen; the
+    // interact pill would overlap it (it's refreshed every frame, so it
+    // reappears the moment the prompt closes).
+    if (label === null || this.promptDeadline !== null) {
       this.interactEl.style.display = 'none';
+      return;
+    }
+    this.interactEl.style.display = 'flex';
+    this.interactEl.classList.toggle('hud-interact-passive', !actionable);
+    // Actionable labels arrive as "E — do the thing": render the E as a keycap.
+    const keyed = label.match(/^E — (.*)$/);
+    this.interactEl.innerHTML = '';
+    if (keyed) {
+      const key = document.createElement('span');
+      key.className = 'hud-key';
+      key.textContent = 'E';
+      const text = document.createElement('span');
+      text.textContent = keyed[1] ?? '';
+      this.interactEl.append(key, text);
     } else {
-      this.interactEl.style.display = 'block';
       this.interactEl.textContent = label;
-      this.interactEl.classList.toggle('hud-interact-passive', !actionable);
     }
   }
 

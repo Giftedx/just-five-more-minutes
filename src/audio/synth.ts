@@ -256,6 +256,13 @@ export class AudioSynth {
   }
 
   /** Little success jingle for finishing a chore. */
+  levelUp(): void {
+    if (!this.ready) return;
+    this.tone(880, { type: 'square', dur: 0.08, gain: 0.08 });
+    this.tone(1174, { at: 0.08, dur: 0.1, gain: 0.07 });
+    this.tone(1568, { at: 0.16, dur: 0.14, gain: 0.06 });
+  }
+
   choreDone(): void {
     if (!this.ready) return;
     this.tone(659.25, { type: 'triangle', dur: 0.1, gain: 0.1 });

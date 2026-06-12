@@ -11,9 +11,18 @@ export function showTitle(parent: HTMLElement): { el: HTMLDivElement; begun: Pro
         Unfortunately, the goblins of <em>Mudwick Online</em> aren't going to grind themselves.
       </p>
       <div class="title-controls">
-        <div><b>WASD</b> move &nbsp;·&nbsp; <b>Mouse</b> look &nbsp;·&nbsp; <b>E</b> interact</div>
-        <div><b>Mouse</b> plays Mudwick at the PC &nbsp;·&nbsp; <b>Esc / Q</b> stand up</div>
-        <div><b>1–4</b> answer the voice at the door</div>
+        <div class="row">
+          <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move
+          <span class="sep">·</span> <span class="key">Mouse</span> look
+          <span class="sep">·</span> <span class="key">E</span> interact
+        </div>
+        <div class="row">
+          <span class="key">Mouse</span> plays Mudwick at the PC
+          <span class="sep">·</span> <span class="key">E</span> stand up
+        </div>
+        <div class="row">
+          <span class="key">1</span>–<span class="key">4</span> answer the voice at the door
+        </div>
       </div>
       <button class="title-begin">Click to begin</button>
       <div class="title-footnote">Earn 100 coins before dinner. Also, maybe, tidy up. Your call.</div>

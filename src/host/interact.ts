@@ -162,7 +162,7 @@ export class InteractSystem {
         const carried = this.tracker.carried;
         if (!carried) {
           const def = CHORE_DEFS[interact.accepts];
-          return { label: `${interact.name} (${def.noun}s go here)`, actionable: false };
+          return { label: `${interact.name} (${def.plural} go here)`, actionable: false };
         }
         const carriedName = this.carriedName();
         if (carried.chore !== interact.accepts) {

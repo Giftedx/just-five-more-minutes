@@ -31,10 +31,12 @@ body {
   align-items: center;
   /* bottom-anchored: fitCrt sets padding-bottom so the stand lands on the desk */
   justify-content: flex-end;
+  /* warm lamp-lit wall matching the 3D room's north wall, with a faint cool
+     spill from the window off to the right */
   background:
-    radial-gradient(ellipse at 28% 10%, rgba(255, 196, 110, 0.16), transparent 52%),
-    radial-gradient(ellipse at 97% 36%, rgba(90, 130, 220, 0.11), transparent 38%),
-    radial-gradient(ellipse at center, #271e15 0%, #0a0810 80%);
+    radial-gradient(ellipse at 50% -12%, rgba(255, 196, 110, 0.3), transparent 58%),
+    radial-gradient(ellipse at 100% 32%, rgba(110, 145, 220, 0.1), transparent 36%),
+    radial-gradient(ellipse at 50% 30%, #a87c54 0%, #8a6342 45%, #604529 78%, #3d2c1b 100%);
 }
 
 .crt-wrap::before {
@@ -45,7 +47,7 @@ body {
   right: 0;
   bottom: 0;
   height: 17%;
-  background: linear-gradient(to bottom, #7a5a38 0%, #4a3518 55%, #2a1e0e 100%);
+  background: linear-gradient(to bottom, #956a40 0%, #644424 55%, #38260f 100%);
   border-top: 1px solid rgba(255, 206, 130, 0.22);
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
 }
@@ -65,7 +67,7 @@ body {
   bottom: 9%;
   left: 50%;
   transform: translateX(-50%);
-  width: 460px;
+  width: calc(var(--crt-half, 350px) * 2.3);
   height: 30px;
   background: radial-gradient(ellipse, rgba(0, 0, 0, 0.45), transparent 68%);
 }
@@ -75,8 +77,8 @@ body {
   bottom: 1.6%;
   left: 50%;
   transform: translateX(-50%) perspective(340px) rotateX(38deg);
-  width: 400px;
-  height: 86px;
+  width: calc(var(--crt-half, 350px) * 1.143);
+  height: calc(var(--crt-half, 350px) * 0.246);
   border-radius: 8px;
   background: linear-gradient(to bottom, #d8d0c0, #a89e8c);
   box-shadow:
@@ -113,9 +115,9 @@ body {
 .crt-mouse {
   position: absolute;
   bottom: 2.4%;
-  left: calc(50% + 252px);
-  width: 38px;
-  height: 52px;
+  left: calc(50% + var(--crt-half, 350px) * 0.751); /* centered on the mousepad */
+  width: calc(var(--crt-half, 350px) * 0.109);
+  height: calc(var(--crt-half, 350px) * 0.149);
   border-radius: 19px 19px 17px 17px;
   background: linear-gradient(155deg, #d8d0c0 0%, #b0a694 60%, #8e8472 100%);
   box-shadow:
@@ -171,129 +173,186 @@ body {
 
 /* sticky notes — same colors/layout as the 3D wall: yellow high, green
    lower-right, pink lower-left (all left of the monitor) */
+/* Wall props use the exact 3D coordinates: positions are meter offsets from
+   the monitor center (x) and the monitor top edge y=1.2m (y), scaled by the
+   --wall px/m variable. Note centers: yellow (-0.56, 1.46), green (-0.40,
+   1.32), pink (-0.63, 1.28); notes are 0.075m squares. */
 .crt-wall-note {
   position: absolute;
-  bottom: calc(var(--crt-top, 540px) - 150px);
-  left: calc(50% - var(--crt-half, 350px) - 130px);
-  width: 58px;
-  height: 58px;
-  padding: 8px 5px;
+  /* Seated sightline: the notes flank the monitor's upper half (the bezel
+     towers over the seated eye, which sits at note height in 3D). */
+  bottom: calc(var(--crt-top, 540px) - var(--wall, 420px) * 0.22);
+  left: calc(50% - var(--crt-half, 350px) - var(--wall, 420px) * 0.23);
+  box-sizing: border-box;
+  width: calc(var(--wall, 420px) * 0.075);
+  height: calc(var(--wall, 420px) * 0.075);
+  padding: calc(var(--wall, 420px) * 0.009) calc(var(--wall, 420px) * 0.006);
   background: linear-gradient(170deg, #f0e060 0%, #e3d272 100%);
   transform: rotate(-7deg);
   box-shadow: 0 3px 7px rgba(0, 0, 0, 0.45);
-  font: 400 11px/1.2 'Segoe Print', 'Comic Sans MS', cursive;
+  font-family: 'Segoe Print', 'Comic Sans MS', cursive;
+  font-size: calc(var(--wall, 420px) * 0.0185);
+  line-height: 1.2;
   color: #4a4030;
   text-align: center;
-  filter: brightness(0.72);
+  filter: brightness(0.9);
 }
 
 .crt-wall-note-2 {
-  bottom: calc(var(--crt-top, 540px) - 218px);
-  left: calc(50% - var(--crt-half, 350px) - 68px);
+  bottom: calc(var(--crt-top, 540px) - var(--wall, 420px) * 0.365);
+  left: calc(50% - var(--crt-half, 350px) - var(--wall, 420px) * 0.065);
   transform: rotate(8deg);
   background: linear-gradient(170deg, #88d8a0 0%, #79c28e 100%);
 }
 
 .crt-wall-note-3 {
-  bottom: calc(var(--crt-top, 540px) - 224px);
-  left: calc(50% - var(--crt-half, 350px) - 168px);
+  bottom: calc(var(--crt-top, 540px) - var(--wall, 420px) * 0.405);
+  left: calc(50% - var(--crt-half, 350px) - var(--wall, 420px) * 0.3);
   transform: rotate(3deg);
   background: linear-gradient(170deg, #f0a0b0 0%, #df8d9e 100%);
 }
 
 .crt-wall-calendar {
   position: absolute;
-  bottom: calc(var(--crt-top, 540px) - 170px);
-  left: calc(50% + var(--crt-half, 350px) + 78px);
-  width: 74px;
-  height: 96px;
+  /* 3D calendar: 0.17 x 0.22m at (+0.76, 1.46) — its center aligns with the
+     yellow note's, matching the room */
+  bottom: calc(var(--crt-top, 540px) - var(--wall, 420px) * 0.293);
+  left: calc(50% + var(--crt-half, 350px) + var(--wall, 420px) * 0.1);
+  width: calc(var(--wall, 420px) * 0.17);
+  height: calc(var(--wall, 420px) * 0.22);
   background:
-    repeating-linear-gradient(to right, transparent 0 17px, rgba(90, 80, 64, 0.35) 17px 18px) 0 38px / 100% 58px no-repeat,
-    repeating-linear-gradient(to bottom, transparent 0 13px, rgba(90, 80, 64, 0.35) 13px 14px) 0 38px / 100% 58px no-repeat,
-    linear-gradient(to bottom, #a03028 0 22px, #ddd6c4 22px 100%);
+    repeating-linear-gradient(
+        to right,
+        transparent 0 calc(var(--wall, 420px) * 0.0207),
+        rgba(90, 80, 64, 0.4) calc(var(--wall, 420px) * 0.0207) calc(var(--wall, 420px) * 0.0207 + 1px)
+      )
+      calc(var(--wall, 420px) * 0.0125) calc(var(--wall, 420px) * 0.0668) / calc(var(--wall, 420px) * 0.1449)
+      calc(var(--wall, 420px) * 0.1364) no-repeat,
+    repeating-linear-gradient(
+        to bottom,
+        transparent 0 calc(var(--wall, 420px) * 0.0263),
+        rgba(90, 80, 64, 0.4) calc(var(--wall, 420px) * 0.0263) calc(var(--wall, 420px) * 0.0263 + 1px)
+      )
+      calc(var(--wall, 420px) * 0.0125) calc(var(--wall, 420px) * 0.0668) / calc(var(--wall, 420px) * 0.1449)
+      calc(var(--wall, 420px) * 0.1364) no-repeat,
+    linear-gradient(to bottom, #a03028 0 23%, #ddd6c4 23% 100%);
   transform: rotate(1.5deg);
   box-shadow: 0 3px 7px rgba(0, 0, 0, 0.45);
-  font: 700 10px/22px 'Segoe UI', sans-serif;
-  letter-spacing: 3px;
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: calc(var(--wall, 420px) * 0.018);
+  line-height: calc(var(--wall, 420px) * 0.05);
+  letter-spacing: 4px;
   color: #efe6cf;
   text-align: center;
-  filter: brightness(0.72);
+  filter: brightness(0.9);
 }
 
 .crt-wall-calendar::before {
   /* binder ring, as on the 3D calendar */
   content: '';
   position: absolute;
-  top: -6px;
+  top: calc(var(--wall, 420px) * -0.009);
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
-  height: 8px;
+  width: calc(var(--wall, 420px) * 0.05);
+  height: calc(var(--wall, 420px) * 0.018);
   border-radius: 3px;
   background: #4a4640;
 }
 
 /* shelf with books + trophy, directly above the monitor (as in the 3D room) */
+/* All shelf metrics are the exact 3D dimensions (meters) times the --wall
+   px/m scale set by fitCrt, so proportions always match the room. */
 .crt-shelf {
   position: absolute;
-  bottom: calc(var(--crt-top, 540px) + 26px);
+  bottom: calc(var(--crt-top, 540px) + 16px);
   left: 50%;
   transform: translateX(-50%);
-  width: calc(var(--crt-half, 350px) * 1.2);
+  width: calc(var(--wall, 420px) * 0.92);
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  gap: 4px;
-  border-bottom: 9px solid #6a4e30;
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
-  filter: brightness(0.8);
+  justify-content: flex-start;
+  /* books start 11% in from the left end, exactly as in the 3D room */
+  padding-left: 11%;
+  gap: calc(var(--wall, 420px) * 0.012);
+  border-bottom: calc(var(--wall, 420px) * 0.035) solid #7a5a38;
+  /* the lamp sits behind the seated player: books read darker and warmer
+     than their raw colors, as in the 3D room */
+  filter: brightness(0.84) saturate(0.92);
+}
+
+.crt-shelf::after {
+  /* board depth: lit top face, shadowed front face (like the 3D board) */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--wall, 420px) * -0.035);
+  height: calc(var(--wall, 420px) * 0.035);
+  background: linear-gradient(to bottom, #9c7144 0 26%, #6e4e2c 26% 100%);
+  box-shadow:
+    0 6px 10px rgba(0, 0, 0, 0.4),
+    inset 6px 0 8px rgba(0, 0, 0, 0.25),
+    inset -6px 0 8px rgba(0, 0, 0, 0.25);
 }
 
 .crt-book {
   display: block;
   border-radius: 2px 2px 0 0;
-  box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.35);
+  box-shadow: inset -3px 0 4px rgba(0, 0, 0, 0.35);
 }
 
 .crt-book-lean {
-  width: 9px;
-  height: 48px;
-  background: #b86a50;
-  transform: rotate(-24deg) translate(7px, 3px);
+  width: calc(var(--wall, 420px) * 0.03);
+  height: calc(var(--wall, 420px) * 0.18);
+  background: linear-gradient(to right, #c47a5e 0 40%, #b86a50 40% 100%);
+  /* top-left lean: rotating about the bottom-left corner swings the top over
+     by sin(24deg)*height = 0.073*wall; shift right so the top corner lands
+     exactly on the purple book's face (0.073 - 0.012 gap = 0.061) */
+  transform: translate(calc(var(--wall, 420px) * 0.061), 3px) rotate(-24deg);
   transform-origin: bottom left;
 }
 
 .crt-trophy {
   display: block;
-  width: 24px;
-  height: 32px;
-  margin-left: 16px;
-  background: linear-gradient(to bottom, #f0d060 0%, #e8c33f 55%, #4a4640 80%, #4a4640 100%);
-  clip-path: polygon(12% 0, 88% 0, 72% 48%, 58% 58%, 58% 74%, 78% 100%, 22% 100%, 42% 74%, 42% 58%, 28% 48%);
+  width: calc(var(--wall, 420px) * 0.07);
+  height: calc(var(--wall, 420px) * 0.075);
+  /* trophy sits near the right end of the shelf, as in 3D */
+  margin-left: auto;
+  margin-right: 11%;
+  /* shaded gold cup (lit from the left, like the 3D cylinder) on a dark base */
+  background:
+    linear-gradient(100deg, #f4d96a 0%, #e8c33f 48%, #c9a52f 100%) 0 0 / 100% 72% no-repeat,
+    linear-gradient(#4a4640, #3c3833);
+  clip-path: polygon(13% 0, 87% 0, 74% 72%, 100% 72%, 100% 100%, 0 100%, 0 72%, 26% 72%);
 }
 
 /* desk chore items mirrored from the 3D room (synced with the tracker) */
+/* Desk chore items, sized from the real 3D mugs (0.08m wide x 0.09m tall):
+   front-of-desk items are close to the seated eye, so they render large;
+   the rear pair (green mug, wrapper) sits deeper and therefore smaller. */
 .crt-mug {
   position: absolute;
-  width: 34px;
-  height: 38px;
-  border-radius: 5px 5px 8px 8px;
+  width: calc(var(--crt-half, 350px) * 0.17);
+  height: calc(var(--crt-half, 350px) * 0.2);
+  border-radius: 8px 8px 14px 14px;
   z-index: 2;
   box-shadow:
-    inset -6px -4px 8px rgba(0, 0, 0, 0.3),
-    inset 0 3px 0 rgba(255, 255, 255, 0.25),
-    0 5px 7px rgba(0, 0, 0, 0.4);
+    inset calc(var(--crt-half, 350px) * -0.03) -6px 12px rgba(0, 0, 0, 0.3),
+    inset 0 4px 0 rgba(255, 255, 255, 0.18),
+    0 7px 10px rgba(0, 0, 0, 0.4);
 }
 
 .crt-mug::after {
   /* handle */
   content: '';
   position: absolute;
-  top: 7px;
-  right: -13px;
-  width: 16px;
-  height: 18px;
-  border: 5px solid;
+  top: 16%;
+  right: calc(var(--crt-half, 350px) * -0.062);
+  width: 42%;
+  height: 46%;
+  border: calc(var(--crt-half, 350px) * 0.022) solid;
   border-color: inherit;
   border-radius: 50%;
   clip-path: inset(0 0 0 50%);
@@ -301,35 +360,42 @@ body {
 
 .crt-mug-blue {
   bottom: 4%;
-  left: calc(50% - var(--crt-half, 350px) - 36px);
+  left: calc(50% - var(--crt-half, 350px) * 1.22);
   background: linear-gradient(160deg, #4c82a8 0%, #3c6e8f 60%, #2e5670 100%);
   border-color: #3c6e8f;
 }
 
 .crt-mug-red {
   bottom: 3.6%;
-  left: calc(50% + var(--crt-half, 350px) - 4px);
-  background: linear-gradient(160deg, #a64c62 0%, #8f3c50 60%, #702e3e 100%);
+  left: calc(50% + var(--crt-half, 350px) * 1.03);
+  background: linear-gradient(160deg, #b04458 0%, #8f3c50 60%, #66293a 100%);
   border-color: #8f3c50;
 }
 
 .crt-mug-green.crt-mug-rear {
-  width: 26px;
-  height: 29px;
+  /* deeper on the desk: ~60% of the front mugs' apparent size, placed just
+     past the right end of the CRT base slab */
+  width: calc(var(--crt-half, 350px) * 0.105);
+  height: calc(var(--crt-half, 350px) * 0.122);
   bottom: 12.6%;
   z-index: 0;
-  left: calc(50% + var(--crt-half, 350px) - 8px);
+  left: calc(50% + var(--crt-half, 350px) * 1.09);
   background: linear-gradient(160deg, #5aa64c 0%, #4a8f3c 60%, #3a702e 100%);
   border-color: #4a8f3c;
   filter: brightness(0.85);
 }
 
+.crt-mug-green.crt-mug-rear::after {
+  right: calc(var(--crt-half, 350px) * -0.038);
+  border-width: calc(var(--crt-half, 350px) * 0.014);
+}
+
 .crt-wrapper {
   position: absolute;
   bottom: 12.8%;
-  left: calc(50% - var(--crt-half, 350px) - 42px);
-  width: 26px;
-  height: 17px;
+  left: calc(50% - var(--crt-half, 350px) * 1.22);
+  width: calc(var(--crt-half, 350px) * 0.126);
+  height: calc(var(--crt-half, 350px) * 0.057);
   z-index: 0;
   background: linear-gradient(150deg, #9ce85c 0%, #8ad84a 55%, #6cb036 100%);
   clip-path: polygon(8% 42%, 32% 4%, 78% 16%, 96% 58%, 70% 96%, 22% 86%);
@@ -339,9 +405,11 @@ body {
 .crt-mousepad {
   position: absolute;
   bottom: 1.7%;
-  left: calc(50% + 196px);
-  width: 112px;
-  height: 60px;
+  /* keyboard's perspective tilt widens its bottom edge to ~0.62*half from
+     center; keep the pad fully clear of it */
+  left: calc(50% + var(--crt-half, 350px) * 0.646);
+  width: calc(var(--crt-half, 350px) * 0.32);
+  height: calc(var(--crt-half, 350px) * 0.171);
   border-radius: 9px;
   background: linear-gradient(to bottom, #404b58 0%, #343e49 60%, #2a323b 100%);
   box-shadow: 0 5px 9px rgba(0, 0, 0, 0.4);
@@ -478,35 +546,37 @@ body {
 }
 
 .crt-stand {
+  /* CRT slab base, slightly wider than the shell — exactly like the 3D
+     monitor's 0.54m base under its 0.5m shell (no LCD neck/foot) */
   position: relative;
   z-index: 1;
-  width: 280px;
-  height: 34px;
+  width: calc(var(--crt-half, 350px) * 2.12);
+  height: 30px;
+  margin-top: -2px;
+  border-radius: 3px 3px 9px 9px;
+  background: linear-gradient(to bottom, #c4bcac 0%, #a89e8c 55%, #7c7260 100%);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .crt-stand::before {
-  /* neck */
+  /* shallow front recess line, as on a real CRT plinth */
   content: '';
   position: absolute;
-  inset: 0 40px 7px 40px;
-  background: linear-gradient(to bottom, #b0a692 0%, #837a66 100%);
-  clip-path: polygon(16% 0, 84% 0, 100% 100%, 0 100%);
+  left: 8%;
+  right: 8%;
+  top: 11px;
+  height: 7px;
+  border-radius: 3px;
+  background: rgba(60, 52, 40, 0.18);
 }
 
-.crt-stand::after {
-  /* base foot resting on the desk */
-  content: '';
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 0;
-  height: 9px;
-  border-radius: 4px 4px 7px 7px;
-  background: linear-gradient(to bottom, #9c9280 0%, #6a624f 100%);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-}
-
-/* ---------- HUD overlay ---------- */
+/* ---------- HUD overlay ----------
+   Art direction: warm dark-glass panels with gold trim for "game" info, and
+   diegetic paper (sticky notes) for the domestic side. One family, two
+   voices — Mudwick speaks in gold, mum speaks in stationery. */
 
 .hud {
   position: absolute;
@@ -516,18 +586,49 @@ body {
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
+.hud-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: linear-gradient(to bottom, #4a3c24, #2c2212);
+  border: 1px solid rgba(255, 214, 130, 0.55);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #ffd970;
+  font: 700 12px 'Segoe UI', system-ui, sans-serif;
+  flex: none;
+}
+
 .hud-objective {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 18px;
+  left: 18px;
   max-width: 360px;
-  background: rgba(14, 11, 8, 0.78);
-  border: 1px solid rgba(232, 195, 63, 0.45);
-  color: #ffd970;
-  padding: 8px 14px;
-  border-radius: 9px;
-  font-size: 14px;
+  background: linear-gradient(165deg, rgba(34, 24, 13, 0.88), rgba(18, 13, 8, 0.88));
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(232, 195, 63, 0.35);
+  border-left: 3px solid #e8c33f;
+  color: #ffe9b0;
+  padding: 9px 14px 10px;
+  border-radius: 10px;
+  font-size: 13.5px;
   font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.hud-objective::before {
+  content: 'OBJECTIVE';
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: #b8954a;
+  margin-bottom: 3px;
 }
 
 .hud-flash {
@@ -535,76 +636,134 @@ body {
 }
 
 @keyframes hudflash {
-  0% { background: rgba(232, 195, 63, 0.85); color: #1a1408; }
-  100% { background: rgba(14, 11, 8, 0.78); color: #ffd970; }
+  0% { background: rgba(232, 195, 63, 0.9); color: #1a1408; }
+  100% { background: linear-gradient(165deg, rgba(34, 24, 13, 0.88), rgba(18, 13, 8, 0.88)); color: #ffe9b0; }
 }
 
+/* chores: mum's requests arrive as sticky notes, same paper as the wall */
 .hud-chores {
   position: absolute;
-  top: 62px;
-  left: 16px;
+  top: 86px;
+  left: 18px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 10px;
 }
 
 .hud-chore {
-  background: rgba(14, 11, 8, 0.78);
-  border: 1px solid rgba(140, 220, 140, 0.4);
-  color: #b8f0b8;
-  padding: 6px 12px;
-  border-radius: 9px;
-  font-size: 13px;
-  font-weight: 600;
+  position: relative;
+  background: linear-gradient(172deg, #f0e060 0%, #e0cf64 100%);
+  color: #4a4030;
+  padding: 9px 14px 10px;
+  font: 600 13px 'Segoe Print', 'Comic Sans MS', cursive;
+  transform: rotate(-1.6deg);
+  box-shadow: 2px 4px 9px rgba(0, 0, 0, 0.45);
+  animation: chorein 0.35s ease-out;
 }
 
+.hud-chore:nth-child(even) {
+  transform: rotate(1.2deg);
+  background: linear-gradient(172deg, #8fdca6 0%, #7cc792 100%);
+  color: #2c4434;
+}
+
+.hud-chore:nth-child(3n) {
+  background: linear-gradient(172deg, #f0a8b6 0%, #de93a2 100%);
+  color: #4c2830;
+}
+
+.hud-chore::before {
+  /* bit of tape holding the note up */
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 34px;
+  height: 11px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: rgba(255, 252, 240, 0.4);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes chorein {
+  from { transform: translateY(-8px) rotate(-4deg); opacity: 0; }
+}
+
+/* clock: a little LED alarm clock pinned top-right */
 .hud-clock {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  background: rgba(14, 11, 8, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #e8e2d4;
-  padding: 8px 14px;
-  border-radius: 9px;
-  font-size: 15px;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  background: linear-gradient(to bottom, #241c12, #120d07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 7px 16px 8px;
+  border-radius: 10px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.hud-clock-cap {
+  font-size: 8.5px;
   font-weight: 700;
+  letter-spacing: 2.5px;
+  color: #8a7a5c;
+}
+
+.hud-clock-digits {
+  font: 700 21px Consolas, 'Courier New', monospace;
   font-variant-numeric: tabular-nums;
+  color: #8aff96;
+  text-shadow: 0 0 8px rgba(110, 255, 130, 0.55);
+  letter-spacing: 1px;
+}
+
+.hud-clock-late .hud-clock-digits {
+  color: #ff7a5a;
+  text-shadow: 0 0 9px rgba(255, 110, 70, 0.65);
 }
 
 .hud-clock-late {
-  color: #ff9a6a;
-  border-color: rgba(255, 130, 80, 0.55);
+  border-color: rgba(255, 130, 80, 0.5);
   animation: clockpulse 1s ease-in-out infinite;
 }
 
 @keyframes clockpulse {
-  50% { background: rgba(120, 40, 16, 0.8); }
+  50% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 90, 40, 0.35); }
 }
 
+/* subtitles: mum's voice, bottom center */
 .hud-subtitle {
   position: absolute;
-  bottom: 9%;
+  bottom: 8%;
   left: 50%;
   transform: translateX(-50%);
   max-width: min(680px, 80vw);
-  background: rgba(10, 8, 6, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(165deg, rgba(30, 22, 13, 0.92), rgba(14, 10, 6, 0.92));
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 218, 150, 0.22);
   color: #f5edd8;
-  padding: 10px 18px;
-  border-radius: 10px;
+  padding: 11px 22px 13px;
+  border-radius: 12px;
   font-size: 17px;
+  line-height: 1.45;
   text-align: center;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
 }
 
 .hud-subtitle::before {
-  content: 'MUM (from the doorway)';
+  content: 'MUM · from the doorway';
   display: block;
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: #b8a880;
-  margin-bottom: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  color: #d8a855;
+  margin-bottom: 4px;
 }
 
 .hud-toast {
@@ -612,15 +771,24 @@ body {
   bottom: 22%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(20, 30, 16, 0.85);
-  border: 1px solid rgba(140, 220, 140, 0.45);
+  background: linear-gradient(165deg, rgba(26, 38, 20, 0.92), rgba(14, 22, 11, 0.92));
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(140, 220, 140, 0.4);
   color: #c8f0c0;
-  padding: 7px 16px;
-  border-radius: 9px;
+  padding: 8px 18px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
+.hud-toast::before {
+  content: '✓  ';
+  color: #8be86b;
+  font-weight: 800;
+}
+
+/* the 1-4 response card */
 .hud-prompt {
   position: absolute;
   bottom: 17%;
@@ -628,47 +796,65 @@ body {
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  background: rgba(10, 8, 6, 0.88);
+  gap: 6px;
+  min-width: 300px;
+  background: linear-gradient(168deg, rgba(32, 23, 13, 0.94), rgba(14, 10, 6, 0.94));
+  backdrop-filter: blur(6px);
   border: 1px solid rgba(232, 195, 63, 0.4);
-  padding: 10px 14px;
-  border-radius: 10px;
+  padding: 12px 14px 12px;
+  border-radius: 13px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
   pointer-events: auto;
+  animation: promptin 0.25s ease-out;
+}
+
+@keyframes promptin {
+  from { transform: translate(-50%, 10px); opacity: 0; }
 }
 
 .hud-prompt-hint {
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  color: #b8a880;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #d8a855;
+  margin-bottom: 2px;
 }
 
 .hud-prompt-option {
-  background: rgba(60, 48, 28, 0.85);
-  border: 1px solid rgba(232, 195, 63, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(to bottom, rgba(72, 56, 30, 0.75), rgba(50, 38, 20, 0.75));
+  border: 1px solid rgba(232, 195, 63, 0.28);
   color: #ffe9b0;
   font: 600 14px 'Segoe UI', system-ui, sans-serif;
-  padding: 6px 12px;
-  border-radius: 7px;
+  padding: 7px 12px 7px 8px;
+  border-radius: 9px;
   text-align: left;
   cursor: pointer;
+  transition: transform 0.1s ease, background 0.12s ease, border-color 0.12s ease;
 }
 
 .hud-prompt-option:hover {
-  background: rgba(110, 86, 40, 0.95);
+  background: linear-gradient(to bottom, rgba(120, 92, 44, 0.95), rgba(86, 64, 30, 0.95));
+  border-color: rgba(255, 220, 130, 0.6);
+  transform: translateX(3px);
 }
 
 .hud-prompt-timer {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 2px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
   overflow: hidden;
+  margin-top: 2px;
 }
 
 .hud-prompt-timer-fill {
   height: 100%;
   width: 100%;
-  background: #e8c33f;
-  border-radius: 2px;
+  background: linear-gradient(to right, #c89a20, #ffd95e);
+  border-radius: 3px;
 }
 
 .hud-interact {
@@ -676,30 +862,37 @@ body {
   bottom: 30%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(10, 8, 6, 0.75);
-  border: 1px solid rgba(255, 220, 140, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(165deg, rgba(30, 22, 13, 0.85), rgba(14, 10, 6, 0.85));
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 220, 140, 0.38);
   color: #ffe9b0;
-  padding: 7px 16px;
-  border-radius: 9px;
+  padding: 8px 16px;
+  border-radius: 11px;
   font-size: 15px;
   font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .hud-interact-passive {
   color: #b8b0a0;
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .hud-crosshair {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  background: rgba(255, 248, 230, 0.9);
+  box-shadow:
+    0 0 4px rgba(0, 0, 0, 0.8),
+    0 0 0 4px rgba(255, 248, 230, 0.12);
 }
 
 /* ---------- title screen ---------- */
@@ -712,41 +905,69 @@ body {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(ellipse at 30% 20%, rgba(255, 180, 90, 0.12), transparent 50%),
+    radial-gradient(ellipse at 28% 18%, rgba(255, 180, 90, 0.14), transparent 50%),
+    radial-gradient(ellipse at 75% 80%, rgba(90, 200, 110, 0.07), transparent 45%),
     radial-gradient(ellipse at center, #1a1622 0%, #0a0810 80%);
 }
 
+.title-screen::before {
+  /* faint scanlines — the whole evening is lit by a CRT, after all */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0 3px,
+    rgba(0, 0, 0, 0.16) 3px 4px
+  );
+  opacity: 0.5;
+}
+
 .title-card {
-  max-width: 560px;
+  position: relative;
+  max-width: 580px;
   text-align: center;
-  padding: 44px 48px;
-  background: rgba(22, 17, 12, 0.92);
-  border: 1px solid rgba(232, 195, 63, 0.25);
-  border-radius: 18px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  padding: 44px 50px 40px;
+  background: linear-gradient(170deg, rgba(30, 23, 14, 0.95), rgba(16, 12, 8, 0.95));
+  border: 1px solid rgba(232, 195, 63, 0.3);
+  border-radius: 20px;
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.65),
+    0 0 60px rgba(232, 195, 63, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  animation: titlein 0.6s ease-out;
+}
+
+@keyframes titlein {
+  from { transform: translateY(14px); opacity: 0; }
 }
 
 .title-kicker {
   font-size: 11px;
-  letter-spacing: 3px;
+  letter-spacing: 4px;
   text-transform: uppercase;
   color: #a89060;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .title-name {
-  font-size: 40px;
-  line-height: 1.05;
-  color: #ffd970;
+  font-size: 44px;
+  line-height: 1.04;
   margin-bottom: 16px;
   font-weight: 800;
+  background: linear-gradient(175deg, #ffe9a8 15%, #ffd970 45%, #c89a20 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 24px rgba(232, 195, 63, 0.18);
 }
 
 .title-premise {
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: #d8d0bc;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .title-premise em {
@@ -760,27 +981,59 @@ body {
   color: #b8b0a0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-bottom: 26px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
 }
 
-.title-controls b {
-  color: #ffe9b0;
+.title-controls .row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.title-controls .key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: linear-gradient(to bottom, #4a3c24, #2c2212);
+  border: 1px solid rgba(255, 214, 130, 0.5);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #ffd970;
+  font: 700 11.5px 'Segoe UI', system-ui, sans-serif;
+}
+
+.title-controls .sep {
+  color: #6a604c;
+  margin: 0 3px;
 }
 
 .title-begin {
   font: 700 17px 'Segoe UI', system-ui, sans-serif;
-  background: linear-gradient(170deg, #e8c33f, #c89a20);
+  background: linear-gradient(170deg, #ffd95e, #c89a20);
   color: #241a06;
   border: none;
-  padding: 13px 38px;
-  border-radius: 11px;
+  padding: 14px 42px;
+  border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 6px 24px rgba(232, 195, 63, 0.25);
+  box-shadow: 0 6px 28px rgba(232, 195, 63, 0.3);
+  animation: beginpulse 2.4s ease-in-out infinite;
+  transition: transform 0.12s ease;
+}
+
+@keyframes beginpulse {
+  50% { box-shadow: 0 6px 40px rgba(232, 195, 63, 0.5); }
 }
 
 .title-begin:hover {
   filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .title-footnote {
@@ -804,33 +1057,57 @@ body {
 
 .sc-card {
   width: min(520px, 92vw);
-  background: #efe6cf;
+  /* ruled paper with a red margin line, like it was torn from a pad */
+  background:
+    linear-gradient(to right, transparent 0 42px, rgba(190, 80, 70, 0.35) 42px 43px, transparent 43px),
+    repeating-linear-gradient(to bottom, transparent 0 27px, rgba(120, 140, 170, 0.16) 27px 28px),
+    #efe6cf;
   color: #2a241a;
   font-family: 'Courier New', monospace;
-  padding: 30px 36px;
-  border-radius: 4px;
+  padding: 30px 36px 30px 56px;
+  border-radius: 3px;
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8);
   position: relative;
+  transform: rotate(-0.4deg);
   animation: cardin 0.45s ease-out;
 }
 
+.sc-card::after {
+  /* coffee ring — someone reviewed this report over a brew */
+  content: '';
+  position: absolute;
+  bottom: 64px;
+  right: 30px;
+  width: 64px;
+  height: 58px;
+  border-radius: 50%;
+  border: 7px solid rgba(150, 105, 50, 0.16);
+  filter: blur(0.6px);
+  pointer-events: none;
+}
+
 @keyframes cardin {
-  from { transform: translateY(26px) rotate(-0.5deg); opacity: 0; }
-  to { transform: none; opacity: 1; }
+  from { transform: translateY(26px) rotate(-2deg); opacity: 0; }
+  to { transform: rotate(-0.4deg); opacity: 1; }
 }
 
 .sc-stamp {
   position: absolute;
   top: 20px;
   right: 26px;
-  border: 3px solid #a03028;
+  border: 3px double #a03028;
   color: #a03028;
   font-weight: 700;
   letter-spacing: 2px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   transform: rotate(8deg);
   font-size: 13px;
   opacity: 0.85;
+  animation: stampin 0.4s cubic-bezier(0.2, 2.2, 0.4, 1) 0.35s backwards;
+}
+
+@keyframes stampin {
+  from { transform: rotate(8deg) scale(2.2); opacity: 0; }
 }
 
 .sc-title {
@@ -948,6 +1225,12 @@ body {
   background: rgba(8, 6, 10, 0.72);
   color: #f5edd8;
   font: 600 22px 'Segoe UI', system-ui, sans-serif;
+  /* Dim the world but let the VOL slider (and canvas clicks) stay live. */
+  pointer-events: none;
+}
+
+.pause-overlay-hint {
+  pointer-events: auto;
   cursor: pointer;
 }
 
@@ -971,7 +1254,8 @@ body {
   position: absolute;
   bottom: 14px;
   right: 16px;
-  z-index: 25;
+  z-index: 35;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 7px;

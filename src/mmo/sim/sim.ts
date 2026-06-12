@@ -19,8 +19,11 @@ import type {
   MenuOption,
   PlayerState,
   Point,
+  Quest,
+  QuestKind,
   SimEvent,
   SimStats,
+  SkillName,
   TileThing,
   Tree,
 } from './types';
@@ -37,13 +40,32 @@ export const COIN_OBJECTIVE = 100;
 export const GOBLIN_DROP_MIN = 4;
 export const GOBLIN_DROP_MAX = 9;
 const GOBLIN_DEAGGRO_DIST = 7;
-const CHOP_CHANCE = 0.5;
+const BASE_CHOP_CHANCE = 0.42;
+
+/** XP needed scales quadratically — close enough to feel like the real grind. */
+export function levelOf(xp: number): number {
+  return 1 + Math.floor(Math.sqrt(xp / 28));
+}
+
+export function xpForLevel(level: number): number {
+  return (level - 1) ** 2 * 28;
+}
+
+function chopChance(wcLevel: number): number {
+  return Math.min(0.88, BASE_CHOP_CHANCE + (wcLevel - 1) * 0.045);
+}
+
+function playerMaxHit(atkLevel: number): number {
+  return Math.min(6, 2 + Math.floor((atkLevel - 1) / 2));
+}
 
 export class MudwickSim {
   readonly player: PlayerState;
   readonly goblins: Goblin[];
   readonly trees: Tree[];
   readonly stats: SimStats;
+  /** Trader Wyn's rotating side contract — bonus gp for grinding. */
+  quest: Quest;
   tick = 0;
 
   private rng: Rng;
@@ -59,6 +81,7 @@ export class MudwickSim {
       inventory: [],
       path: [],
       intent: null,
+      skills: { woodcutting: 0, attack: 0, foraging: 0 },
     };
     this.goblins = GOBLIN_SPAWNS.map((p, i) => ({
       id: `goblin${i}`,
@@ -83,7 +106,74 @@ export class MudwickSim {
       logsSold: 0,
       flaxSold: 0,
       objectiveHit: false,
+      killStreak: 0,
+      bestStreak: 0,
     };
+    this.quest = this.rollQuest();
+  }
+
+  private rollQuest(): Quest {
+    const kinds: QuestKind[] = ['logs', 'flax', 'goblins'];
+    const kind = kinds[this.rng.int(0, kinds.length - 1)] ?? 'logs';
+    const defs: Record<QuestKind, { target: number; reward: number }> = {
+      logs: { target: 4, reward: 22 },
+      flax: { target: 6, reward: 16 },
+      goblins: { target: 2, reward: 28 },
+    };
+    const d = defs[kind];
+    return { kind, target: d.target, progress: 0, reward: d.reward, claimed: false };
+  }
+
+  private assignQuest(): void {
+    this.quest = this.rollQuest();
+    this.events.push({
+      type: 'questAssigned',
+      kind: this.quest.kind,
+      target: this.quest.target,
+      reward: this.quest.reward,
+    });
+  }
+
+  private grantSkillXp(skill: SkillName, amount: number): void {
+    const before = levelOf(this.player.skills[skill]);
+    this.player.skills[skill] += amount;
+    const after = levelOf(this.player.skills[skill]);
+    if (after > before) {
+      this.events.push({ type: 'levelUp', skill, level: after });
+    }
+  }
+
+  private bumpQuest(kind: QuestKind, amount = 1): void {
+    const q = this.quest;
+    if (q.claimed || q.kind !== kind || q.progress >= q.target) return;
+    q.progress = Math.min(q.target, q.progress + amount);
+    this.events.push({ type: 'questProgress', kind, progress: q.progress, target: q.target });
+    if (q.progress >= q.target) this.events.push({ type: 'questReady' });
+  }
+
+  /** Claim Wyn's side contract at the trader stall. Returns false if not ready. */
+  turnInQuest(): boolean {
+    const q = this.quest;
+    if (q.claimed || q.progress < q.target) return false;
+    this.addCoins(q.reward);
+    q.claimed = true;
+    this.events.push({ type: 'questComplete', reward: q.reward, kind: q.kind });
+    this.assignQuest();
+    return true;
+  }
+
+  questReady(): boolean {
+    return !this.quest.claimed && this.quest.progress >= this.quest.target;
+  }
+
+  questLabel(): string {
+    const q = this.quest;
+    const verbs: Record<QuestKind, string> = {
+      logs: 'Gather logs',
+      flax: 'Pick flax',
+      goblins: 'Slay goblins',
+    };
+    return `${verbs[q.kind]} (${q.progress}/${q.target}) — ${q.reward}gp`;
   }
 
   // ----- queries -------------------------------------------------------
@@ -124,6 +214,7 @@ export class MudwickSim {
     if (ch === 'Y') return { kind: 'trader', pos };
     if (ch === 'b') return { kind: 'bread', pos };
     if (ch === 'c') return { kind: 'campfire', pos };
+    if (ch === 's') return { kind: 'sign', pos };
     if (ch === 'F' || ch === '#') return { kind: 'fence', pos };
     return { kind: 'ground', pos };
   }
@@ -333,10 +424,13 @@ export class MudwickSim {
           return;
         }
         this.events.push({ type: 'chop' });
-        if (this.rng.chance(CHOP_CHANCE)) {
+        const wc = levelOf(this.player.skills.woodcutting);
+        if (this.rng.chance(chopChance(wc))) {
           p.inventory.push('log');
           t.chopped = true;
           t.regrowTick = this.tick + TREE_REGROW_TICKS;
+          this.grantSkillXp('woodcutting', 25);
+          this.bumpQuest('logs');
           this.events.push({ type: 'log' });
           p.intent = null;
         }
@@ -347,6 +441,8 @@ export class MudwickSim {
           this.events.push({ type: 'invFull' });
         } else {
           p.inventory.push('flax');
+          this.grantSkillXp('foraging', 9);
+          this.bumpQuest('flax');
           this.events.push({ type: 'flax' });
         }
         p.intent = null;
@@ -417,7 +513,9 @@ export class MudwickSim {
     if (g.nextAttacker === 'player') {
       const attacking = p.intent?.kind === 'attack' && p.intent.goblinId === g.id;
       if (attacking) {
-        const dmg = this.rng.int(0, 2);
+        const atk = levelOf(this.player.skills.attack);
+        const dmg = this.rng.int(0, playerMaxHit(atk));
+        if (dmg > 0) this.grantSkillXp('attack', dmg * 8);
         this.events.push({ type: 'playerSwing', damage: dmg, goblinId: g.id });
         g.hp -= dmg;
         if (g.hp <= 0) {
@@ -444,8 +542,13 @@ export class MudwickSim {
     g.respawnTick = this.tick + GOBLIN_RESPAWN_TICKS;
     const drop = this.rng.int(GOBLIN_DROP_MIN, GOBLIN_DROP_MAX);
     this.stats.kills++;
-    this.events.push({ type: 'goblinDied', goblinId: g.id, coins: drop });
-    this.addCoins(drop);
+    this.stats.killStreak++;
+    if (this.stats.killStreak > this.stats.bestStreak) this.stats.bestStreak = this.stats.killStreak;
+    const streakBonus = Math.min(5, Math.max(0, this.stats.killStreak - 1)) * 2;
+    this.grantSkillXp('attack', 12);
+    this.bumpQuest('goblins');
+    this.events.push({ type: 'goblinDied', goblinId: g.id, coins: drop, streakBonus });
+    this.addCoins(drop + streakBonus);
     if (this.player.intent?.kind === 'attack' && this.player.intent.goblinId === g.id) {
       this.player.intent = null;
     }
@@ -460,6 +563,7 @@ export class MudwickSim {
     p.path = [];
     p.intent = null;
     this.stats.deaths++;
+    this.stats.killStreak = 0;
     if (away) this.stats.deathsWhileAway++;
     for (const g of this.goblins) g.aggro = false;
     this.events.push({ type: 'playerDied', coinsLost: lost, whileAway: away });
@@ -509,6 +613,8 @@ export function thingName(thing: TileThing): string {
       return 'Bread';
     case 'campfire':
       return 'Campfire';
+    case 'sign':
+      return 'Signpost';
     case 'fence':
       return 'Fence';
     case 'ground':
@@ -532,6 +638,8 @@ export function examineText(thing: TileThing): string {
       return EXAMINE_TEXTS.bread;
     case 'campfire':
       return EXAMINE_TEXTS.campfire;
+    case 'sign':
+      return EXAMINE_TEXTS.sign;
     case 'fence':
       return EXAMINE_TEXTS.fence;
     case 'ground':

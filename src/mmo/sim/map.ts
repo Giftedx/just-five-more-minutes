@@ -9,7 +9,7 @@ export const TILE = 16;
  *   '#' border tree (blocked)   '.' grass        'T' choppable tree
  *   'Y' Trader Wyn              'f' flax         'F' fence
  *   '+' pen gateway (walkable)  'c' campfire     'b' bread table
- *   'g' goblin spawn (walkable)
+ *   's' signpost (walkable)     'g' goblin spawn (walkable)
  */
 export const MAP_ROWS: readonly string[] = [
   '####################',
@@ -20,7 +20,7 @@ export const MAP_ROWS: readonly string[] = [
   '#.......T..........#',
   '#..................#',
   '#..ff.......FFFFFF.#',
-  '#..ff.......F....F.#',
+  '#..ff..s....F....F.#',
   '#..ff.......F.g..F.#',
   '#...........+..g.F.#',
   '#...........F...gF.#',
@@ -66,13 +66,14 @@ export const BREAD_TILE: Point = findTiles('b')[0] ?? { x: 3, y: 13 };
 export const SPAWN_TILE: Point = { x: 4, y: 12 };
 
 export const EXAMINE_TEXTS = {
-  goblin: 'It has a five-year plan.',
-  tree: 'Contains wood, allegedly.',
-  stump: 'Past tense tree.',
-  flax: "The economy's favourite weed.",
-  trader: "He's seen your spreadsheet. He's not impressed.",
-  bread: 'Free healthcare.',
-  campfire: 'Respawn-flavoured warmth.',
-  fence: 'Goblin containment infrastructure. Mostly decorative.',
-  ground: 'Dirt. Premium dirt.',
+  goblin: 'It has a five-year plan. And poor impulse control.',
+  tree: 'Contains wood, allegedly. The economy runs on allegedly.',
+  stump: 'Past tense tree. Give it eight ticks.',
+  flax: "The economy's favourite weed. Wyn pays 2gp. Inflation is a myth.",
+  trader: "He's seen your spreadsheet. He's not impressed. He'll still buy your logs.",
+  bread: 'Free healthcare. Mum would call this enabling.',
+  campfire: 'Respawn-flavoured warmth. Smells like hope and old socks.',
+  sign: 'GOBLIN PEN — enter at own risk. Management accepts no liability.',
+  fence: 'Goblin containment infrastructure. Mostly decorative. Mostly.',
+  ground: 'Dirt. Premium dirt. Some say the real Mudwick was the dirt we walked on.',
 } as const;

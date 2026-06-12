@@ -97,6 +97,13 @@ export class MmoGame {
         const events = this.sim.drainEvents();
         this.renderer.consumeEvents(events, this.nowMs());
         this.onEvents?.(events);
+      } else if (btn === 'quest') {
+        if (this.sim.turnInQuest()) {
+          this.onUiSound?.('confirm');
+          const events = this.sim.drainEvents();
+          this.renderer.consumeEvents(events, this.nowMs());
+          this.onEvents?.(events);
+        }
       } else if (btn === 'done') {
         this.renderer.tradeOpen = false;
         this.onUiSound?.('click');

@@ -22,6 +22,14 @@ export interface GameOptions {
 
 const CHORE_ORDER: readonly ChoreId[] = ['mugs', 'wrappers', 'laundry'];
 
+/** Mum's comeback for each of the four excuses. She has heard them all. */
+const MUM_RETORTS: readonly string[] = [
+  "Mm. Starting the sixty seconds I don't believe in.",
+  "You're in a bedroom, love. The only combat up here is with the laundry.",
+  'The economy survived the Bronze Age collapse. It can survive your dinner.',
+  'So is the washing-up, technically. Historical. Some of it ancient.',
+];
+
 /** Full session: title -> 12 minutes of divided attention -> incident report. */
 export class Game {
   private root: HTMLElement;
@@ -69,6 +77,8 @@ export class Game {
 
     this.wire();
     this.wirePause();
+    // Seeded sessions need the chore chips painted too, not just the tracker.
+    this.refreshChoreChip();
   }
 
   private wirePause(): void {
@@ -100,8 +110,11 @@ export class Game {
     if (show && !this.pauseOverlay) {
       const el = document.createElement('div');
       el.className = 'pause-overlay';
-      el.textContent = 'Click to resume';
-      el.addEventListener('click', () => this.host.requestPointerLock());
+      const hint = document.createElement('span');
+      hint.className = 'pause-overlay-hint';
+      hint.textContent = 'Click to resume';
+      hint.addEventListener('click', () => this.host.requestPointerLock());
+      el.appendChild(hint);
       this.root.appendChild(el);
       this.pauseOverlay = el;
     } else if (!show && this.pauseOverlay) {
@@ -186,6 +199,10 @@ export class Game {
           case 'objectiveHit':
             this.audio.fanfare();
             break;
+          case 'levelUp':
+          case 'questComplete':
+            this.audio.levelUp();
+            break;
           case 'eat':
           case 'flax':
             this.audio.pickup();
@@ -246,7 +263,19 @@ export class Game {
       case 'promptClosed':
         this.hud.closePrompt();
         this.host.router.promptActive = false;
-        if (ev.result === 'answered') this.audio.uiClick();
+        if (ev.result === 'answered') {
+          this.audio.uiClick();
+          // She always gets the last word. Always.
+          const retort = ev.option !== null ? MUM_RETORTS[ev.option - 1] : undefined;
+          if (retort) {
+            const delay = 900 / this.opts.speed;
+            window.setTimeout(() => {
+              if (this.disposed || this.state !== 'playing') return;
+              this.hud.showSubtitle(retort, this.gameNow, 4500 / this.opts.speed);
+              this.audio.npcVoice(Math.min(6, Math.max(3, Math.round(retort.split(' ').length / 2.5))));
+            }, delay);
+          }
+        }
         break;
       case 'sessionEnd':
         this.endSession();

@@ -9,15 +9,17 @@ export interface ChoreDef {
   chip: string;
   /** Item noun for prompts, e.g. "mug". */
   noun: string;
+  /** Plural noun for prompts, e.g. "mugs" (laundry is its own plural). */
+  plural: string;
   /** Where items go, for prompts, e.g. "tray". */
   target: string;
   count: number;
 }
 
 export const CHORE_DEFS: Readonly<Record<ChoreId, ChoreDef>> = {
-  mugs: { chip: 'Mugs', noun: 'mug', target: 'tray', count: 3 },
-  wrappers: { chip: 'Wrappers', noun: 'wrapper', target: 'bin', count: 4 },
-  laundry: { chip: 'Laundry', noun: 'laundry', target: 'basket', count: 3 },
+  mugs: { chip: 'Mugs', noun: 'mug', plural: 'mugs', target: 'tray', count: 3 },
+  wrappers: { chip: 'Wrappers', noun: 'wrapper', plural: 'wrappers', target: 'bin', count: 4 },
+  laundry: { chip: 'Laundry', noun: 'laundry', plural: 'laundry', target: 'basket', count: 3 },
 };
 
 export type ItemState = 'world' | 'carried' | 'placed';

@@ -1,7 +1,15 @@
-import { MAP_H, MAP_W, TILE, tileChar } from '../sim/map';
-import { COIN_OBJECTIVE, MudwickSim, PLAYER_MAX_HP } from '../sim/sim';
-import type { MenuOption, Point, SimEvent } from '../sim/types';
-import { drawSprite, GOBLIN_SPRITE, PLAYER_SPRITE, TRADER_SPRITE } from './sprites';
+import { CAMPFIRE_TILE, MAP_H, MAP_W, TILE, TRADER_TILE, tileChar } from '../sim/map';
+import { COIN_OBJECTIVE, levelOf, MudwickSim, PLAYER_MAX_HP, xpForLevel } from '../sim/sim';
+import type { MenuOption, Point, SimEvent, SkillName } from '../sim/types';
+import {
+  drawSprite,
+  GOBLIN_ANGRY_SPRITE,
+  GOBLIN_SPRITE,
+  PLAYER_ATTACK_SPRITE,
+  PLAYER_SPRITE,
+  TRADER_SPRITE,
+  type Sprite,
+} from './sprites';
 
 export const CANVAS_W = 320;
 export const CANVAS_H = 240;
@@ -15,9 +23,73 @@ interface Hitsplat {
   until: number;
 }
 
-interface Splash {
+interface ChatLine {
+  text: string;
+  color: string;
+  until: number;
+}
+
+/** Rising "+25 Woodcutting" toast, top-right of the viewport. */
+interface XpDrop {
   text: string;
   until: number;
+}
+
+/**
+ * Cosmetic "other players": they wander, they chat nonsense, they cannot be
+ * interacted with in any way. The most authentic MMO experience available.
+ */
+interface Ghost {
+  id: string;
+  name: string;
+  pos: Point;
+  sprite: Sprite;
+  nextMoveAt: number;
+  say: string | null;
+  sayUntil: number;
+  nextSayAt: number;
+}
+
+const GHOST_CHATTER: readonly string[] = [
+  'selling flax 3gp',
+  'free stuff pls',
+  'anyone else hear their mum',
+  'grats',
+  'how do u sit',
+  'buying gf 100gp',
+  'dinner in 10 they said',
+  'wc lvl 4!!!',
+  'goblin pen is NOT safe',
+  'trader wyn scammed me',
+  'f',
+  'nice logs bro',
+  'streak bonus is real',
+  'just 5 more mins',
+  'wyn quest op',
+  'lag??',
+  'brb chores',
+  'ironman btw',
+  'nice hit splat',
+  'where r u goblins',
+];
+
+function recolorPlayer(tunic: string, shade: string, hair: string): Sprite {
+  return {
+    rows: PLAYER_SPRITE.rows,
+    palette: { ...PLAYER_SPRITE.palette, b: tunic, d: shade, h: hair },
+  };
+}
+
+/** XP needed scales quadratically — close enough to feel like the real grind. */
+function skillLabel(skill: SkillName): string {
+  switch (skill) {
+    case 'woodcutting':
+      return 'Woodcutting';
+    case 'attack':
+      return 'Attack';
+    case 'foraging':
+      return 'Foraging';
+  }
 }
 
 interface MenuState {
@@ -69,8 +141,12 @@ export class MmoRenderer {
   private sim: MudwickSim;
   private disp: DispMap = new Map();
   private hitsplats: Hitsplat[] = [];
-  private message: Splash | null = null;
+  private chat: ChatLine[] = [];
+  private xpDrops: XpDrop[] = [];
+  private ghosts: Ghost[] = [];
   private objectiveFlash = 0;
+  private swingUntil = 0;
+  private welcomed = false;
   menu: MenuState | null = null;
   tradeOpen = false;
   /** Mouse position in canvas pixels, or null when the cursor is elsewhere. */
@@ -93,6 +169,59 @@ export class MmoRenderer {
     this.ctx = ctx;
     ctx.imageSmoothingEnabled = false;
     this.buildVignette();
+
+    this.ghosts = [
+      {
+        id: 'ghost0',
+        name: 'xX_Dave_Xx',
+        pos: { x: 6, y: 4 },
+        sprite: recolorPlayer('#8a3c3c', '#66292c', '#2e2218'),
+        nextMoveAt: 0,
+        say: null,
+        sayUntil: 0,
+        nextSayAt: 6000,
+      },
+      {
+        id: 'ghost1',
+        name: 'Brenda1987',
+        pos: { x: 10, y: 5 },
+        sprite: recolorPlayer('#7a3b8f', '#5b2c6b', '#d8b46a'),
+        nextMoveAt: 0,
+        say: null,
+        sayUntil: 0,
+        nextSayAt: 16000,
+      },
+      {
+        id: 'ghost2',
+        name: 'lvl3pkr',
+        pos: { x: 5, y: 10 },
+        sprite: recolorPlayer('#3c6e4a', '#2a4f34', '#8a5a2b'),
+        nextMoveAt: 0,
+        say: null,
+        sayUntil: 0,
+        nextSayAt: 28000,
+      },
+      {
+        id: 'ghost3',
+        name: 'IronMum42',
+        pos: { x: 8, y: 3 },
+        sprite: recolorPlayer('#6a4a8a', '#4a3460', '#d8b46a'),
+        nextMoveAt: 0,
+        say: null,
+        sayUntil: 0,
+        nextSayAt: 22000,
+      },
+      {
+        id: 'ghost4',
+        name: 'GoblinFan99',
+        pos: { x: 14, y: 4 },
+        sprite: recolorPlayer('#8a6a3c', '#6a5028', '#2e2218'),
+        nextMoveAt: 0,
+        say: null,
+        sayUntil: 0,
+        nextSayAt: 34000,
+      },
+    ];
   }
 
   /** Pre-rendered soft dark corners for the world viewport (tube feel). */
@@ -163,6 +292,8 @@ export class MmoRenderer {
             const d = this.disp.get(ev.goblinId) ?? { x: g.pos.x * TILE, y: g.pos.y * TILE };
             this.hitsplats.push({ x: d.x + 8, y: d.y + 8, dmg: ev.damage, until: now + 700 });
           }
+          this.swingUntil = now + 220;
+          if (ev.damage > 0) this.xpDrops.push({ text: `+${ev.damage * 8} Attack`, until: now + 1300 });
           break;
         }
         case 'goblinSwing': {
@@ -174,11 +305,18 @@ export class MmoRenderer {
           break;
         }
         case 'goblinDied': {
-          this.postMessage(`The goblin drops ${ev.coins} coins.`, now);
+          const bonus = ev.streakBonus > 0 ? ` (+${ev.streakBonus}gp streak!)` : '';
+          this.postMessage(`The goblin drops ${ev.coins} coins.${bonus}`, now);
+          this.xpDrops.push({ text: '+12 Attack', until: now + 1300 });
           const g = this.sim.goblinById(ev.goblinId);
           if (g) {
             const d = this.disp.get(ev.goblinId) ?? { x: g.pos.x * TILE, y: g.pos.y * TILE };
-            this.coinPops.push({ x: d.x + 8, y: d.y + 2, text: `+${ev.coins}gp`, until: now + 900 });
+            this.coinPops.push({
+              x: d.x + 8,
+              y: d.y + 2,
+              text: `+${ev.coins + ev.streakBonus}gp`,
+              until: now + 900,
+            });
             this.spawnBurst(d.x + 8, d.y + 8, ['#5f8f3e', '#456b2c', '#9a9a9a'], 6, now, 450);
           }
           break;
@@ -204,6 +342,7 @@ export class MmoRenderer {
           break;
         case 'openTrade':
           this.tradeOpen = true;
+          this.postMessage('"Show me the goods." — Wyn', now, '#9be8e0');
           break;
         case 'chop': {
           // chips fly off the tree under the axe (intent still points at it)
@@ -223,17 +362,129 @@ export class MmoRenderer {
         case 'flax': {
           const d = this.disp.get('player');
           if (d) this.spawnBurst(d.x + 8, d.y + 10, ['#7fa8e8', '#cfe0ff'], 4, now, 500);
+          this.xpDrops.push({ text: '+9 Foraging', until: now + 1300 });
           break;
         }
         case 'log':
+          this.xpDrops.push({ text: '+25 Woodcutting', until: now + 1300 });
+          this.postMessage('You get some logs.', now);
+          break;
+        case 'levelUp':
+          this.postMessage(
+            `Congratulations, you just advanced a ${skillLabel(ev.skill)} level (now ${ev.level}).`,
+            now,
+            '#ffd23f',
+          );
+          break;
+        case 'questAssigned':
+          this.postMessage(
+            `Wyn's contract: ${this.questVerb(ev.kind)} ${ev.target} for ${ev.reward}gp bonus.`,
+            now,
+            '#9be8e0',
+          );
+          break;
+        case 'questProgress':
+          if (ev.progress === ev.target) {
+            this.postMessage('Contract complete — see Trader Wyn!', now, '#8be86b');
+          }
+          break;
+        case 'questReady':
+          break;
+        case 'questComplete':
+          this.postMessage(`Wyn pays ${ev.reward}gp. "Pleasure doing business."`, now, '#ffd23f');
+          break;
         case 'eat':
+          this.postMessage('You eat the bread. It heals some health.', now);
           break;
       }
     }
   }
 
-  postMessage(text: string, now: number): void {
-    this.message = { text, until: now + 3000 };
+  /** Push a line onto the chat log (game messages cream, chatter blue). */
+  postMessage(text: string, now: number, color = '#e8e8e8'): void {
+    this.chat.push({ text, color, until: now + 6000 });
+    if (this.chat.length > 6) this.chat.shift();
+  }
+
+  private questVerb(kind: 'logs' | 'flax' | 'goblins'): string {
+    switch (kind) {
+      case 'logs':
+        return 'gather';
+      case 'flax':
+        return 'pick';
+      case 'goblins':
+        return 'slay';
+    }
+  }
+
+  private postWelcome(now: number): void {
+    this.postMessage('Welcome to Mudwick Online.', now, '#ffd23f');
+    this.postMessage('Left-click to act. Right-click for options.', now);
+    this.postMessage('Earn 100gp before dinner. Wyn has side contracts.', now, '#9be8e0');
+    const q = this.sim.quest;
+    this.postMessage(
+      `Active contract: ${this.questVerb(q.kind)} ${q.target} (${q.reward}gp bonus).`,
+      now,
+      '#9be8e0',
+    );
+  }
+
+  /** Wander + chatter for the cosmetic players. */
+  private updateGhosts(now: number): void {
+    for (const g of this.ghosts) {
+      if (now >= g.nextMoveAt) {
+        g.nextMoveAt = now + 900 + Math.random() * 1500;
+        if (Math.random() < 0.7) {
+          const dirs = [
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+            { x: 1, y: 0 },
+          ];
+          const d = dirs[Math.floor(Math.random() * 4)];
+          if (d) {
+            const nx = g.pos.x + d.x;
+            const ny = g.pos.y + d.y;
+            // stay out of the goblin pen — they're cosmetic, not suicidal
+            const inPen = nx >= 12 && nx <= 17 && ny >= 7 && ny <= 12;
+            if (!inPen && this.sim.walkable(nx, ny)) g.pos = { x: nx, y: ny };
+          }
+        }
+      }
+      if (now >= g.nextSayAt) {
+        g.nextSayAt = now + 16000 + Math.random() * 24000;
+        const line = GHOST_CHATTER[Math.floor(Math.random() * GHOST_CHATTER.length)] ?? 'grats';
+        g.say = line;
+        g.sayUntil = now + 3400;
+        this.postMessage(`${g.name}: ${line}`, now, '#8fb8ff');
+      }
+      if (g.say && now > g.sayUntil) g.say = null;
+    }
+  }
+
+  private drawGhosts(now: number, dtMs: number): void {
+    const ctx = this.ctx;
+    for (const g of this.ghosts) {
+      const d = this.displayed(g.id, g.pos, dtMs);
+      const moving = Math.abs(d.x - g.pos.x * TILE) > 0.5 || Math.abs(d.y - g.pos.y * TILE) > 0.5;
+      const bob = moving && Math.floor(now / 150 + g.pos.x) % 2 === 0 ? 1 : 0;
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(Math.round(d.x) + 3, Math.round(d.y) + 14, 10, 2);
+      drawSprite(ctx, g.sprite, Math.round(d.x) + 2, Math.round(d.y) + 1 - bob);
+      if (g.say) {
+        // classic yellow overhead text
+        ctx.font = '7px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        const cx = Math.round(d.x) + 8;
+        const cy = Math.round(d.y) - 3;
+        ctx.fillStyle = '#241a06';
+        ctx.fillText(g.say, cx + 1, cy + 1);
+        ctx.fillStyle = '#ffe96b';
+        ctx.fillText(g.say, cx, cy);
+        ctx.textAlign = 'left';
+      }
+    }
   }
 
   addClickMarker(canvasX: number, canvasY: number, red: boolean, now: number): void {
@@ -266,19 +517,63 @@ export class MmoRenderer {
     return { x, y };
   }
 
-  /** Trade dialog button under a canvas point: 'log' | 'flax' | 'done' | null. */
-  tradeButtonAt(cx: number, cy: number): 'log' | 'flax' | 'done' | null {
+  /** Trade dialog button under a canvas point: 'log' | 'flax' | 'quest' | 'done' | null. */
+  tradeButtonAt(cx: number, cy: number): 'log' | 'flax' | 'quest' | 'done' | null {
     if (!this.tradeOpen) return null;
-    const bx = 40;
-    const bw = 200;
-    if (cx < bx + 10 || cx > bx + bw - 10) return null;
-    if (cy >= 100 && cy < 118) return 'log';
-    if (cy >= 122 && cy < 140) return 'flax';
-    if (cy >= 144 && cy < 160) return 'done';
+    const L = this.tradeDialogLayout();
+    if (cx < L.btnX || cx > L.btnX + L.btnW) return null;
+    const hit = (by: number) => cy >= by && cy < by + L.btnH;
+    if (L.questBtnY !== null && hit(L.questBtnY)) return 'quest';
+    if (hit(L.logY)) return 'log';
+    if (hit(L.flaxY)) return 'flax';
+    if (hit(L.doneY)) return 'done';
     return null;
   }
 
+  /** Shared trade-dialog geometry so draw + hit tests stay aligned. */
+  private tradeDialogLayout(): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    btnX: number;
+    btnW: number;
+    btnH: number;
+    questBtnY: number | null;
+    questTextY: number;
+    logY: number;
+    flaxY: number;
+    doneY: number;
+  } {
+    const x = 40;
+    const y = 58;
+    const w = 200;
+    const btnX = x + 10;
+    const btnW = w - 20;
+    const btnH = 16;
+    const rowStep = 20;
+
+    let rowY = y + 34;
+    const questReady = this.sim.questReady();
+    const questBtnY = questReady ? rowY : null;
+    const questTextY = rowY + 4;
+    rowY += questReady ? rowStep : 13;
+
+    const logY = rowY;
+    rowY += rowStep;
+    const flaxY = rowY;
+    rowY += rowStep;
+    const doneY = rowY;
+    const h = doneY + btnH + 10 - y;
+
+    return { x, y, w, h, btnX, btnW, btnH, questBtnY, questTextY, logY, flaxY, doneY };
+  }
+
   render(now: number, dtMs: number): void {
+    if (!this.welcomed) {
+      this.welcomed = true;
+      this.postWelcome(now);
+    }
     const ctx = this.ctx;
     const sim = this.sim;
 
@@ -296,6 +591,8 @@ export class MmoRenderer {
 
     this.drawTerrain();
     this.drawStatics(now);
+    this.updateGhosts(now);
+    this.drawGhosts(now, dtMs);
     this.drawGoblins(now, dtMs);
 
     const pMoving =
@@ -303,7 +600,13 @@ export class MmoRenderer {
     const pBob = pMoving && Math.floor(now / 140) % 2 === 0 ? 1 : 0;
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.fillRect(Math.round(pd.x) + 3, Math.round(pd.y) + 14, 10, 2);
-    drawSprite(ctx, PLAYER_SPRITE, Math.round(pd.x) + 2, Math.round(pd.y) + 1 - pBob);
+    const swinging = now < this.swingUntil;
+    drawSprite(
+      ctx,
+      swinging ? PLAYER_ATTACK_SPRITE : PLAYER_SPRITE,
+      Math.round(pd.x) + 2 + (swinging ? 1 : 0),
+      Math.round(pd.y) + 1 - pBob,
+    );
 
     this.drawTreeTops(now);
     this.drawMarkers(now);
@@ -314,7 +617,8 @@ export class MmoRenderer {
 
     if (this.vignette) ctx.drawImage(this.vignette, 0, 0);
     this.drawObjectiveBanner(now);
-    this.drawMessage(now);
+    this.drawChat(now);
+    this.drawXpDrops(now);
     this.drawHoverText();
     this.drawPanel();
     if (this.tradeOpen) this.drawTradeDialog();
@@ -459,6 +763,17 @@ export class MmoRenderer {
             ctx.fillRect(px + 11, py + 12, 3, 2);
             break;
           }
+          case 's': {
+            // wooden signpost
+            ctx.fillStyle = '#6b4a26';
+            ctx.fillRect(px + 7, py + 4, 2, 12);
+            ctx.fillStyle = '#8a6a3c';
+            ctx.fillRect(px + 2, py + 2, 12, 7);
+            ctx.fillStyle = '#5c421f';
+            ctx.fillRect(px + 3, py + 4, 10, 1);
+            ctx.fillRect(px + 3, py + 6, 8, 1);
+            break;
+          }
           default:
             break;
         }
@@ -539,7 +854,7 @@ export class MmoRenderer {
       const bob = moving && Math.floor(now / 150 + g.home.x) % 2 === 0 ? 1 : 0;
       this.ctx.fillStyle = 'rgba(0,0,0,0.18)';
       this.ctx.fillRect(Math.round(d.x) + 3, Math.round(d.y) + 14, 10, 2);
-      drawSprite(this.ctx, GOBLIN_SPRITE, Math.round(d.x) + 2, Math.round(d.y) + 2 - bob);
+      drawSprite(this.ctx, g.aggro ? GOBLIN_ANGRY_SPRITE : GOBLIN_SPRITE, Math.round(d.x) + 2, Math.round(d.y) + 2 - bob);
       if (g.hp < 3) {
         // tiny hp bar
         this.ctx.fillStyle = '#900';
@@ -569,9 +884,18 @@ export class MmoRenderer {
     const ctx = this.ctx;
     this.hitsplats = this.hitsplats.filter((h) => h.until > now);
     for (const h of this.hitsplats) {
+      // proper star-shaped splat: red for damage, blue for a miss
       ctx.fillStyle = h.dmg === 0 ? '#2a4a9c' : '#b02020';
       ctx.beginPath();
-      ctx.arc(h.x, h.y, 5, 0, Math.PI * 2);
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 - Math.PI / 2;
+        const r = i % 2 === 0 ? 6.5 : 4;
+        const px = h.x + Math.cos(a) * r;
+        const py = h.y + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
       ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.font = '7px monospace';
@@ -593,22 +917,65 @@ export class MmoRenderer {
     ctx.font = '7px monospace';
     ctx.textBaseline = 'top';
     ctx.fillStyle = flashing ? '#ffe96b' : hit ? '#8be86b' : '#ffd23f';
+    const streak = this.sim.stats.killStreak;
+    const streakTxt = streak > 1 ? ` · ${streak} streak` : '';
     const label = hit
-      ? `Objective complete! ${coins} coins`
-      : `Earn ${COIN_OBJECTIVE} coins before dinner! (${Math.min(coins, COIN_OBJECTIVE)}/${COIN_OBJECTIVE})`;
+      ? `Objective complete! ${coins} coins${streakTxt}`
+      : `Earn ${COIN_OBJECTIVE} coins before dinner! (${Math.min(coins, COIN_OBJECTIVE)}/${COIN_OBJECTIVE})${streakTxt}`;
     ctx.fillText(label, 3, CANVAS_H - 9);
   }
 
-  private drawMessage(now: number): void {
-    if (!this.message || this.message.until < now) return;
+  /** Chat log: up to five lines stacked above the objective banner. */
+  private drawChat(now: number): void {
+    this.chat = this.chat.filter((c) => c.until > now);
+    if (this.chat.length === 0) return;
     const ctx = this.ctx;
     ctx.font = '7px monospace';
     ctx.textBaseline = 'top';
-    const w = ctx.measureText(this.message.text).width + 6;
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(0, CANVAS_H - 24, w, 11);
-    ctx.fillStyle = '#e8e8e8';
-    ctx.fillText(this.message.text, 3, CANVAS_H - 22);
+    for (let i = 0; i < this.chat.length; i++) {
+      const line = this.chat[this.chat.length - 1 - i];
+      if (!line) continue;
+      const y = CANVAS_H - 24 - i * 10;
+      const fade = Math.min(1, (line.until - now) / 700);
+      const w = ctx.measureText(line.text).width + 6;
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = 'rgba(0,0,0,0.62)';
+      ctx.fillRect(0, y, w, 10);
+      ctx.fillStyle = line.color;
+      ctx.fillText(line.text, 3, y + 2);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /** XP drops rise from the top-right corner of the world viewport. */
+  private drawXpDrops(now: number): void {
+    this.xpDrops = this.xpDrops.filter((d) => d.until > now);
+    if (this.xpDrops.length === 0) return;
+    const ctx = this.ctx;
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    for (let i = 0; i < this.xpDrops.length; i++) {
+      const d = this.xpDrops[i];
+      if (!d) continue;
+      const t = 1 - (d.until - now) / 1300;
+      const y = 26 - t * 14 + i * 9;
+      ctx.globalAlpha = Math.min(1, (d.until - now) / 400);
+      ctx.fillStyle = '#241a06';
+      ctx.fillText(d.text, VIEW_W - 5, y + 1);
+      ctx.fillStyle = '#e8e0f0';
+      ctx.fillText(d.text, VIEW_W - 6, y);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = 'left';
+  }
+
+  /** "Attack Goblin" → ['Attack', 'Goblin'] — verb plain, target colored. */
+  private static splitLabel(label: string): [string, string | null] {
+    if (label === 'Walk here' || label === 'Cancel') return [label, null];
+    const i = label.indexOf(' ');
+    if (i < 0) return [label, null];
+    return [label.slice(0, i), label.slice(i + 1)];
   }
 
   private drawHoverText(): void {
@@ -621,15 +988,92 @@ export class MmoRenderer {
     const first = opts[0];
     if (!first) return;
     const extra = opts.length - 1;
-    const text = extra > 0 ? `${first.label} / ${extra} more` : first.label;
+    const [verb, target] = MmoRenderer.splitLabel(first.label);
+    const suffix = extra > 0 ? ` / ${extra} more` : '';
     const ctx = this.ctx;
     ctx.font = '7px monospace';
     ctx.textBaseline = 'top';
-    const w = ctx.measureText(text).width + 6;
+    const verbW = ctx.measureText(`${verb} `).width;
+    const targetW = target ? ctx.measureText(`${target}`).width : 0;
+    const w = verbW + targetW + ctx.measureText(suffix).width + 6;
     ctx.fillStyle = 'rgba(0,0,0,0.75)';
     ctx.fillRect(0, 0, w, 11);
-    ctx.fillStyle = '#ffd23f';
-    ctx.fillText(text, 3, 2);
+    ctx.fillStyle = '#e8e2d4';
+    ctx.fillText(`${verb} `, 3, 2);
+    if (target) {
+      ctx.fillStyle = '#9be8e0';
+      ctx.fillText(target, 3 + verbW, 2);
+    }
+    if (suffix) {
+      ctx.fillStyle = '#a8a094';
+      ctx.fillText(suffix, 3 + verbW + targetW, 2);
+    }
+  }
+
+  private drawMinimap(): void {
+    const ctx = this.ctx;
+    const x0 = VIEW_W;
+    const my = 4;
+    const mw = 68;
+    const mh = 38;
+    const mx = x0 + Math.floor((PANEL_W - mw) / 2);
+    const scaleX = mw / MAP_W;
+    const scaleY = mh / MAP_H;
+    ctx.fillStyle = '#3a2c18';
+    ctx.fillRect(mx, my, mw, mh);
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        const ch = tileChar(x, y);
+        const px = mx + x * scaleX;
+        const py = my + y * scaleY;
+        const inPen = x >= 13 && x <= 16 && y >= 8 && y <= 11;
+        if (ch === '#') ctx.fillStyle = '#243d18';
+        else if (inPen || ch === '+') ctx.fillStyle = '#8a7250';
+        else ctx.fillStyle = '#48732f';
+        ctx.fillRect(px, py, Math.ceil(scaleX), Math.ceil(scaleY));
+      }
+    }
+    const dot = (tx: number, ty: number, color: string, size = 2): void => {
+      ctx.fillStyle = color;
+      ctx.fillRect(mx + tx * scaleX + 1, my + ty * scaleY + 1, size, size);
+    };
+    // choppable trees (bright green — they matter for the grind)
+    for (const t of this.sim.trees) {
+      if (!t.chopped) dot(t.pos.x, t.pos.y, '#6ecf4a', 2);
+    }
+    // points of interest
+    dot(CAMPFIRE_TILE.x, CAMPFIRE_TILE.y, '#e8762a', 2);
+    dot(TRADER_TILE.x, TRADER_TILE.y, '#c060c0', 3);
+    // other players (cosmetic ghosts)
+    for (const g of this.ghosts) dot(g.pos.x, g.pos.y, '#8fb8ff', 2);
+    // goblins (alive only — the real threat)
+    for (const g of this.sim.goblins) {
+      if (g.alive) dot(g.pos.x, g.pos.y, g.aggro ? '#ff6040' : '#5f8f3e', 2);
+    }
+    // player on top — larger yellow blip with a dark outline
+    const p = this.sim.player.pos;
+    const px = mx + p.x * scaleX;
+    const py = my + p.y * scaleY;
+    ctx.fillStyle = '#3a2c18';
+    ctx.fillRect(px, py, 4, 4);
+    ctx.fillStyle = '#ffe96b';
+    ctx.fillRect(px + 1, py + 1, 2, 2);
+    ctx.strokeStyle = '#3a2c18';
+    ctx.strokeRect(mx - 0.5, my - 0.5, mw + 1, mh + 1);
+  }
+
+  private drawSkillBar(x: number, y: number, label: string, xp: number, w: number): void {
+    const ctx = this.ctx;
+    const lvl = levelOf(xp);
+    const cur = xp - xpForLevel(lvl);
+    const need = Math.max(1, xpForLevel(lvl + 1) - xpForLevel(lvl));
+    const pct = cur / need;
+    ctx.fillStyle = '#5a4a30';
+    ctx.fillText(`${label} ${lvl}`, x, y);
+    ctx.fillStyle = '#8a754f';
+    ctx.fillRect(x, y + 7, w, 3);
+    ctx.fillStyle = '#c8a040';
+    ctx.fillRect(x, y + 7, Math.floor(w * pct), 3);
   }
 
   private drawPanel(): void {
@@ -640,28 +1084,63 @@ export class MmoRenderer {
     ctx.fillStyle = '#c8b088';
     ctx.fillRect(x0 + 2, 2, PANEL_W - 4, CANVAS_H - 4);
 
-    // coin counter
+    // fixed layout — every band owns its pixels, nothing overlaps
+    const PL = {
+      coinCy: 52,
+      hpR1: 63,
+      hpR2: 75,
+      invY: 86,
+      slot: 13,
+      skillDiv: 178,
+      wcY: 181,
+      atkY: 193,
+      frgY: 205,
+      questY: 217,
+      footDiv: 225,
+      brandY: 227,
+    } as const;
+
+    const invCols = 4;
+    const invGridW = (invCols - 1) * PL.slot + (PL.slot - 2);
+    const invX = x0 + Math.floor((PANEL_W - invGridW) / 2);
+    const hpPitch = 13;
+    const hpSpan = 4 * hpPitch;
+    const hpX = x0 + Math.floor((PANEL_W - hpSpan) / 2);
+    const skillBarW = 58;
+    const skillX = x0 + Math.floor((PANEL_W - skillBarW) / 2);
+
+    this.drawMinimap();
+
+    // dividers frame the status cluster (coin + HP)
+    ctx.fillStyle = '#8a754f';
+    ctx.fillRect(x0 + 8, 44, PANEL_W - 16, 1);
+    ctx.fillRect(x0 + 8, 82, PANEL_W - 16, 1);
+
+    // coin — icon + amount, centred as a pair
+    ctx.font = '8px monospace';
+    const coinStr = String(this.sim.player.coins);
+    const coinGroupW = 9 + ctx.measureText(coinStr).width;
+    const coinIconX = x0 + Math.floor((PANEL_W - coinGroupW) / 2) + 5;
     ctx.fillStyle = '#e8c33f';
     ctx.beginPath();
-    ctx.arc(x0 + 12, 12, 5, 0, Math.PI * 2);
+    ctx.arc(coinIconX, PL.coinCy, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#b8932a';
     ctx.beginPath();
-    ctx.arc(x0 + 12, 12, 3, 0, Math.PI * 2);
+    ctx.arc(coinIconX, PL.coinCy, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#fff4c8';
-    ctx.fillRect(x0 + 9, 9, 2, 1);
+    ctx.fillRect(coinIconX - 3, PL.coinCy - 3, 2, 1);
     ctx.fillStyle = '#3a2c18';
-    ctx.font = '8px monospace';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(this.sim.player.coins), x0 + 21, 13);
+    ctx.fillText(coinStr, coinIconX + 9, PL.coinCy);
     ctx.textBaseline = 'alphabetic';
 
-    // HP orbs (two rows of five)
+    // HP — two rows of five, centred
     const hp = this.sim.player.hp;
     for (let i = 0; i < PLAYER_MAX_HP; i++) {
-      const ox = x0 + 9 + (i % 5) * 13;
-      const oy = 28 + Math.floor(i / 5) * 12;
+      const ox = hpX + (i % 5) * hpPitch;
+      const oy = i < 5 ? PL.hpR1 : PL.hpR2;
       ctx.fillStyle = i < hp ? '#c03030' : '#705848';
       ctx.beginPath();
       ctx.arc(ox, oy, 4, 0, Math.PI * 2);
@@ -677,12 +1156,14 @@ export class MmoRenderer {
       }
     }
 
-    // inventory 4x7
+    // inventory 4×7
     const inv = this.sim.player.inventory;
-    const slot = 17;
-    const gx = x0 + 6;
-    const gy = 52;
-    ctx.font = '7px monospace';
+    const logCount = inv.filter((i) => i === 'log').length;
+    const flaxCount = inv.filter((i) => i === 'flax').length;
+    const { slot } = PL;
+    const gx = invX;
+    const gy = PL.invY;
+    ctx.font = '6px monospace';
     for (let i = 0; i < 28; i++) {
       const sx = gx + (i % 4) * slot;
       const sy = gy + Math.floor(i / 4) * slot;
@@ -695,34 +1176,58 @@ export class MmoRenderer {
       const item = inv[i];
       if (item === 'log') {
         ctx.fillStyle = '#7a5a30';
-        ctx.fillRect(sx + 2, sy + 5, 11, 5);
+        ctx.fillRect(sx + 1, sy + 4, 8, 4);
         ctx.fillStyle = '#caa86a';
-        ctx.fillRect(sx + 2, sy + 6, 11, 1);
+        ctx.fillRect(sx + 1, sy + 5, 8, 1);
       } else if (item === 'flax') {
         ctx.fillStyle = '#3c7a2e';
-        ctx.fillRect(sx + 6, sy + 6, 2, 7);
+        ctx.fillRect(sx + 4, sy + 5, 2, 4);
         ctx.fillStyle = '#7fa8e8';
-        ctx.fillRect(sx + 4, sy + 2, 6, 5);
-        ctx.fillStyle = '#cfe0ff';
-        ctx.fillRect(sx + 6, sy + 4, 2, 2);
+        ctx.fillRect(sx + 3, sy + 2, 5, 4);
+      }
+    }
+    if (logCount > 1) {
+      ctx.fillStyle = '#ffe96b';
+      ctx.fillText(String(logCount), gx + slot - 8, gy + 9);
+    }
+    if (flaxCount > 1) {
+      const firstFlax = inv.indexOf('flax');
+      if (firstFlax >= 0) {
+        const fx = gx + (firstFlax % 4) * slot;
+        const fy = gy + Math.floor(firstFlax / 4) * slot;
+        ctx.fillStyle = '#ffe96b';
+        ctx.fillText(String(flaxCount), fx + slot - 8, fy + 9);
       }
     }
 
-    ctx.fillStyle = '#8a754f';
-    ctx.fillRect(x0 + 8, CANVAS_H - 26, PANEL_W - 16, 1);
-    ctx.fillStyle = '#7a6444';
-    ctx.font = '7px monospace';
+    // skills (user said these are perfect — keep spacing)
+    const skills = this.sim.player.skills;
+    ctx.font = '6px monospace';
     ctx.textBaseline = 'top';
-    ctx.fillText('Mudwick', x0 + 14, CANVAS_H - 20);
-    ctx.fillText('Online', x0 + 18, CANVAS_H - 12);
+    ctx.fillStyle = '#8a754f';
+    ctx.fillRect(x0 + 8, PL.skillDiv, PANEL_W - 16, 1);
+    this.drawSkillBar(skillX, PL.wcY, 'Wc', skills.woodcutting, skillBarW);
+    this.drawSkillBar(skillX, PL.atkY, 'Atk', skills.attack, skillBarW);
+    this.drawSkillBar(skillX, PL.frgY, 'Frg', skills.foraging, skillBarW);
+
+    const q = this.sim.quest;
+    ctx.fillStyle = q.progress >= q.target && !q.claimed ? '#8be86b' : '#5a4a30';
+    const qLabel = this.sim.questLabel();
+    const qText = qLabel.length > 20 ? `${qLabel.slice(0, 19)}…` : qLabel;
+    ctx.textAlign = 'center';
+    ctx.fillText(qText, x0 + PANEL_W / 2, PL.questY);
+
+    ctx.fillStyle = '#8a754f';
+    ctx.fillRect(x0 + 8, PL.footDiv, PANEL_W - 16, 1);
+    ctx.fillStyle = '#7a6444';
+    ctx.fillText('Mudwick Online', x0 + PANEL_W / 2, PL.brandY);
+    ctx.textAlign = 'left';
   }
 
   private drawTradeDialog(): void {
     const ctx = this.ctx;
-    const x = 40;
-    const y = 70;
-    const w = 200;
-    const h = 96;
+    const L = this.tradeDialogLayout();
+    const { x, y, w, h, btnX, btnW, btnH } = L;
     ctx.fillStyle = '#5c4a32';
     ctx.fillRect(x, y, w, h);
     ctx.fillStyle = '#c8b088';
@@ -730,19 +1235,29 @@ export class MmoRenderer {
     ctx.fillStyle = '#3a2c18';
     ctx.font = '8px monospace';
     ctx.textBaseline = 'top';
-    ctx.fillText('Trader Wyn buys:', x + 8, y + 8);
+    ctx.fillText('Trader Wyn', x + 8, y + 8);
+    ctx.font = '7px monospace';
+    ctx.fillStyle = '#5a4a30';
+    ctx.fillText('"Coins talk. Logs walk."', x + 8, y + 20);
 
     const logs = this.sim.invCount('log');
     const flax = this.sim.invCount('flax');
-    const button = (by: number, label: string, enabled: boolean): void => {
-      ctx.fillStyle = enabled ? '#8a754f' : '#a89878';
-      ctx.fillRect(x + 10, by, w - 20, 16);
+    const button = (by: number, label: string, enabled: boolean, highlight = false): void => {
+      ctx.fillStyle = highlight ? '#a89060' : enabled ? '#8a754f' : '#a89878';
+      ctx.fillRect(btnX, by, btnW, btnH);
       ctx.fillStyle = enabled ? '#ffe9b0' : '#cabfa6';
-      ctx.fillText(label, x + 16, by + 4);
+      ctx.fillText(label, btnX + 6, by + 4);
     };
-    button(100, `Sell all logs (${logs}) - 7gp each`, logs > 0);
-    button(122, `Sell all flax (${flax}) - 2gp each`, flax > 0);
-    button(144, 'Done', true);
+
+    if (L.questBtnY !== null) {
+      button(L.questBtnY, `Turn in contract (+${this.sim.quest.reward}gp)`, true, true);
+    } else {
+      ctx.fillStyle = '#7a6444';
+      ctx.fillText(this.sim.questLabel(), x + 12, L.questTextY);
+    }
+    button(L.logY, `Sell all logs (${logs}) - 7gp each`, logs > 0);
+    button(L.flaxY, `Sell all flax (${flax}) - 2gp each`, flax > 0);
+    button(L.doneY, 'Done', true);
   }
 
   private drawMenu(): void {
@@ -755,7 +1270,7 @@ export class MmoRenderer {
     ctx.fillRect(m.x + 1, m.y + 1, m.w - 2, 9);
     ctx.font = '7px monospace';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#5c5040';
+    ctx.fillStyle = '#c8b088';
     ctx.fillText('Choose Option', m.x + 3, m.y + 2);
     ctx.fillStyle = '#c8b088';
     ctx.fillRect(m.x + 1, m.y + 10, m.w - 2, m.h - 11);
@@ -765,8 +1280,13 @@ export class MmoRenderer {
         ctx.fillStyle = '#a89060';
         ctx.fillRect(m.x + 1, oy - 1, m.w - 2, 10);
       }
+      const [verb, target] = MmoRenderer.splitLabel(opt.label);
       ctx.fillStyle = '#2a2018';
-      ctx.fillText(opt.label, m.x + 4, oy);
+      ctx.fillText(`${verb} `, m.x + 4, oy);
+      if (target) {
+        ctx.fillStyle = '#155c74';
+        ctx.fillText(target, m.x + 4 + ctx.measureText(`${verb} `).width, oy);
+      }
     });
   }
 

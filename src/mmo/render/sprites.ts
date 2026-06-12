@@ -52,6 +52,34 @@ export const PLAYER_SPRITE: Sprite = {
   ],
 };
 
+export const PLAYER_ATTACK_SPRITE: Sprite = {
+  palette: {
+    h: '#8a5a2b',
+    s: '#e0b088',
+    b: '#3a5a9c',
+    d: '#2c4377',
+    l: '#5a4632',
+    k: '#2e2218',
+    w: '#c8c0b0', // wooden sword
+  },
+  rows: [
+    '....hhhh....',
+    '...hhhhhh...',
+    '...hssssh...',
+    '...ssssss...',
+    '....ssss....',
+    '...bbbbbb...',
+    '..bbbbbbbb..',
+    '..sbbddbbs..',
+    '...bbbbbb...',
+    '...llllll...',
+    '...ll..ll...',
+    '...kk..kk...',
+    '...kk..kk...',
+    '...kk..kk...',
+  ],
+};
+
 export const GOBLIN_SPRITE: Sprite = {
   palette: {
     g: '#5f8f3e', // skin
@@ -76,6 +104,11 @@ export const GOBLIN_SPRITE: Sprite = {
     '...ee..ee...',
     '............',
   ],
+};
+
+export const GOBLIN_ANGRY_SPRITE: Sprite = {
+  ...GOBLIN_SPRITE,
+  palette: { ...GOBLIN_SPRITE.palette, y: '#ff6040' },
 };
 
 export const TRADER_SPRITE: Sprite = {
