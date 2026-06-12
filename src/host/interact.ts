@@ -38,7 +38,7 @@ export class InteractSystem {
   }
 
   /** The interactable in the crosshair plus its prompt, or null. */
-  update(camera: THREE.Camera): InteractPrompt | null {
+  update(camera: THREE.Camera, nowMs = 0): InteractPrompt | null {
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const candidates = this.room.interactables.filter((o) => o !== this.carriedObj);
     const hits = this.raycaster.intersectObjects(candidates, true);
@@ -60,6 +60,13 @@ export class InteractSystem {
 
     const prompt = interact ? this.promptFor(interact) : null;
     this.setHighlight(prompt && prompt.actionable ? target : null);
+    // gentle pulse on whatever is highlighted
+    if (this.hovered && nowMs > 0) {
+      const pulse = 0.3 + 0.13 * Math.sin(nowMs / 140);
+      for (const mat of this.highlightMats.keys()) {
+        mat.emissiveIntensity = pulse;
+      }
+    }
     return prompt;
   }
 

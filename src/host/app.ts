@@ -149,7 +149,7 @@ export class HostApp {
     if (this.mode === 'room') {
       if (!this.paused) {
         this.player.update(dt);
-        this.currentPrompt = this.interact.update(this.camera);
+        this.currentPrompt = this.interact.update(this.camera, performance.now());
         this.interact.updateCarried(this.camera);
       }
       this.monitorRefreshAcc += dtMs;
