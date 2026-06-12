@@ -1,4 +1,10 @@
 import { RESPONSE_OPTIONS } from '../director/director';
+import type { Skills } from '../mmo/sim/types';
+import {
+  bonusProgressLabel,
+  formatGp,
+  objectiveProgressLabel,
+} from '../mmo/sim/osrs';
 
 /** DOM overlay HUD: objective, chore chip, clock, subtitles, prompt. */
 export class Hud {
@@ -55,11 +61,19 @@ export class Hud {
     this.objectiveEl.classList.add('hud-flash');
   }
 
-  setObjectiveProgress(coins: number, hit: boolean): void {
+  setObjectiveProgress(coins: number, hit: boolean, skills: Skills, bonusHit: boolean): void {
     if (this.objectiveEl.style.display === 'none') return;
-    this.objectiveEl.textContent = hit
-      ? `Objective complete — ${coins} coins. Dinner, though.`
-      : `Earn 100 coins in Mudwick before dinner. (${Math.min(coins, 100)}/100)`;
+    const gp = objectiveProgressLabel(coins, hit);
+    const bonus = bonusProgressLabel(skills, bonusHit);
+    if (hit && bonusHit) {
+      this.objectiveEl.textContent = `Max stack & 99 all stats. Dinner, though. (${formatGp(coins)} gp)`;
+    } else if (hit) {
+      this.objectiveEl.textContent = `Max stack reached. Bonus: ${bonus}. (${formatGp(coins)} gp)`;
+    } else if (bonusHit) {
+      this.objectiveEl.textContent = `99 all stats! Main goal: ${gp}`;
+    } else {
+      this.objectiveEl.textContent = `Mudwick: ${gp} · Bonus: ${bonus}`;
+    }
   }
 
   /** One chip per active chore, oldest first. Empty array hides the stack. */

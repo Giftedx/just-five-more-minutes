@@ -5,6 +5,7 @@ export interface ScorecardStats {
   deaths: number;
   choresDone: number;
   choresTotal: number;
+  statsBonusHit: boolean;
 }
 
 /** The HOUSEHOLD INCIDENT REPORT. */
@@ -31,7 +32,7 @@ export function showScorecard(
       <div class="sc-header">
         <div class="sc-stamp">FILED</div>
         <div class="sc-title">HOUSEHOLD INCIDENT REPORT</div>
-        <div class="sc-subtitle">RE: the twelve minutes before dinner</div>
+        <div class="sc-subtitle">RE: the five minutes before dinner</div>
       </div>
       <div class="sc-body">
         ${row('MMO Progress', score.mmo, 40)}
@@ -39,7 +40,7 @@ export function showScorecard(
         ${row('Vibe Preservation', score.vibe, 20)}
         ${row('Comedy Bonus', score.comedy, 10)}
         <div class="sc-total-row"><span>TOTAL</span><span>${score.total} / 100</span></div>
-        <div class="sc-meta">${stats.coins} coins · ${stats.deaths} death${stats.deaths === 1 ? '' : 's'} · ${stats.choresDone}/${stats.choresTotal} chores</div>
+        <div class="sc-meta">${stats.coins.toLocaleString('en-US')} gp · ${stats.statsBonusHit ? '99 all stats · ' : ''}${stats.deaths} death${stats.deaths === 1 ? '' : 's'} · ${stats.choresDone}/${stats.choresTotal} chores</div>
         <div class="sc-notes-title">INCIDENT NOTES</div>
         <ul class="sc-notes">${facts}</ul>
         <div class="sc-ending-label">VERDICT</div>

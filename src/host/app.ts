@@ -220,6 +220,7 @@ export class HostApp {
 
   exitPc(): void {
     if (this.mode === 'room') return;
+    this.mmo.dismissUi();
     this.mode = 'room';
     this.router.mode = 'room';
     this.player.clearKeys();

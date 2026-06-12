@@ -1,18 +1,28 @@
 /**
  * Session timeline state machine. Pure: no DOM, no Three.js.
- * All times are in session seconds (0..720).
+ * All times are in session seconds (0..SESSION_LENGTH).
  */
 
-export const SESSION_LENGTH = 720;
+/** Full session length — five minutes, matching the title. */
+export const SESSION_LENGTH = 5 * 60;
+
+/** Objective banner appears this many seconds in (scaled from the original 12-min schedule). */
+export const BANNER_AT = Math.round((45 / 720) * SESSION_LENGTH);
+
+/** Final warning — always one minute before dinner. */
+export const WARN_AT = SESSION_LENGTH - 60;
+
+/** Laundry never requested later than this (~3:58 in a 5-min session). */
+export const CHORE3_CAP = Math.round((570 / 720) * SESSION_LENGTH);
+
 export const PROMPT_DURATION = 20;
 export const CHORE_GRACE = 60;
-export const CHORE3_CAP = 570; // 9:30 — chore 3 never fires later than this
 
 export type ChoreId = 'mugs' | 'wrappers' | 'laundry';
 export type LineId = 'intro' | 'mugs' | 'wrappers' | 'laundry' | 'warn';
 
 export const NPC_LINES: Readonly<Record<LineId, string>> = {
-  intro: "Dinner's in about twelve minutes. Give your room a quick tidy if you get a second.",
+  intro: "Dinner's in about five minutes. Give your room a quick tidy if you get a second.",
   mugs: 'Could you move those mugs before one of them starts paying rent?',
   wrappers: 'Is the bin full, or are the wrappers just choosing not to participate?',
   laundry: "Laundry in the basket. I'm not asking you to defeat it, just contain it.",
@@ -49,10 +59,10 @@ export interface ChoreRecord {
 }
 
 const CHORE_ORDER: readonly ChoreId[] = ['mugs', 'wrappers', 'laundry'];
-const CHORE_BASE_TIMES: Readonly<Record<ChoreId, number>> = {
-  mugs: 90,
-  wrappers: 240,
-  laundry: 420,
+export const CHORE_BASE_TIMES: Readonly<Record<ChoreId, number>> = {
+  mugs: Math.round((90 / 720) * SESSION_LENGTH),
+  wrappers: Math.round((240 / 720) * SESSION_LENGTH),
+  laundry: Math.round((420 / 720) * SESSION_LENGTH),
 };
 
 export class Director {
@@ -83,13 +93,13 @@ export class Director {
     // Seeding the clock (dev `?t=`) silently marks earlier one-shots as done
     // and earlier chores as already requested, with no prompts opened.
     if (this.t > 0) this.introFired = true;
-    if (this.t > 45) this.bannerFired = true;
+    if (this.t > BANNER_AT) this.bannerFired = true;
     for (const id of CHORE_ORDER) {
       if (this.t > this.choreFireAt[id]) {
         this.chores[id].requestedAt = this.choreFireAt[id];
       }
     }
-    if (this.t > 630) this.warnFired = true;
+    if (this.t > WARN_AT) this.warnFired = true;
   }
 
   /** The prompt currently awaiting a 1-4 response, if any. */
@@ -113,7 +123,7 @@ export class Director {
       this.introFired = true;
       events.push(...this.fireLine('intro'));
     }
-    if (!this.bannerFired && this.t >= 45) {
+    if (!this.bannerFired && this.t >= BANNER_AT) {
       this.bannerFired = true;
       events.push({ type: 'objectiveBanner' });
     }
@@ -125,7 +135,7 @@ export class Director {
         events.push({ type: 'choreRequested', chore: id });
       }
     }
-    if (!this.warnFired && this.t >= 630) {
+    if (!this.warnFired && this.t >= WARN_AT) {
       this.warnFired = true;
       events.push(...this.fireLine('warn'));
     }
@@ -179,7 +189,7 @@ export class Director {
       const nc = this.chores[next];
       if (nc.requestedAt === null) {
         let fireAt = Math.max(this.choreFireAt[next], this.t + CHORE_GRACE);
-        // …but chore 3 never fires later than 9:30.
+        // …but chore 3 never fires later than CHORE3_CAP.
         if (next === 'laundry') fireAt = Math.min(fireAt, CHORE3_CAP);
         this.choreFireAt[next] = fireAt;
         break;

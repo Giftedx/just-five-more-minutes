@@ -4,7 +4,6 @@
 export class AudioSynth {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
-  private roomToneNodes: AudioNode[] = [];
   private volume = 0.6;
   private unlocked = false;
   private removeUnlockListeners: () => void;
@@ -61,7 +60,6 @@ export class AudioSynth {
     this.master = this.ctx.createGain();
     this.master.gain.value = this.volume;
     this.master.connect(this.ctx.destination);
-    this.startRoomTone();
     return this.ctx;
   }
 
@@ -142,33 +140,6 @@ export class AudioSynth {
     return buf;
   }
 
-  private startRoomTone(): void {
-    if (!this.ctx || !this.master) return;
-    // soft hum: detuned low sines + heavily lowpassed noise
-    const g = this.ctx.createGain();
-    g.gain.value = 0.022;
-    g.connect(this.master);
-    for (const f of [50, 60.4]) {
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = f;
-      osc.connect(g);
-      osc.start();
-      this.roomToneNodes.push(osc);
-    }
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = this.noiseBuffer(2);
-    noise.loop = true;
-    const lp = this.ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 160;
-    const ng = this.ctx.createGain();
-    ng.gain.value = 0.05;
-    noise.connect(lp).connect(ng).connect(g);
-    noise.start();
-    this.roomToneNodes.push(noise);
-  }
-
   // ----- game sounds ------------------------------------------------------
 
   knock(): void {
@@ -219,7 +190,7 @@ export class AudioSynth {
     this.tone(1760, { at: 0.07, dur: 0.16, gain: 0.09 });
   }
 
-  /** The 100-coin objective fanfare. */
+  /** Max-stack objective fanfare. */
   fanfare(): void {
     if (!this.ready) return;
     const notes = [523.25, 659.25, 783.99, 1046.5];
@@ -241,7 +212,6 @@ export class AudioSynth {
     seq.forEach((f, i) => {
       this.tone(f, { type: 'triangle', at: i * 0.16, dur: 0.3, gain: 0.16 });
     });
-    this.tone(73.4, { type: 'sine', at: 0.45, dur: 0.6, gain: 0.18 });
   }
 
   pickup(): void {
@@ -269,18 +239,44 @@ export class AudioSynth {
     this.tone(880, { type: 'triangle', at: 0.09, dur: 0.18, gain: 0.1 });
   }
 
+  /** Chair scrape + CRT wake when leaving the title screen. */
+  titleBegin(): void {
+    if (!this.ready) return;
+    this.thump(140, 55, { dur: 0.14, gain: 0.22, noise: 0.12, noiseFreq: 220 });
+    this.tone(520, { at: 0.06, dur: 0.12, gain: 0.08, glideTo: 880 });
+    this.tone(880, { at: 0.1, type: 'square', dur: 0.08, gain: 0.04 });
+  }
+
+  /** Very quiet CRT room tone for the title screen; returns a stop function. */
+  titleAmbience(): () => void {
+    const ctx = this.ensureCtx();
+    if (!ctx || !this.master) return () => {};
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer(1.5);
+    src.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2400;
+    filter.Q.value = 0.6;
+    const g = ctx.createGain();
+    g.gain.value = 0.008 * this.volume;
+    src.connect(filter).connect(g).connect(this.master);
+    try {
+      src.start();
+    } catch {
+      return () => {};
+    }
+    return () => {
+      try {
+        src.stop();
+      } catch {
+        /* already stopped */
+      }
+    };
+  }
+
   dispose(): void {
     this.removeUnlockListeners();
-    for (const n of this.roomToneNodes) {
-      if (n instanceof OscillatorNode || n instanceof AudioBufferSourceNode) {
-        try {
-          n.stop();
-        } catch {
-          /* already stopped */
-        }
-      }
-    }
-    this.roomToneNodes = [];
     void this.ctx?.close();
     this.ctx = null;
     this.master = null;

@@ -7,6 +7,7 @@ import {
   GOBLIN_RESPAWN_TICKS,
   INVENTORY_SIZE,
   LOG_PRICE,
+  MAX_COINS,
   MudwickSim,
   PLAYER_MAX_HP,
   TREE_REGROW_TICKS,
@@ -228,17 +229,27 @@ describe('trading and economy', () => {
     stepUntil(sim, (ev) => ev.some((e) => e.type === 'openTrade'));
   });
 
-  it('latches the coin objective exactly once at 100 coins', () => {
+  it('latches the coin objective exactly once at max stack', () => {
     const sim = new MudwickSim(5);
-    sim.player.coins = 98;
+    sim.player.coins = MAX_COINS - 3;
     sim.player.inventory = ['log'];
-    sim.sell('log'); // 98 + 7 = 105
+    sim.sell('log'); // +7, capped at MAX_COINS
+    expect(sim.player.coins).toBe(MAX_COINS);
     expect(sim.stats.objectiveHit).toBe(true);
     expect(sim.drainEvents().filter((e) => e.type === 'objectiveHit')).toHaveLength(1);
     sim.player.inventory = ['log'];
     sim.sell('log');
+    expect(sim.player.coins).toBe(MAX_COINS);
     expect(sim.drainEvents().filter((e) => e.type === 'objectiveHit')).toHaveLength(0);
-    expect(COIN_OBJECTIVE).toBe(100);
+    expect(COIN_OBJECTIVE).toBe(MAX_COINS);
+  });
+
+  it('does not exceed OSRS max coin stack', () => {
+    const sim = new MudwickSim(5);
+    sim.player.coins = MAX_COINS - 1;
+    sim.player.inventory = ['log', 'log'];
+    sim.sell('log');
+    expect(sim.player.coins).toBe(MAX_COINS);
   });
 });
 

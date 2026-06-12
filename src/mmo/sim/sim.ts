@@ -1,5 +1,11 @@
 import { Rng } from './rng';
 import {
+  allSkillsAt99,
+  COIN_OBJECTIVE,
+  levelOf,
+  MAX_COINS,
+} from './osrs';
+import {
   BREAD_TILE,
   CAMPFIRE_TILE,
   EXAMINE_TEXTS,
@@ -36,20 +42,11 @@ export const TREE_REGROW_TICKS = 8;
 export const LOG_PRICE = 7;
 export const FLAX_PRICE = 2;
 export const BREAD_HEAL = 4;
-export const COIN_OBJECTIVE = 100;
+export { COIN_OBJECTIVE, levelOf, MAX_COINS, MAX_LEVEL, xpForLevel } from './osrs';
 export const GOBLIN_DROP_MIN = 4;
 export const GOBLIN_DROP_MAX = 9;
 const GOBLIN_DEAGGRO_DIST = 7;
 const BASE_CHOP_CHANCE = 0.42;
-
-/** XP needed scales quadratically — close enough to feel like the real grind. */
-export function levelOf(xp: number): number {
-  return 1 + Math.floor(Math.sqrt(xp / 28));
-}
-
-export function xpForLevel(level: number): number {
-  return (level - 1) ** 2 * 28;
-}
 
 function chopChance(wcLevel: number): number {
   return Math.min(0.88, BASE_CHOP_CHANCE + (wcLevel - 1) * 0.045);
@@ -106,6 +103,7 @@ export class MudwickSim {
       logsSold: 0,
       flaxSold: 0,
       objectiveHit: false,
+      statsBonusHit: false,
       killStreak: 0,
       bestStreak: 0,
     };
@@ -141,6 +139,14 @@ export class MudwickSim {
     if (after > before) {
       this.events.push({ type: 'levelUp', skill, level: after });
     }
+    this.checkStatsBonus();
+  }
+
+  private checkStatsBonus(): void {
+    if (this.stats.statsBonusHit) return;
+    if (!allSkillsAt99(this.player.skills)) return;
+    this.stats.statsBonusHit = true;
+    this.events.push({ type: 'allSkills99' });
   }
 
   private bumpQuest(kind: QuestKind, amount = 1): void {
@@ -589,7 +595,10 @@ export class MudwickSim {
   }
 
   private addCoins(n: number): void {
-    this.player.coins += n;
+    if (n <= 0) return;
+    const room = MAX_COINS - this.player.coins;
+    if (room <= 0) return;
+    this.player.coins += Math.min(n, room);
     if (!this.stats.objectiveHit && this.player.coins >= COIN_OBJECTIVE) {
       this.stats.objectiveHit = true;
       this.events.push({ type: 'objectiveHit' });

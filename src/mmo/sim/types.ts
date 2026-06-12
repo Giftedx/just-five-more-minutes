@@ -77,6 +77,7 @@ export type SimEvent =
   | { type: 'openTrade' }
   | { type: 'invFull' }
   | { type: 'objectiveHit' }
+  | { type: 'allSkills99' }
   | { type: 'levelUp'; skill: SkillName; level: number }
   | { type: 'questProgress'; kind: QuestKind; progress: number; target: number }
   | { type: 'questReady' }
@@ -90,6 +91,8 @@ export interface SimStats {
   logsSold: number;
   flaxSold: number;
   objectiveHit: boolean;
+  /** All trainable stats hit 99 (OSRS bonus goal). */
+  statsBonusHit: boolean;
   /** Consecutive goblin kills without dying — drives bonus coin drops. */
   killStreak: number;
   /** Best streak this session. */

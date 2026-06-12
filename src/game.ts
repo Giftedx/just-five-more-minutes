@@ -2,6 +2,7 @@ import { AudioSynth } from './audio/synth';
 import { CHORE_DEFS } from './host/chores';
 import { HostApp } from './host/app';
 import {
+  BANNER_AT,
   Director,
   PROMPT_DURATION,
   SESSION_LENGTH,
@@ -30,7 +31,7 @@ const MUM_RETORTS: readonly string[] = [
   'So is the washing-up, technically. Historical. Some of it ancient.',
 ];
 
-/** Full session: title -> 12 minutes of divided attention -> incident report. */
+/** Full session: title -> five minutes of divided attention -> incident report. */
 export class Game {
   private root: HTMLElement;
   private opts: GameOptions;
@@ -53,6 +54,7 @@ export class Game {
   private hiddenPause = false;
   private pauseOverlay: HTMLDivElement | null = null;
   private docListeners: [string, () => void][] = [];
+  private timers: number[] = [];
 
   constructor(root: HTMLElement, opts: GameOptions) {
     this.root = root;
@@ -71,8 +73,8 @@ export class Game {
         this.host.interact.tracker.request(c);
       }
     }
-    if (opts.startAt > 45) {
-      this.hud.showObjective('Earn 100 coins in Mudwick before dinner. (0/100)');
+    if (opts.startAt > BANNER_AT) {
+      this.hud.showObjective('Mudwick: 0 / 2,147,483,647 gp · Bonus: 99 all stats (0/3)');
     }
 
     this.wire();
@@ -127,7 +129,7 @@ export class Game {
     if (this.opts.skipTitle) {
       this.begin(false);
     } else {
-      const { begun } = showTitle(this.root);
+      const { begun } = showTitle(this.root, this.audio);
       void begun.then(() => this.begin(true));
     }
     this.loop();
@@ -197,6 +199,7 @@ export class Game {
             this.audio.deathSting();
             break;
           case 'objectiveHit':
+          case 'allSkills99':
             this.audio.fanfare();
             break;
           case 'levelUp':
@@ -228,8 +231,15 @@ export class Game {
     slider.min = '0';
     slider.max = '1';
     slider.step = '0.05';
+    const saved = sessionStorage.getItem('j5mm-volume');
+    const initial = saved !== null ? Number(saved) : this.audio.getVolume();
+    if (Number.isFinite(initial)) this.audio.setVolume(initial);
     slider.value = String(this.audio.getVolume());
-    slider.addEventListener('input', () => this.audio.setVolume(Number(slider.value)));
+    slider.addEventListener('input', () => {
+      const v = Number(slider.value);
+      this.audio.setVolume(v);
+      sessionStorage.setItem('j5mm-volume', String(v));
+    });
     wrap.appendChild(label);
     wrap.appendChild(slider);
     this.root.appendChild(wrap);
@@ -247,11 +257,11 @@ export class Game {
         this.silhouetteHideAt = this.gameNow + 6000 / this.opts.speed;
         this.audio.knock();
         const syllables = Math.min(6, Math.max(3, Math.round(ev.text.split(' ').length / 2.5)));
-        window.setTimeout(() => this.audio.npcVoice(syllables), 420);
+        this.later(420, () => this.audio.npcVoice(syllables));
         break;
       }
       case 'objectiveBanner':
-        this.hud.showObjective('Earn 100 coins in Mudwick before dinner. (0/100)');
+        this.hud.showObjective('Mudwick: 0 / 2,147,483,647 gp · Bonus: 99 all stats (0/3)');
         break;
       case 'choreRequested': {
         const events = this.host.interact.tracker.request(ev.chore);
@@ -269,11 +279,11 @@ export class Game {
           const retort = ev.option !== null ? MUM_RETORTS[ev.option - 1] : undefined;
           if (retort) {
             const delay = 900 / this.opts.speed;
-            window.setTimeout(() => {
+            this.later(delay, () => {
               if (this.disposed || this.state !== 'playing') return;
               this.hud.showSubtitle(retort, this.gameNow, 4500 / this.opts.speed);
               this.audio.npcVoice(Math.min(6, Math.max(3, Math.round(retort.split(' ').length / 2.5))));
-            }, delay);
+            });
           }
         }
         break;
@@ -297,6 +307,7 @@ export class Game {
   private endSession(): void {
     if (this.state === 'ended') return;
     this.state = 'ended';
+    this.host.mmo.dismissUi();
     this.host.router.enabled = false;
     this.host.router.promptActive = false;
     this.hud.closePrompt();
@@ -310,6 +321,7 @@ export class Game {
     const data: SessionData = {
       coins: sim.player.coins,
       objectiveHit: sim.stats.objectiveHit,
+      statsBonusHit: sim.stats.statsBonusHit,
       deaths: sim.stats.deaths,
       deathsWhileAway: sim.stats.deathsWhileAway,
       prompts: this.director.prompts.map((p) => ({
@@ -329,6 +341,7 @@ export class Game {
         deaths: sim.stats.deaths,
         choresDone: CHORE_ORDER.filter((c) => tracker.isCompleted(c)).length,
         choresTotal: CHORE_ORDER.length,
+        statsBonusHit: sim.stats.statsBonusHit,
       },
       () => this.restart(),
     );
@@ -345,6 +358,8 @@ export class Game {
 
   dispose(): void {
     this.disposed = true;
+    for (const id of this.timers) window.clearTimeout(id);
+    this.timers = [];
     cancelAnimationFrame(this.raf);
     for (const [type, fn] of this.docListeners) document.removeEventListener(type, fn);
     this.pauseOverlay?.remove();
@@ -355,6 +370,14 @@ export class Game {
   }
 
   private last = 0;
+
+  private later(ms: number, fn: () => void): void {
+    const id = window.setTimeout(() => {
+      this.timers = this.timers.filter((t) => t !== id);
+      fn();
+    }, ms);
+    this.timers.push(id);
+  }
 
   private loop(): void {
     this.raf = requestAnimationFrame(this.tick);
@@ -381,7 +404,12 @@ export class Game {
     // HUD upkeep
     if (this.state === 'playing') {
       this.hud.setClock(SESSION_LENGTH - this.director.t);
-      this.hud.setObjectiveProgress(this.host.mmo.sim.player.coins, this.host.mmo.sim.stats.objectiveHit);
+      this.hud.setObjectiveProgress(
+        this.host.mmo.sim.player.coins,
+        this.host.mmo.sim.stats.objectiveHit,
+        this.host.mmo.sim.player.skills,
+        this.host.mmo.sim.stats.statsBonusHit,
+      );
       const prompt = this.host.mode === 'room' ? this.host.prompt : null;
       this.hud.setInteractLabel(prompt?.label ?? null, prompt?.actionable ?? true);
       if (this.host.room.npcSilhouette.visible && this.gameNow > this.silhouetteHideAt) {

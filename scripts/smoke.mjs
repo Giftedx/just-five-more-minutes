@@ -17,7 +17,7 @@ try {
     throw new Error(`expected 200 from ${URL}, got ${response?.status()}`);
   }
 
-  // The 12-minute session runs at 20x => ~36s. Give it 120s of headroom.
+  // The 5-minute session runs at 20x => ~15s. Give it 120s of headroom.
   await page.waitForSelector('.sc-card', { timeout: 120_000 });
   const title = await page.textContent('.sc-title');
   const ending = await page.textContent('.sc-ending');

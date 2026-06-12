@@ -35,6 +35,11 @@ export class MmoGame {
     return this.sim.isInCombat();
   }
 
+  /** Close modal Mudwick UI when leaving PC mode. */
+  dismissUi(): void {
+    this.renderer.dismissOverlays();
+  }
+
   /** Advance time. `playerAway` = player is not seated at the PC. */
   update(dtMs: number, playerAway: boolean): void {
     if (!this.paused) {
@@ -92,7 +97,8 @@ export class MmoGame {
     if (this.renderer.tradeOpen) {
       const btn = this.renderer.tradeButtonAt(cx, cy);
       if (btn === 'log' || btn === 'flax') {
-        this.sim.sell(btn);
+        const result = this.sim.sell(btn);
+        if (result.sold === 0) return;
         this.onUiSound?.('confirm');
         const events = this.sim.drainEvents();
         this.renderer.consumeEvents(events, this.nowMs());

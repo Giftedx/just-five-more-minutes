@@ -1,5 +1,10 @@
 import { CAMPFIRE_TILE, MAP_H, MAP_W, TILE, TRADER_TILE, tileChar } from '../sim/map';
-import { COIN_OBJECTIVE, levelOf, MudwickSim, PLAYER_MAX_HP, xpForLevel } from '../sim/sim';
+import {
+  bonusProgressLabel,
+  formatGpShort,
+  objectiveProgressLabel,
+} from '../sim/osrs';
+import { levelOf, MudwickSim, MAX_LEVEL, PLAYER_MAX_HP, xpForLevel } from '../sim/sim';
 import type { MenuOption, Point, SimEvent, SkillName } from '../sim/types';
 import {
   drawSprite,
@@ -335,7 +340,11 @@ export class MmoRenderer {
           break;
         case 'objectiveHit':
           this.objectiveFlash = now + 4000;
-          this.postMessage('100 coins! The economy thanks you.', now);
+          this.postMessage('Max stack! 2,147,483,647 gp. The economy thanks you.', now);
+          break;
+        case 'allSkills99':
+          this.objectiveFlash = now + 4000;
+          this.postMessage('Level 99 in all stats. Mum is still waiting.', now, '#ffd23f');
           break;
         case 'trade':
           this.postMessage(`Sold ${ev.sold} ${ev.item}${ev.sold === 1 ? '' : 's'} for ${ev.gained}gp.`, now);
@@ -420,7 +429,7 @@ export class MmoRenderer {
   private postWelcome(now: number): void {
     this.postMessage('Welcome to Mudwick Online.', now, '#ffd23f');
     this.postMessage('Left-click to act. Right-click for options.', now);
-    this.postMessage('Earn 100gp before dinner. Wyn has side contracts.', now, '#9be8e0');
+    this.postMessage('Earn max stack before dinner. Bonus: 99 all stats.', now, '#9be8e0');
     const q = this.sim.quest;
     this.postMessage(
       `Active contract: ${this.questVerb(q.kind)} ${q.target} (${q.reward}gp bonus).`,
@@ -497,6 +506,12 @@ export class MmoRenderer {
     const x = Math.min(Math.max(0, canvasX - w / 2), CANVAS_W - w);
     const y = Math.min(canvasY, CANVAS_H - h);
     this.menu = { x, y, w, h, options, hover: -1 };
+  }
+
+  /** Close trade sheet and context menu (e.g. when standing up from the PC). */
+  dismissOverlays(): void {
+    this.menu = null;
+    this.tradeOpen = false;
   }
 
   /** Index of the menu row under a canvas point, or -1. */
@@ -911,17 +926,21 @@ export class MmoRenderer {
     const ctx = this.ctx;
     const coins = this.sim.player.coins;
     const hit = this.sim.stats.objectiveHit;
+    const bonus = this.sim.stats.statsBonusHit;
     const flashing = this.objectiveFlash > now && Math.floor(now / 200) % 2 === 0;
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, CANVAS_H - 11, VIEW_W, 11);
     ctx.font = '7px monospace';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = flashing ? '#ffe96b' : hit ? '#8be86b' : '#ffd23f';
+    ctx.fillStyle = flashing ? '#ffe96b' : hit && bonus ? '#8be86b' : '#ffd23f';
     const streak = this.sim.stats.killStreak;
     const streakTxt = streak > 1 ? ` · ${streak} streak` : '';
-    const label = hit
-      ? `Objective complete! ${coins} coins${streakTxt}`
-      : `Earn ${COIN_OBJECTIVE} coins before dinner! (${Math.min(coins, COIN_OBJECTIVE)}/${COIN_OBJECTIVE})${streakTxt}`;
+    const gp = objectiveProgressLabel(coins, hit);
+    const stats = bonusProgressLabel(this.sim.player.skills, bonus);
+    const label =
+      hit && bonus
+        ? `Max stack & 99 all! ${formatGpShort(coins)} gp${streakTxt}`
+        : `${gp} · ${stats}${streakTxt}`;
     ctx.fillText(label, 3, CANVAS_H - 9);
   }
 
@@ -1065,9 +1084,12 @@ export class MmoRenderer {
   private drawSkillBar(x: number, y: number, label: string, xp: number, w: number): void {
     const ctx = this.ctx;
     const lvl = levelOf(xp);
-    const cur = xp - xpForLevel(lvl);
-    const need = Math.max(1, xpForLevel(lvl + 1) - xpForLevel(lvl));
-    const pct = cur / need;
+    let pct = 1;
+    if (lvl < MAX_LEVEL) {
+      const cur = xp - xpForLevel(lvl);
+      const need = Math.max(1, xpForLevel(lvl + 1) - xpForLevel(lvl));
+      pct = cur / need;
+    }
     ctx.fillStyle = '#5a4a30';
     ctx.fillText(`${label} ${lvl}`, x, y);
     ctx.fillStyle = '#8a754f';
@@ -1118,7 +1140,7 @@ export class MmoRenderer {
 
     // coin — icon + amount, centred as a pair
     ctx.font = '8px monospace';
-    const coinStr = String(this.sim.player.coins);
+    const coinStr = formatGpShort(this.sim.player.coins);
     const coinGroupW = 9 + ctx.measureText(coinStr).width;
     const coinIconX = x0 + Math.floor((PANEL_W - coinGroupW) / 2) + 5;
     ctx.fillStyle = '#e8c33f';

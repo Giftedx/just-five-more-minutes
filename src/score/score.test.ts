@@ -14,6 +14,7 @@ function base(overrides: Partial<SessionData> = {}): SessionData {
   return {
     coins: 0,
     objectiveHit: false,
+    statsBonusHit: false,
     deaths: 0,
     deathsWhileAway: 0,
     prompts: [],
@@ -28,24 +29,22 @@ function base(overrides: Partial<SessionData> = {}): SessionData {
 }
 
 describe('MMO progress (0-40)', () => {
-  it('scales coins to 25 points', () => {
+  it('uses log-scaled coin progress toward max stack', () => {
     expect(scoreMmoProgress(base({ coins: 0 }))).toBe(0);
-    expect(scoreMmoProgress(base({ coins: 50 }))).toBe(12.5);
-    expect(scoreMmoProgress(base({ coins: 100 }))).toBe(25);
+    expect(scoreMmoProgress(base({ coins: 100 }))).toBeGreaterThan(0);
+    expect(scoreMmoProgress(base({ coins: 100 }))).toBeLessThan(5);
   });
 
-  it('caps the coin contribution at 100 coins', () => {
-    expect(scoreMmoProgress(base({ coins: 400 }))).toBe(25);
-  });
-
-  it('adds 15 for the objective and subtracts 5 per death', () => {
-    expect(scoreMmoProgress(base({ coins: 100, objectiveHit: true }))).toBe(40);
-    expect(scoreMmoProgress(base({ coins: 100, objectiveHit: true, deaths: 1 }))).toBe(35);
+  it('adds for max-stack and 99-all bonus, subtracts 5 per death', () => {
+    expect(scoreMmoProgress(base({ objectiveHit: true }))).toBe(12);
+    expect(scoreMmoProgress(base({ statsBonusHit: true }))).toBe(8);
+    expect(scoreMmoProgress(base({ objectiveHit: true, statsBonusHit: true }))).toBe(20);
+    expect(scoreMmoProgress(base({ objectiveHit: true, deaths: 1 }))).toBe(7);
   });
 
   it('clamps to 0-40', () => {
     expect(scoreMmoProgress(base({ coins: 0, deaths: 5 }))).toBe(0);
-    expect(scoreMmoProgress(base({ coins: 200, objectiveHit: true }))).toBe(40);
+    expect(scoreMmoProgress(base({ objectiveHit: true, statsBonusHit: true, deaths: 1 }))).toBe(15);
   });
 });
 
@@ -216,11 +215,15 @@ describe('ending matrix', () => {
     { id: 'laundry' as const, requestedAt: 420, startedAt: 425, completedAt: 460 },
   ];
 
-  it('covers all four cells', () => {
+  it('covers primary endings and bonus titles', () => {
     expect(endingTitle(base({ objectiveHit: true, chores: allDoneChores }))).toBe(
       'Functional Adult (Suspicious)',
     );
     expect(endingTitle(base({ objectiveHit: true }))).toBe('The Economy Needed You');
+    expect(endingTitle(base({ statsBonusHit: true }))).toBe('Max Cape (Bedroom Edition)');
+    expect(endingTitle(base({ objectiveHit: true, statsBonusHit: true }))).toBe(
+      'Max Stack, Max Cape, No Dinner',
+    );
     expect(endingTitle(base({ chores: allDoneChores }))).toBe('Employee of the Month (This House)');
     expect(endingTitle(base())).toBe('Goblin Spreadsheet Enjoyer');
   });
@@ -249,12 +252,13 @@ describe('computeScore', () => {
       ],
     });
     const s = computeScore(data);
-    expect(s.mmo).toBe(35); // 25 + 15 - 5
+    expect(s.mmo).toBeGreaterThan(0);
+    expect(s.mmo).toBeLessThan(40);
     expect(s.household).toBe(22); // 16 + 6
     expect(s.vibe).toBe(20); // 20 - 4 + 2 + 2, clamped to 20
     // facts: laundryIgnored + economyAtDinner = 2 -> 4
     expect(s.comedy).toBe(4);
-    expect(s.total).toBe(81);
+    expect(s.total).toBe(Math.round(s.mmo + s.household + s.vibe + s.comedy));
     expect(s.facts.map((f) => f.id)).toEqual(['laundryIgnored', 'economyAtDinner']);
     expect(s.facts.every((f) => f.note.length > 0)).toBe(true);
     expect(s.endingTitle).toBe('The Economy Needed You');

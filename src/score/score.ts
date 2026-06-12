@@ -3,6 +3,7 @@
  * Implements the locked formulas exactly.
  */
 import type { ChoreId, LineId } from '../director/director';
+import { COIN_OBJECTIVE } from '../mmo/sim/osrs';
 
 export interface PromptOutcome {
   lineId: LineId;
@@ -21,6 +22,7 @@ export interface ChoreOutcome {
 export interface SessionData {
   coins: number;
   objectiveHit: boolean;
+  statsBonusHit: boolean;
   deaths: number;
   /** Deaths that happened while the player was away from the PC. */
   deathsWhileAway: number;
@@ -41,7 +43,7 @@ export type ComedyFactId =
 export const COMEDY_NOTES: Readonly<Record<ComedyFactId, string>> = {
   oneSecSpam: 'Said "One sec!" three or more times. It was never one sec.',
   choreInDanger: 'Completed a chore while something was actively biting them.',
-  laundryIgnored: 'Reached 100 coins. The laundry remains at large.',
+  laundryIgnored: 'Hit max stack. The laundry remains at large.',
   choresWithoutGlory: 'Did every chore and still failed the only quest that mattered.',
   remoteDeath: 'Died to a goblin while physically in another room.',
   economyAtDinner: 'Responded to the dinner call with a macroeconomic argument.',
@@ -69,8 +71,10 @@ export function completedChores(data: SessionData): number {
 }
 
 export function scoreMmoProgress(data: SessionData): number {
-  let s = (Math.min(data.coins, 100) / 100) * 25;
-  if (data.objectiveHit) s += 15;
+  const coinPct = Math.log10(data.coins + 1) / Math.log10(COIN_OBJECTIVE + 1);
+  let s = coinPct * 20;
+  if (data.objectiveHit) s += 12;
+  if (data.statsBonusHit) s += 8;
   s -= 5 * data.deaths;
   return clamp(s, 0, 40);
 }
@@ -130,7 +134,9 @@ export function scoreComedy(data: SessionData): number {
 export function endingTitle(data: SessionData): string {
   const allChores = completedChores(data) === data.chores.length && data.chores.length > 0;
   let title: string;
-  if (data.objectiveHit && allChores) title = 'Functional Adult (Suspicious)';
+  if (data.objectiveHit && data.statsBonusHit) title = 'Max Stack, Max Cape, No Dinner';
+  else if (data.statsBonusHit) title = 'Max Cape (Bedroom Edition)';
+  else if (data.objectiveHit && allChores) title = 'Functional Adult (Suspicious)';
   else if (data.objectiveHit) title = 'The Economy Needed You';
   else if (allChores) title = 'Employee of the Month (This House)';
   else title = 'Goblin Spreadsheet Enjoyer';
