@@ -65,9 +65,20 @@ export class HostApp {
     const crtLabel = document.createElement('div');
     crtLabel.className = 'crt-label';
     crtLabel.textContent = 'ESC / Q — STAND UP';
+    const crtBrand = document.createElement('div');
+    crtBrand.className = 'crt-brand';
+    crtBrand.textContent = 'VISIONMASTER 240';
+    const crtControls = document.createElement('div');
+    crtControls.className = 'crt-controls';
+    for (let i = 0; i < 3; i++) crtControls.appendChild(document.createElement('span'));
     bezel.appendChild(this.crtScreen);
     bezel.appendChild(crtLabel);
+    bezel.appendChild(crtBrand);
+    bezel.appendChild(crtControls);
+    const crtStand = document.createElement('div');
+    crtStand.className = 'crt-stand';
     this.pcWrap.appendChild(bezel);
+    this.pcWrap.appendChild(crtStand);
     root.appendChild(this.pcWrap);
     this.mmo.attachInput(this.crtScreen);
 
