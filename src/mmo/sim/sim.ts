@@ -386,6 +386,12 @@ export class MudwickSim {
             if (next) g.pos = { ...next };
           }
         }
+      } else if (chebyshev(g.pos, g.home) > 2) {
+        // De-aggro can strand a goblin far from home (e.g. the player died
+        // mid-chase); walk back rather than freezing in place forever.
+        const path = bfsPath(g.pos, g.home, this.walkable);
+        const next = path?.[0];
+        if (next) g.pos = { ...next };
       } else if (this.rng.chance(0.15)) {
         // Idle wander near home.
         const dirs = [

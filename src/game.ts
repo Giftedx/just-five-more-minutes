@@ -33,7 +33,10 @@ export class Game {
   private state: 'title' | 'playing' | 'ended' = 'title';
   private choreCompletedInDanger = false;
   private silhouetteHideAt = 0;
-  private nowMs = 0;
+  /** Pause-frozen HUD clock (ms). Director time freezes on pause; wall-clock
+   *  timers would desync subtitles/prompt bar from the director, so the HUD
+   *  runs on this clock instead. */
+  private gameNow = 0;
   private raf = 0;
   private overlays: HTMLElement[] = [];
   private disposed = false;
@@ -147,7 +150,7 @@ export class Game {
           if (this.host.mmo.inCombat || sim.player.hp <= 4) {
             this.choreCompletedInDanger = true;
           }
-          this.hud.showToast(`${CHORE_DEFS[e.chore].chip} — sorted.`, this.nowMs);
+          this.hud.showToast(`${CHORE_DEFS[e.chore].chip} — sorted.`, this.gameNow);
           this.audio.choreDone();
         }
       }
@@ -216,12 +219,12 @@ export class Game {
   private handleDirectorEvent(ev: DirectorEvent): void {
     switch (ev.type) {
       case 'npcLine': {
-        this.hud.showSubtitle(ev.text, this.nowMs, 6000 / this.opts.speed);
-        this.hud.openPrompt(this.nowMs, (PROMPT_DURATION * 1000) / this.opts.speed);
+        this.hud.showSubtitle(ev.text, this.gameNow, 6000 / this.opts.speed);
+        this.hud.openPrompt(this.gameNow, (PROMPT_DURATION * 1000) / this.opts.speed);
         this.host.router.promptActive = true;
         this.host.room.npcSilhouette.visible = true;
         this.host.room.setHallLight(true);
-        this.silhouetteHideAt = this.nowMs + 6000 / this.opts.speed;
+        this.silhouetteHideAt = this.gameNow + 6000 / this.opts.speed;
         this.audio.knock();
         const syllables = Math.min(6, Math.max(3, Math.round(ev.text.split(' ').length / 2.5)));
         window.setTimeout(() => this.audio.npcVoice(syllables), 420);
@@ -330,11 +333,11 @@ export class Game {
     if (this.last === 0) this.last = now;
     const dtMs = Math.min(100, now - this.last);
     this.last = now;
-    this.nowMs = now;
 
     const paused = this.paused;
     this.host.paused = paused || this.state !== 'playing';
     if (this.state === 'playing' && !paused) {
+      this.gameNow += dtMs;
       for (const ev of this.director.update((dtMs / 1000) * this.opts.speed)) {
         this.handleDirectorEvent(ev);
       }
@@ -349,12 +352,12 @@ export class Game {
       this.hud.setObjectiveProgress(this.host.mmo.sim.player.coins, this.host.mmo.sim.stats.objectiveHit);
       const prompt = this.host.mode === 'room' ? this.host.prompt : null;
       this.hud.setInteractLabel(prompt?.label ?? null, prompt?.actionable ?? true);
-      if (this.host.room.npcSilhouette.visible && now > this.silhouetteHideAt) {
+      if (this.host.room.npcSilhouette.visible && this.gameNow > this.silhouetteHideAt) {
         this.host.room.npcSilhouette.visible = false;
         this.host.room.setHallLight(false);
       }
     }
-    if (!paused) this.hud.update(now);
+    this.hud.update(this.gameNow);
 
     this.raf = requestAnimationFrame(this.tick);
   };

@@ -37,8 +37,10 @@ export class MmoGame {
 
   /** Advance time. `playerAway` = player is not seated at the PC. */
   update(dtMs: number, playerAway: boolean): void {
-    this.now += dtMs;
     if (!this.paused) {
+      // Renderer clock freezes with the sim so messages/markers don't expire
+      // (and hitsplats don't vanish) during a pause.
+      this.now += dtMs;
       this.acc += dtMs;
       const tickMs = BASE_TICK_MS / this.speed;
       this.renderer.setTickMs(tickMs);

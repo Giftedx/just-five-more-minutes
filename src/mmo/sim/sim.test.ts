@@ -138,6 +138,16 @@ describe('combat', () => {
     expect(sim.player.pos).toEqual(SPAWN_TILE);
   });
 
+  it('a de-aggroed goblin walks back toward its home tile', () => {
+    const sim = new MudwickSim(7);
+    const goblin = sim.goblins[0];
+    if (!goblin) throw new Error('no goblin');
+    goblin.pos = { x: 6, y: 6 }; // stranded mid-map, far outside the pen
+    expect(goblin.aggro).toBe(false);
+    for (let i = 0; i < 40; i++) sim.step();
+    expect(Math.max(Math.abs(goblin.pos.x - goblin.home.x), Math.abs(goblin.pos.y - goblin.home.y))).toBeLessThanOrEqual(2);
+  });
+
   it('dead goblins respawn at home after the respawn delay', () => {
     const sim = new MudwickSim(7);
     engage(sim);
