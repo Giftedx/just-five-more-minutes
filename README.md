@@ -83,7 +83,7 @@ Smoke test (optional, needs Playwright + Chromium): run `npm run preview`, then 
 
 The live build is on **ha.ggis.xyz**: https://ha.ggis.xyz/just-five-more-minutes/
 
-A standalone mirror also lives on Cloudflare Pages: https://just-five-more-minutes.pages.dev/
+The old `just-five-more-minutes.pages.dev` URL redirects there automatically.
 
 The build is fully static and self-contained (`base: './'`, no network assets). Connect the repo in the Cloudflare dashboard, or deploy from the CLI:
 
