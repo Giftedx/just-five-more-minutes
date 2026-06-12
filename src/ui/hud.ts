@@ -23,7 +23,7 @@ export class Hud {
     parent.appendChild(this.root);
 
     this.objectiveEl = this.div('hud-objective');
-    this.choreEl = this.div('hud-chore');
+    this.choreEl = this.div('hud-chores');
     this.clockEl = this.div('hud-clock');
     this.subtitleEl = this.div('hud-subtitle');
     this.promptEl = this.div('hud-prompt');
@@ -62,12 +62,19 @@ export class Hud {
       : `Earn 100 coins in Mudwick before dinner. (${Math.min(coins, 100)}/100)`;
   }
 
-  setChoreChip(text: string | null): void {
-    if (text === null) {
+  /** One chip per active chore, oldest first. Empty array hides the stack. */
+  setChoreChips(texts: string[]): void {
+    if (texts.length === 0) {
       this.choreEl.style.display = 'none';
-    } else {
-      this.choreEl.style.display = 'block';
-      this.choreEl.textContent = text;
+      return;
+    }
+    this.choreEl.style.display = 'flex';
+    this.choreEl.innerHTML = '';
+    for (const text of texts) {
+      const chip = document.createElement('div');
+      chip.className = 'hud-chore';
+      chip.textContent = text;
+      this.choreEl.appendChild(chip);
     }
   }
 

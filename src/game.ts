@@ -253,13 +253,13 @@ export class Game {
 
   private refreshChoreChip(): void {
     const tracker = this.host.interact.tracker;
-    const active = tracker.activeChore(CHORE_ORDER);
-    if (!active) {
-      this.hud.setChoreChip(null);
-      return;
+    const chips: string[] = [];
+    for (const c of CHORE_ORDER) {
+      if (!tracker.isRequested(c) || tracker.isCompleted(c)) continue;
+      const { done, total } = tracker.progress(c);
+      chips.push(`${CHORE_DEFS[c].chip} ${done}/${total}`);
     }
-    const { done, total } = tracker.progress(active);
-    this.hud.setChoreChip(`${CHORE_DEFS[active].chip} ${done}/${total}`);
+    this.hud.setChoreChips(chips);
   }
 
   private endSession(): void {
