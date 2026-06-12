@@ -77,8 +77,17 @@ export class HostApp {
     bezel.appendChild(crtControls);
     const crtStand = document.createElement('div');
     crtStand.className = 'crt-stand';
+    const deskProps = document.createElement('div');
+    deskProps.className = 'crt-desk-props';
+    const deskKb = document.createElement('div');
+    deskKb.className = 'crt-kb';
+    const deskMouse = document.createElement('div');
+    deskMouse.className = 'crt-mouse';
+    deskProps.appendChild(deskKb);
+    deskProps.appendChild(deskMouse);
     this.pcWrap.appendChild(bezel);
     this.pcWrap.appendChild(crtStand);
+    this.pcWrap.appendChild(deskProps);
     root.appendChild(this.pcWrap);
     this.mmo.attachInput(this.crtScreen);
 
@@ -207,9 +216,14 @@ export class HostApp {
   private fitCrt(): void {
     const scale = Math.max(
       1,
-      Math.floor(Math.min((window.innerWidth - 140) / 320, (window.innerHeight - 160) / 240)),
+      Math.floor(Math.min((window.innerWidth - 140) / 320, (window.innerHeight - 220) / 240)),
     );
     this.crtScreen.style.width = `${320 * scale}px`;
     this.crtScreen.style.height = `${240 * scale}px`;
+    // Rest the monitor on the desk: bottom padding sinks the stand foot just
+    // past the desk's top edge, clamped so the bezel never spills off-screen.
+    const clusterH = 240 * scale + 110; // screen + bezel padding + stand
+    const pad = Math.max(24, Math.min(0.12 * window.innerHeight, window.innerHeight - clusterH - 24));
+    this.pcWrap.style.paddingBottom = `${pad}px`;
   }
 }

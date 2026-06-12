@@ -311,6 +311,13 @@ export function buildRoom(): Room {
   // keyboard
   scene.add(box(0.42, 0.025, 0.16, lambert(0xc8c0b0), 0.9, 0.79, -1.32));
 
+  // mousepad + mouse, to the right of the keyboard
+  scene.add(box(0.2, 0.006, 0.24, lambert(0x3a4450), 1.32, 0.784, -1.32));
+  const mouse = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), lambert(0xc8c0b0));
+  mouse.scale.set(1, 0.5, 1.35);
+  mouse.position.set(1.32, 0.8, -1.32);
+  scene.add(mouse);
+
   // chair
   const chair = new THREE.Group();
   chair.add(box(0.42, 0.06, 0.42, lambert(0x4a4a56), 0, 0.46, 0));
