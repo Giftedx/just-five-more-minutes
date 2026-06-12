@@ -7,6 +7,7 @@ export class AudioSynth {
   private roomToneNodes: AudioNode[] = [];
   private volume = 0.6;
   private unlocked = false;
+  private removeUnlockListeners: () => void;
 
   constructor() {
     // Resume on the first user gesture (autoplay policy).
@@ -14,6 +15,9 @@ export class AudioSynth {
       this.ensureCtx();
       void this.ctx?.resume();
       this.unlocked = true;
+      this.removeUnlockListeners();
+    };
+    this.removeUnlockListeners = () => {
       document.removeEventListener('pointerdown', unlock);
       document.removeEventListener('keydown', unlock);
     };
@@ -244,6 +248,7 @@ export class AudioSynth {
   }
 
   dispose(): void {
+    this.removeUnlockListeners();
     for (const n of this.roomToneNodes) {
       if (n instanceof OscillatorNode || n instanceof AudioBufferSourceNode) {
         try {

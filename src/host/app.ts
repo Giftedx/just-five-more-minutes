@@ -169,6 +169,19 @@ export class HostApp {
   dispose(): void {
     this.router.dispose();
     window.removeEventListener('resize', this.onResize);
+    this.monitorTex.dispose();
+    // Free GPU resources created in buildRoom (texture dispose is idempotent,
+    // so the monitor screen's map appearing here too is fine).
+    this.room.scene.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      o.geometry.dispose();
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        const mat = m as THREE.Material & { map?: THREE.Texture | null };
+        mat.map?.dispose();
+        mat.dispose();
+      }
+    });
     this.renderer.dispose();
     this.root.innerHTML = '';
   }
