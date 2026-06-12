@@ -1,10 +1,9 @@
 # Just Five More Minutes
 
 [![CI](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml/badge.svg)](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml)
-[![Deploy](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/deploy.yml/badge.svg)](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**[▶ Play in your browser](https://giftedx.github.io/just-five-more-minutes/)** — no install, no login, no microtransactions. Just goblins.
+**[▶ Play in your browser](https://just-five-more-minutes.pages.dev/)** — no install, no login, no microtransactions. Just goblins.
 
 Dinner is in five minutes, and your room is a mild disgrace. Unfortunately, the goblins of **Mudwick Online** — a lovingly stupid, 2004-flavoured mini-MMO that lives inside your bedroom PC — are not going to grind themselves.
 
@@ -80,25 +79,15 @@ Smoke test (optional, needs Playwright + Chromium): run `npm run preview`, then 
 
 ## Deploying
 
-### GitHub Pages (automatic)
+The live build is on **Cloudflare Pages**: https://just-five-more-minutes.pages.dev/
 
-Pushes to `master` run [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) and publish to:
-
-**https://giftedx.github.io/just-five-more-minutes/**
-
-First-time setup: in repo **Settings → Pages**, set **Source** to **GitHub Actions**.
-
-### Cloudflare Pages (manual)
-
-The build is fully static and self-contained (`base: './'`, no network assets).
+The build is fully static and self-contained (`base: './'`, no network assets). Connect the repo in the Cloudflare dashboard, or deploy from the CLI:
 
 | Setting | Value |
 |---|---|
 | Framework preset | **None** |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
-
-Or from the CLI:
 
 ```bash
 npm run build

@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Play the game
-    url: https://giftedx.github.io/just-five-more-minutes/
+    url: https://just-five-more-minutes.pages.dev/
     about: Open the live build in your browser
   - name: Discussions
     url: https://github.com/Giftedx/just-five-more-minutes/discussions
