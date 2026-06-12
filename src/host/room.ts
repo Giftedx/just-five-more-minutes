@@ -413,6 +413,139 @@ export function buildRoom(): Room {
   addItem('cloth1', 'laundry', 'sock', makeCloth(0x8f8f3c), -0.2, 0, 1.35);
   addItem('cloth2', 'laundry', 'shirt', makeCloth(0x8f5a3c, true), -1.9, 0.48, 0.2);
 
+  // ---- decoration pass (visual only: nothing here is interactable or solid)
+
+  // skirting boards (south wall split around the door opening)
+  const skirt = lambert(0x6e5a44);
+  scene.add(box(5, 0.09, 0.025, skirt, 0, 0.045, -1.99));
+  scene.add(box(0.025, 0.09, 4, skirt, -2.49, 0.045, 0));
+  scene.add(box(0.025, 0.09, 4, skirt, 2.49, 0.045, 0));
+  scene.add(box(1.26, 0.09, 0.025, skirt, -1.87, 0.045, 1.99));
+  scene.add(box(2.86, 0.09, 0.025, skirt, 1.07, 0.045, 1.99));
+
+  // PC tower under the desk, with power LED and drive slots
+  const tower = new THREE.Group();
+  tower.add(box(0.18, 0.46, 0.42, lambert(0xb8b0a0), 0, 0.23, 0));
+  tower.add(box(0.12, 0.008, 0.005, lambert(0x4a4640), 0, 0.36, 0.21));
+  tower.add(box(0.12, 0.008, 0.005, lambert(0x4a4640), 0, 0.32, 0.21));
+  const towerLed = new THREE.Mesh(
+    new THREE.BoxGeometry(0.014, 0.014, 0.006),
+    new THREE.MeshBasicMaterial({ color: 0x5ee85e }),
+  );
+  towerLed.position.set(-0.05, 0.4, 0.21);
+  tower.add(towerLed);
+  tower.add(box(0.025, 0.025, 0.006, lambert(0x8a8276), 0.04, 0.4, 0.21));
+  tower.position.set(1.5, 0, -1.62);
+  scene.add(tower);
+
+  // cables: monitor drop behind the desk + floor run to the tower
+  const cableMat = lambert(0x1c1c20);
+  scene.add(box(0.02, 0.74, 0.02, cableMat, 1.08, 0.37, -1.92));
+  scene.add(box(0.32, 0.02, 0.02, cableMat, 1.26, 0.012, -1.88));
+
+  // curtain rod + panels framing the window (east wall)
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.74, 8), lambert(WOOD_DARK));
+  rod.rotation.x = Math.PI / 2;
+  rod.position.set(2.44, 2.26, 0.4);
+  scene.add(rod);
+  const curtainMat = lambert(0x6e4a8c);
+  for (const cz of [-0.34, 1.14]) {
+    const panel = box(0.06, 1.42, 0.26, curtainMat, 2.43, 1.5, cz);
+    scene.add(panel);
+    scene.add(box(0.045, 1.42, 0.1, curtainMat, 2.4, 1.46, cz + (cz < 0.4 ? 0.16 : -0.16)));
+  }
+
+  // window sill + a small potted plant
+  scene.add(box(0.1, 0.045, 1.34, lambert(WOOD_DARK), 2.44, 0.96, 0.4));
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.024, 0.07, 8), lambert(0xa05838));
+  pot.position.set(2.4, 1.02, 0.78);
+  scene.add(pot);
+  const plant = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 0), lambert(0x4a8f3c));
+  plant.scale.set(1, 1.25, 1);
+  plant.position.set(2.4, 1.1, 0.78);
+  scene.add(plant);
+
+  // shelf above the desk: books (one leaning) + a small trophy
+  scene.add(box(0.92, 0.035, 0.2, lambert(WOOD), 0.9, 1.74, -1.88));
+  const bookColors = [0x8f3c50, 0x3c6e8f, 0xc8a040, 0x4a8f3c, 0x6e4a8c];
+  let bx = 0.54;
+  for (let i = 0; i < bookColors.length; i++) {
+    const w = 0.034 + (i % 3) * 0.007;
+    const h = 0.16 + ((i * 7) % 4) * 0.014;
+    scene.add(box(w, h, 0.15, lambert(bookColors[i] ?? 0x888888), bx + w / 2, 1.758 + h / 2, -1.88));
+    bx += w + 0.012;
+  }
+  const leaning = box(0.03, 0.18, 0.15, lambert(0xb86a50), bx + 0.05, 1.84, -1.88);
+  leaning.rotation.z = -0.42;
+  scene.add(leaning);
+  scene.add(box(0.07, 0.02, 0.07, lambert(0x4a4640), 1.22, 1.768, -1.88));
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.018, 0.055, 8), lambert(0xe8c33f, { emissive: 0x806820, emissiveIntensity: 0.35 }));
+  cup.position.set(1.22, 1.806, -1.88);
+  scene.add(cup);
+
+  // sticky notes + wall calendar near the desk (north wall)
+  const stickyColors = [0xf0e060, 0x88d8a0, 0xf0a0b0];
+  const stickyPos: [number, number, number][] = [
+    [0.34, 1.46, -0.12],
+    [0.5, 1.32, 0.14],
+    [0.27, 1.28, 0.05],
+  ];
+  stickyColors.forEach((c, i) => {
+    const p = stickyPos[i];
+    if (!p) return;
+    const note = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.075), new THREE.MeshLambertMaterial({ color: c }));
+    note.position.set(p[0], p[1], -1.995);
+    note.rotation.z = p[2];
+    scene.add(note);
+  });
+  const calendar = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.22), lambert(0xe8e2d4));
+  calendar.position.set(1.66, 1.46, -1.995);
+  scene.add(calendar);
+  const calHeader = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.05), lambert(0xa03028));
+  calHeader.position.set(1.66, 1.545, -1.994);
+  scene.add(calHeader);
+  const calRing = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.018), lambert(0x4a4640));
+  calRing.position.set(1.66, 1.578, -1.994);
+  scene.add(calRing);
+
+  // headboard + slippers by the bed
+  scene.add(box(0.95, 0.55, 0.05, lambert(WOOD_DARK), -1.95, 0.45, -1.43));
+  for (const [sx, sz, ry] of [
+    [-1.36, 0.78, 0.25],
+    [-1.32, 0.95, -0.15],
+  ] as const) {
+    const slipper = box(0.09, 0.045, 0.2, lambert(0x9c4a3c), sx, 0.023, sz);
+    slipper.rotation.y = ry;
+    scene.add(slipper);
+  }
+
+  // glow-in-the-dark ceiling stars
+  const starMat = new THREE.MeshBasicMaterial({ color: 0xb8e8c8 });
+  for (const [gx, gz] of [
+    [-1.5, -1.2],
+    [0.6, -0.9],
+    [1.4, 0.3],
+    [-0.6, 0.5],
+    [0.2, -1.6],
+    [-1.8, 1.0],
+    [1.0, 1.2],
+    [-0.2, -0.1],
+    [1.9, -0.9],
+    [-1.1, -1.7],
+    [2.1, 1.5],
+    [-2.0, -0.3],
+  ] as const) {
+    const star = new THREE.Mesh(new THREE.CircleGeometry(0.016, 5), starMat);
+    star.position.set(gx, 2.595, gz);
+    star.rotation.x = Math.PI / 2;
+    scene.add(star);
+  }
+
+  // cord for the ceiling lamp
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.22, 6), lambert(0x2e2a26));
+  cord.position.set(-0.4, 2.49, -0.2);
+  scene.add(cord);
+
   // ---- placement slots (world space)
   const slots = {
     tray: [
