@@ -8,6 +8,8 @@ export class AudioSynth {
   private volume = 0.6;
   private unlocked = false;
   private removeUnlockListeners: () => void;
+  /** Transient per-call gain multiplier (see atGain). */
+  private gainScale = 1;
 
   constructor() {
     // Resume on the first user gesture (autoplay policy).
@@ -34,6 +36,19 @@ export class AudioSynth {
 
   getVolume(): number {
     return this.volume;
+  }
+
+  /**
+   * Play `fn`'s sounds at a scaled gain — e.g. MMO sounds heard from across
+   * the room, coming out of the CRT's little speaker.
+   */
+  atGain(scale: number, fn: () => void): void {
+    this.gainScale = scale;
+    try {
+      fn();
+    } finally {
+      this.gainScale = 1;
+    }
   }
 
   private ensureCtx(): AudioContext | null {
@@ -77,7 +92,7 @@ export class AudioSynth {
     if (opts.glideTo !== undefined) {
       osc.frequency.exponentialRampToValueAtTime(Math.max(20, opts.glideTo), t0 + dur);
     }
-    const peak = opts.gain ?? 0.18;
+    const peak = (opts.gain ?? 0.18) * this.gainScale;
     const attack = opts.attack ?? 0.004;
     g.gain.setValueAtTime(0, t0);
     g.gain.linearRampToValueAtTime(peak, t0 + attack);
@@ -111,7 +126,7 @@ export class AudioSynth {
       filter.frequency.value = opts.noiseFreq ?? 300;
       filter.Q.value = 1.2;
       const g = this.ctx.createGain();
-      g.gain.setValueAtTime(opts.noise, t0);
+      g.gain.setValueAtTime(opts.noise * this.gainScale, t0);
       g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
       src.connect(filter).connect(g).connect(this.master);
       src.start(t0);

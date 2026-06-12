@@ -162,8 +162,11 @@ export class Game {
       else this.audio.place();
     };
 
-    this.host.mmo.onUiSound = () => this.audio.mmoClick();
-    this.host.mmo.onEvents = (events) => {
+    // MMO sounds are diegetic: when the player is across the room they come
+    // out of the CRT's little speaker, so they play attenuated.
+    const mmoGain = (): number => (this.host.mode === 'room' ? 0.4 : 1);
+    this.host.mmo.onUiSound = () => this.audio.atGain(mmoGain(), () => this.audio.mmoClick());
+    this.host.mmo.onEvents = (events) => this.audio.atGain(mmoGain(), () => {
       for (const e of events) {
         switch (e.type) {
           case 'chop':
@@ -195,7 +198,7 @@ export class Game {
             break;
         }
       }
-    };
+    });
   }
 
   private buildVolumeControl(): void {
