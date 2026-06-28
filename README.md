@@ -61,7 +61,7 @@ git clone https://github.com/Giftedx/just-five-more-minutes.git
 cd just-five-more-minutes
 npm install
 npm run dev        # dev server at http://localhost:5173
-npm test           # vitest — director, score, sim, chores (73 tests)
+npm test           # vitest — director, score, sim, chores (75 tests)
 npm run build      # tsc --noEmit && vite build -> dist/
 npm run preview    # serve the production build
 ```

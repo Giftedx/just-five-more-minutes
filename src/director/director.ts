@@ -12,11 +12,21 @@ export const BANNER_AT = Math.round((45 / 720) * SESSION_LENGTH);
 /** Final warning — always one minute before dinner. */
 export const WARN_AT = SESSION_LENGTH - 60;
 
-/** Laundry never requested later than this (~3:58 in a 5-min session). */
-export const CHORE3_CAP = Math.round((570 / 720) * SESSION_LENGTH);
-
 export const PROMPT_DURATION = 20;
 export const CHORE_GRACE = 60;
+
+/**
+ * Laundry is never requested later than this. Its proportional slot is ~3:58
+ * (570/720 of the session), but it is also clamped to leave a full prompt
+ * window before the warning. WARN_AT is anchored to the session end (not
+ * scaled), so without this clamp the compressed 5-minute schedule lets laundry
+ * fire ~2s before warn — and the warn prompt would steal laundry's answer
+ * window mid-countdown and orphan its prompt.
+ */
+export const CHORE3_CAP = Math.min(
+  Math.round((570 / 720) * SESSION_LENGTH),
+  WARN_AT - PROMPT_DURATION,
+);
 
 export type ChoreId = 'mugs' | 'wrappers' | 'laundry';
 export type LineId = 'intro' | 'mugs' | 'wrappers' | 'laundry' | 'warn';
@@ -206,7 +216,19 @@ export class Director {
     // Invariant: a bark line never repeats within a session.
     if (this.firedLines.includes(lineId)) return [];
     this.firedLines.push(lineId);
+    const events: DirectorEvent[] = [];
+    // A new line supersedes any prompt still open (grace can compress two
+    // requests to under PROMPT_DURATION apart). Close it as ignored so the
+    // record isn't orphaned permanently-open — only the latest prompt is ever
+    // reachable by the timeout/respond logic, so an un-closed older one would
+    // never resolve and would still cost the player a vibe point at scoring.
+    const open = this.activePrompt;
+    if (open) {
+      open.result = 'ignored';
+      events.push({ type: 'promptClosed', lineId: open.lineId, result: 'ignored', option: null });
+    }
     this.prompts.push({ lineId, openedAt: this.t, result: 'open', option: null });
-    return [{ type: 'npcLine', lineId, text: NPC_LINES[lineId] }];
+    events.push({ type: 'npcLine', lineId, text: NPC_LINES[lineId] });
+    return events;
   }
 }

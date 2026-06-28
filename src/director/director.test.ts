@@ -241,6 +241,74 @@ describe('director timeline', () => {
     expect(d.ended).toBe(true);
   });
 
+  it('leaves a full prompt window before the warning even when laundry is pushed to its cap', () => {
+    // Scaling invariant: chore 3 must never be requested within PROMPT_DURATION
+    // of the warn line, or its answer window gets stolen by the warn prompt.
+    expect(CHORE3_CAP).toBeLessThanOrEqual(WARN_AT - PROMPT_DURATION);
+
+    // Behaviourally: completing mugs + wrappers promptly pushes laundry toward
+    // its cap via the 60s grace; it must still fire a full window before warn.
+    const d = new Director();
+    const log = run(d, SESSION_LENGTH + 1, 0.5, [
+      (dir, t) => {
+        if (
+          t >= CHORE_BASE_TIMES.wrappers - 1 &&
+          dir.chores.mugs.requestedAt !== null &&
+          dir.chores.mugs.completedAt === null
+        ) {
+          dir.noteChoreCompleted('mugs');
+        }
+        // Complete wrappers before laundry's base time so the grace reschedule
+        // actually applies to laundry (otherwise laundry fires at its base).
+        if (
+          t >= CHORE_BASE_TIMES.laundry - 5 &&
+          dir.chores.wrappers.requestedAt !== null &&
+          dir.chores.wrappers.completedAt === null
+        ) {
+          dir.noteChoreCompleted('wrappers');
+        }
+      },
+    ]);
+    const laundry = eventsOf(log, 'npcLine').find((e) => e.ev.type === 'npcLine' && e.ev.lineId === 'laundry');
+    expect(laundry).toBeDefined();
+    expect(laundry?.t ?? Infinity).toBeLessThanOrEqual(WARN_AT - PROMPT_DURATION + 1);
+
+    // Formula-independent teeth: whatever the cap, the player must get a full
+    // answer window — warn cannot supersede the laundry prompt before
+    // PROMPT_DURATION has elapsed. (Pre-fix the gap collapses to ~10s.)
+    const warn = eventsOf(log, 'npcLine').find((e) => e.ev.type === 'npcLine' && e.ev.lineId === 'warn');
+    expect(warn).toBeDefined();
+    expect((warn?.t ?? 0) - (laundry?.t ?? 0)).toBeGreaterThanOrEqual(PROMPT_DURATION - 1);
+  });
+
+  it('never orphans a superseded prompt when a new line fires within the answer window', () => {
+    // Complete mugs just before wrappers' base time: grace pushes wrappers to
+    // ~base+59, which lands < PROMPT_DURATION before laundry's base, so the
+    // wrappers prompt is still open when laundry fires.
+    const d = new Director();
+    const log = run(d, SESSION_LENGTH + 1, 0.5, [
+      (dir, t) => {
+        if (
+          t >= CHORE_BASE_TIMES.wrappers - 1 &&
+          dir.chores.mugs.requestedAt !== null &&
+          dir.chores.mugs.completedAt === null
+        ) {
+          dir.noteChoreCompleted('mugs');
+        }
+      },
+    ]);
+
+    // The wrappers prompt must be explicitly closed, not left dangling.
+    const wrappersClose = eventsOf(log, 'promptClosed').find(
+      (e) => e.ev.type === 'promptClosed' && e.ev.lineId === 'wrappers',
+    );
+    expect(wrappersClose).toBeDefined();
+    // No prompt may remain 'open' once the session has ended.
+    expect(d.prompts.filter((p) => p.result === 'open')).toHaveLength(0);
+    // Every prompt record is accounted for by exactly one promptClosed event.
+    expect(eventsOf(log, 'promptClosed')).toHaveLength(d.prompts.length);
+  });
+
   it('exposes the four canonical response options', () => {
     expect(RESPONSE_OPTIONS).toHaveLength(4);
     expect(RESPONSE_OPTIONS[0]).toBe('One sec!');
