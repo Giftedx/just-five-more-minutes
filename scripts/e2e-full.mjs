@@ -24,6 +24,13 @@ const aimSnippet = `
 const browser = await chromium.launch();
 const page = await browser.newPage();
 
+// CPU_THROTTLE=8 emulates a slow CI runner (CDP throttling) for local repros.
+const throttleRate = Number(process.env.CPU_THROTTLE ?? '0');
+if (throttleRate > 1) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttleRate });
+}
+
 const evalGame = (fn) => page.evaluate(fn);
 const aimAt = async (sx, sz, ix, iy, iz) => {
   await page.evaluate(`${aimSnippet}(${sx},${sz},${ix},${iy},${iz})`);
@@ -81,21 +88,59 @@ const carryTo = async (itemId, item, target) => {
   );
 };
 
-const waitForChore = async (chore) => {
-  await page.waitForFunction(
-    (c) => window.__game['director'].chores[c].requestedAt !== null,
-    chore,
-    { timeout: 90_000, polling: 150 },
-  );
+/**
+ * Arm a background watcher that answers a prompt the moment it opens, then
+ * verifies the director recorded the answer. Prompts live PROMPT_DURATION
+ * game-seconds (2 wall-seconds at speed 10), so on a slow machine a prompt
+ * that fires mid-carry would expire before a sequential wait even starts —
+ * arming BEFORE the preceding carries catches the window at its opening
+ * edge. Returns an awaiter for the point in the flow that needs the answer.
+ */
+const armPrompt = (lineId, option) => {
+  const armed = (async () => {
+    try {
+      await page.waitForFunction(
+        (l) => window.__game['director'].activePrompt?.lineId === l,
+        lineId,
+        { timeout: 120_000, polling: 100 },
+      );
+      await page.keyboard.press(String(option));
+      await page.waitForFunction(
+        (l) => window.__game['director'].prompts.some(
+          (p) => p.lineId === l && p.result === 'answered',
+        ),
+        lineId,
+        { timeout: 10_000, polling: 100 },
+      );
+    } catch (error) {
+      await dumpDirector(`answering prompt "${lineId}"`);
+      throw error;
+    }
+  })();
+  // Handled here so an in-flight rejection can't crash the run before the
+  // flow awaits it; `await armed` below still surfaces the original error.
+  armed.catch(() => {});
+  return () => armed;
 };
 
-const answerPrompt = async (lineId, option) => {
-  await page.waitForFunction(
-    (l) => window.__game['director'].activePrompt?.lineId === l,
-    lineId,
-    { timeout: 90_000, polling: 100 },
-  );
-  await page.keyboard.press(String(option));
+/** On failure, show where the session clock and prompt records actually are. */
+const dumpDirector = async (context) => {
+  try {
+    const state = await page.evaluate(() => {
+      const d = window.__game['director'];
+      return {
+        t: Math.round(d.t),
+        ended: d.ended,
+        prompts: d.prompts.map((p) => `${p.lineId}@${Math.round(p.openedAt)}:${p.result}`),
+        chores: Object.values(d.chores).map(
+          (c) => `${c.id} req@${c.requestedAt === null ? '-' : Math.round(c.requestedAt)}`,
+        ),
+      };
+    });
+    console.error(`E2E state while ${context}: ${JSON.stringify(state)}`);
+  } catch {
+    console.error(`E2E state unavailable while ${context}`);
+  }
 };
 
 try {
@@ -106,23 +151,25 @@ try {
   const BIN = [1.95, -0.45, 1.95, 0.2, -1.1];
   const BASKET = [-1.85, 0.9, -1.85, 0.15, 1.55];
 
-  await answerPrompt('intro', 1);
+  await armPrompt('intro', 1)();
 
-  await waitForChore('mugs');
-  await answerPrompt('mugs', 2);
+  // Each next prompt is armed before the current chore's carries: a chore
+  // request that fires mid-carry still gets answered inside its window.
+  await armPrompt('mugs', 2)();
+  const wrappersAnswered = armPrompt('wrappers', 3);
   await carryTo('mug0', [0.28, -0.8, 0.28, 0.82, -1.42], TRAY);
   await carryTo('mug1', [1.5, -0.8, 1.5, 0.82, -1.38], TRAY);
   await carryTo('mug2', [1.56, -0.8, 1.56, 0.82, -1.74], TRAY);
 
-  await waitForChore('wrappers');
-  await answerPrompt('wrappers', 3);
+  await wrappersAnswered();
+  const laundryAnswered = armPrompt('laundry', 4);
   await carryTo('wrap0', [0.3, 0.8, 0.3, 0.04, 0.1], BIN);
   await carryTo('wrap1', [1.5, 0.3, 1.5, 0.04, -0.4], BIN);
   await carryTo('wrap2', [-0.55, 0.4, -0.55, 0.04, 1.1], BIN);
   await carryTo('wrap3', [0.32, -0.8, 0.32, 0.82, -1.72], BIN);
 
-  await waitForChore('laundry');
-  await answerPrompt('laundry', 4);
+  await laundryAnswered();
+  const warnAnswered = armPrompt('warn', 1);
   await carryTo('cloth0', [-0.9, 0.5, -0.9, 0.05, -0.2], BASKET);
   await carryTo('cloth1', [-0.2, 0.65, -0.2, 0.05, 1.35], BASKET);
   await carryTo('cloth2', [-1.1, 0.2, -1.9, 0.5, 0.2], BASKET);
@@ -133,7 +180,7 @@ try {
   });
   if (!chores.every(Boolean)) throw new Error(`chores not all complete: ${chores}`);
 
-  await answerPrompt('warn', 1);
+  await warnAnswered();
 
   await page.waitForSelector('.sc-card', { timeout: 120_000 });
   const get = (sel) => page.textContent(sel);
