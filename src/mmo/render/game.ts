@@ -19,6 +19,7 @@ export class MmoGame {
 
   private acc = 0;
   private now = 0;
+  private renderAcc = 0;
 
   constructor(seed?: number, speed = 1) {
     this.sim = seed === undefined ? new MudwickSim() : new MudwickSim(seed);
@@ -41,7 +42,8 @@ export class MmoGame {
   }
 
   /** Advance time. `playerAway` = player is not seated at the PC. */
-  update(dtMs: number, playerAway: boolean): void {
+  update(dtMs: number, playerAway: boolean, render = true): void {
+    this.renderAcc += dtMs;
     if (!this.paused) {
       // Renderer clock freezes with the sim so messages/markers don't expire
       // (and hitsplats don't vanish) during a pause.
@@ -63,7 +65,11 @@ export class MmoGame {
         this.onEvents?.(events);
       }
     }
-    this.renderer.render(this.now, dtMs);
+    if (render) {
+      const renderDtMs = this.renderAcc;
+      this.renderAcc = 0;
+      this.renderer.render(this.now, renderDtMs);
+    }
   }
 
   /** Wire mouse handling onto the element that displays the canvas. */

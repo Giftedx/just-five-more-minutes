@@ -10,8 +10,11 @@
     "build:hub": "tsc --noEmit && vite build --base /just-five-more-minutes/",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:browser": "node scripts/run-browser-checks.mjs",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "size:check": "node scripts/check-dist-size.mjs",
+    "verify": "npm test && npm run build && npm run size:check && npm run test:browser && npm run build:hub"
   },
   "dependencies": {
     "three": "0.184.0"

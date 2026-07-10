@@ -10,6 +10,13 @@ import {
   type DirectorEvent,
 } from './director/director';
 import { computeScore, type SessionData } from './score/score';
+import {
+  recordReport,
+  type ReportHistorySummary,
+} from './score/history';
+import { levelOf } from './mmo/sim/osrs';
+import type { SimEvent } from './mmo/sim/types';
+import { createSessionSeed } from './session';
 import { Hud } from './ui/hud';
 import { showScorecard } from './ui/scorecard';
 import { showTitle } from './ui/title';
@@ -23,6 +30,37 @@ export interface GameOptions {
 
 const CHORE_ORDER: readonly ChoreId[] = ['mugs', 'wrappers', 'laundry'];
 
+export function crossWorldToast(event: SimEvent): string | null {
+  if (event.type === 'playerDied' && event.whileAway) {
+    return 'Mudwick: you died while unsupervised.';
+  }
+  if (event.type === 'questComplete') {
+    return `Wyn contract complete — ${event.reward} gp.`;
+  }
+  return null;
+}
+
+export function choreDoneToast(label: string, completedInDanger: boolean): string {
+  return completedInDanger
+    ? 'Sorted while your avatar was in mortal danger. Efficient.'
+    : `${label} — sorted.`;
+}
+
+function recordReportSafely(total: number): ReportHistorySummary {
+  try {
+    return recordReport(localStorage, total);
+  } catch {
+    return {
+      runNumber: 1,
+      best: total,
+      previousTotal: null,
+      delta: null,
+      isNewBest: true,
+      persisted: false,
+    };
+  }
+}
+
 /** Mum's comeback for each of the four excuses. She has heard them all. */
 const MUM_RETORTS: readonly string[] = [
   "Mm. Starting the sixty seconds I don't believe in.",
@@ -35,6 +73,7 @@ const MUM_RETORTS: readonly string[] = [
 export class Game {
   private root: HTMLElement;
   private opts: GameOptions;
+  private readonly sessionSeed: number;
   private host: HostApp;
   private director: Director;
   private hud: Hud;
@@ -51,21 +90,29 @@ export class Game {
   private disposed = false;
   /** Pointer lock has been held at least once (real keyboard+mouse session). */
   private hadPointerLock = false;
+  /** A normal title-screen run cannot advance until its first room lock. */
+  private pointerLockRequired = false;
   private hiddenPause = false;
   private pauseOverlay: HTMLDivElement | null = null;
+  private titleDispose: (() => void) | null = null;
+  private volumeControl: HTMLDivElement;
   private docListeners: [string, () => void][] = [];
   private timers: number[] = [];
 
-  constructor(root: HTMLElement, opts: GameOptions) {
+  constructor(
+    root: HTMLElement,
+    opts: GameOptions,
+    private readonly onRestart: () => void,
+  ) {
     this.root = root;
     this.opts = opts;
-    const hostOpts: { speed: number; seed?: number } = { speed: opts.speed };
-    if (opts.seed !== undefined) hostOpts.seed = opts.seed;
+    this.sessionSeed = opts.seed ?? createSessionSeed();
+    const hostOpts = { speed: opts.speed, seed: this.sessionSeed };
     this.host = new HostApp(root, hostOpts);
     this.director = new Director(opts.startAt);
     this.hud = new Hud(root);
     this.audio = new AudioSynth();
-    this.buildVolumeControl();
+    this.volumeControl = this.buildVolumeControl();
 
     // Seeded sessions (dev `?t=`) need already-requested chores mirrored.
     for (const c of CHORE_ORDER) {
@@ -74,7 +121,7 @@ export class Game {
       }
     }
     if (opts.startAt > BANNER_AT) {
-      this.hud.showObjective('Mudwick: 0 / 2,147,483,647 gp · Bonus: 99 all stats (0/3)');
+      this.revealObjective();
     }
 
     this.wire();
@@ -85,7 +132,7 @@ export class Game {
 
   private wirePause(): void {
     const onLockChange = (): void => {
-      if (document.pointerLockElement) this.hadPointerLock = true;
+      if (this.host.pointerLocked) this.hadPointerLock = true;
       this.syncPauseOverlay();
     };
     const onVisibility = (): void => {
@@ -103,8 +150,9 @@ export class Game {
   private get paused(): boolean {
     if (this.state !== 'playing') return false;
     if (this.hiddenPause) return true;
-    // Losing pointer lock in Room Mode pauses; PC Mode has no lock and never pauses.
-    return this.host.mode === 'room' && this.hadPointerLock && !this.host.pointerLocked;
+    // PC Mode has no lock. A normal room run freezes before first lock and
+    // whenever that lock is later lost; automation can opt out with skipTitle.
+    return this.host.mode === 'room' && this.pointerLockRequired && !this.host.pointerLocked;
   }
 
   private syncPauseOverlay(): void {
@@ -112,13 +160,21 @@ export class Game {
     if (show && !this.pauseOverlay) {
       const el = document.createElement('div');
       el.className = 'pause-overlay';
-      const hint = document.createElement('span');
+      const hint = document.createElement('button');
+      hint.type = 'button';
       hint.className = 'pause-overlay-hint';
-      hint.textContent = 'Click to resume';
       hint.addEventListener('click', () => this.host.requestPointerLock());
       el.appendChild(hint);
       this.root.appendChild(el);
       this.pauseOverlay = el;
+    }
+    if (show && this.pauseOverlay) {
+      const hint = this.pauseOverlay.querySelector<HTMLButtonElement>('.pause-overlay-hint');
+      if (hint) {
+        hint.textContent = this.hadPointerLock
+          ? 'Paused — click to resume'
+          : 'Click to start looking';
+      }
     } else if (!show && this.pauseOverlay) {
       this.pauseOverlay.remove();
       this.pauseOverlay = null;
@@ -126,11 +182,15 @@ export class Game {
   }
 
   start(): void {
+    if (this.disposed) return;
     if (this.opts.skipTitle) {
       this.begin(false);
     } else {
-      const { begun } = showTitle(this.root, this.audio);
-      void begun.then(() => this.begin(true));
+      this.setVolumeControlVisible(false);
+      this.titleDispose = showTitle(this.root, this.audio, () => {
+        this.setVolumeControlVisible(true);
+        this.begin(true);
+      });
     }
     this.loop();
   }
@@ -138,7 +198,9 @@ export class Game {
   private begin(lockPointer: boolean): void {
     if (this.state !== 'title') return;
     this.state = 'playing';
+    this.pointerLockRequired = lockPointer;
     this.hud.setCrosshairVisible(true);
+    this.syncPauseOverlay();
     if (lockPointer) this.host.requestPointerLock();
   }
 
@@ -153,6 +215,7 @@ export class Game {
     this.host.hooks.onModeChange = (mode) => {
       this.hud.setCrosshairVisible(mode === 'room' && this.state === 'playing');
       if (mode === 'pc') this.hud.setInteractLabel(null);
+      this.syncPauseOverlay();
     };
 
     this.host.interact.onTrackerEvents = (events) => {
@@ -162,10 +225,15 @@ export class Game {
         } else if (e.type === 'choreCompleted') {
           this.director.noteChoreCompleted(e.chore);
           const sim = this.host.mmo.sim;
-          if (this.host.mmo.inCombat || sim.player.hp <= 4) {
+          const completedInDanger = this.host.mmo.inCombat || sim.player.hp <= 4;
+          if (completedInDanger) {
             this.choreCompletedInDanger = true;
           }
-          this.hud.showToast(`${CHORE_DEFS[e.chore].chip} — sorted.`, this.gameNow);
+          const { done, total } = this.host.interact.tracker.progress(e.chore);
+          this.hud.showToast(
+            choreDoneToast(`${CHORE_DEFS[e.chore].chip} ${done}/${total}`, completedInDanger),
+            this.gameNow,
+          );
           this.audio.choreDone();
         }
       }
@@ -181,69 +249,98 @@ export class Game {
     // out of the CRT's little speaker, so they play attenuated.
     const mmoGain = (): number => (this.host.mode === 'room' ? 0.4 : 1);
     this.host.mmo.onUiSound = () => this.audio.atGain(mmoGain(), () => this.audio.mmoClick());
-    this.host.mmo.onEvents = (events) => this.audio.atGain(mmoGain(), () => {
-      for (const e of events) {
-        switch (e.type) {
-          case 'chop':
-            this.audio.chop();
-            break;
-          case 'goblinDied':
-          case 'trade':
-            this.audio.coin();
-            break;
-          case 'playerSwing':
-          case 'goblinSwing':
-            if (e.damage > 0) this.audio.hit();
-            break;
-          case 'playerDied':
-            this.audio.deathSting();
-            break;
-          case 'objectiveHit':
-          case 'allSkills99':
-            this.audio.fanfare();
-            break;
-          case 'levelUp':
-          case 'questComplete':
-            this.audio.levelUp();
-            break;
-          case 'eat':
-          case 'flax':
-            this.audio.pickup();
-            break;
-          case 'invFull':
-            this.audio.uiClick();
-            break;
-          case 'log':
-          case 'openTrade':
-            break;
-        }
-      }
-    });
+    this.host.mmo.onEvents = (events) =>
+      this.audio.atGain(mmoGain(), () => this.handleMmoEvents(events));
   }
 
-  private buildVolumeControl(): void {
+  private handleMmoEvents(events: readonly SimEvent[]): void {
+    for (const e of events) {
+      const toast = crossWorldToast(e);
+      if (toast !== null) {
+        this.hud.showToast(
+          toast,
+          this.gameNow,
+          e.type === 'playerDied' ? 4200 : 3200,
+          e.type === 'playerDied' ? 'danger' : 'success',
+        );
+      }
+
+      switch (e.type) {
+        case 'chop':
+          this.audio.chop();
+          break;
+        case 'goblinDied':
+        case 'trade':
+          this.audio.coin();
+          break;
+        case 'playerSwing':
+        case 'goblinSwing':
+          if (e.damage > 0) this.audio.hit();
+          break;
+        case 'playerDied':
+          this.audio.deathSting();
+          break;
+        case 'objectiveHit':
+        case 'allSkills99':
+          this.audio.fanfare();
+          break;
+        case 'levelUp':
+        case 'questComplete':
+          this.audio.levelUp();
+          break;
+        case 'eat':
+        case 'flax':
+          this.audio.pickup();
+          break;
+        case 'invFull':
+          this.audio.uiClick();
+          break;
+        case 'log':
+        case 'openTrade':
+        case 'questProgress':
+        case 'questReady':
+        case 'questAssigned':
+          break;
+      }
+    }
+  }
+
+  private buildVolumeControl(): HTMLDivElement {
     const wrap = document.createElement('div');
     wrap.className = 'volume-control';
-    const label = document.createElement('span');
+    const label = document.createElement('label');
     label.textContent = 'VOL';
     const slider = document.createElement('input');
     slider.type = 'range';
+    slider.id = 'j5mm-volume-slider';
+    slider.setAttribute('aria-label', 'Volume');
+    label.htmlFor = slider.id;
     slider.min = '0';
     slider.max = '1';
     slider.step = '0.05';
-    const saved = sessionStorage.getItem('j5mm-volume');
-    const initial = saved !== null ? Number(saved) : this.audio.getVolume();
+    let initial = this.audio.getVolume();
+    try {
+      const saved = localStorage.getItem('j5mm-volume');
+      if (saved !== null) initial = Number(saved);
+    } catch {
+      // Storage can be unavailable in privacy-restricted embeds.
+    }
     if (Number.isFinite(initial)) this.audio.setVolume(initial);
     slider.value = String(this.audio.getVolume());
     slider.addEventListener('input', () => {
       const v = Number(slider.value);
       this.audio.setVolume(v);
-      sessionStorage.setItem('j5mm-volume', String(v));
+      try {
+        localStorage.setItem('j5mm-volume', String(v));
+      } catch {
+        // Volume still works for this run when persistence is unavailable.
+      }
     });
     wrap.appendChild(label);
     wrap.appendChild(slider);
     this.root.appendChild(wrap);
     this.overlays.push(wrap);
+    return wrap;
   }
 
   private handleDirectorEvent(ev: DirectorEvent): void {
@@ -261,7 +358,7 @@ export class Game {
         break;
       }
       case 'objectiveBanner':
-        this.hud.showObjective('Mudwick: 0 / 2,147,483,647 gp · Bonus: 99 all stats (0/3)');
+        this.revealObjective();
         break;
       case 'choreRequested': {
         const events = this.host.interact.tracker.request(ev.chore);
@@ -304,6 +401,18 @@ export class Game {
     this.hud.setChoreChips(chips);
   }
 
+  private revealObjective(): void {
+    const sim = this.host.mmo.sim;
+    this.hud.showObjective('');
+    this.hud.setObjectiveProgress(
+      sim.player.coins,
+      sim.player.skills,
+      sim.questLabel(),
+      sim.stats.objectiveHit,
+      sim.stats.statsBonusHit,
+    );
+  }
+
   private endSession(): void {
     if (this.state === 'ended') return;
     this.state = 'ended';
@@ -314,6 +423,7 @@ export class Game {
     this.hud.setInteractLabel(null);
     this.hud.setCrosshairVisible(false);
     this.hud.root.style.display = 'none';
+    this.setVolumeControlVisible(false);
     if (document.pointerLockElement) document.exitPointerLock();
 
     const sim = this.host.mmo.sim;
@@ -324,6 +434,12 @@ export class Game {
       statsBonusHit: sim.stats.statsBonusHit,
       deaths: sim.stats.deaths,
       deathsWhileAway: sim.stats.deathsWhileAway,
+      kills: sim.stats.kills,
+      logsSold: sim.stats.logsSold,
+      flaxSold: sim.stats.flaxSold,
+      bestStreak: sim.stats.bestStreak,
+      contractsCompleted: sim.stats.contractsCompleted,
+      skills: { ...sim.player.skills },
       prompts: this.director.prompts.map((p) => ({
         lineId: p.lineId,
         result: p.result === 'answered' ? 'answered' : 'ignored',
@@ -333,6 +449,7 @@ export class Game {
       choreCompletedInDanger: this.choreCompletedInDanger,
     };
     const score = computeScore(data);
+    const history = recordReportSafely(score.total);
     const card = showScorecard(
       this.root,
       score,
@@ -342,6 +459,16 @@ export class Game {
         choresDone: CHORE_ORDER.filter((c) => tracker.isCompleted(c)).length,
         choresTotal: CHORE_ORDER.length,
         statsBonusHit: sim.stats.statsBonusHit,
+        kills: sim.stats.kills,
+        bestStreak: sim.stats.bestStreak,
+        contractsCompleted: sim.stats.contractsCompleted,
+        skillLevels: {
+          woodcutting: levelOf(sim.player.skills.woodcutting),
+          attack: levelOf(sim.player.skills.attack),
+          foraging: levelOf(sim.player.skills.foraging),
+        },
+        seed: this.sessionSeed,
+        history,
       },
       () => this.restart(),
     );
@@ -349,21 +476,31 @@ export class Game {
   }
 
   private restart(): void {
-    const root = this.root;
-    const opts = this.opts;
-    this.dispose();
-    const next = new Game(root, opts);
-    next.start();
+    if (this.disposed) return;
+    this.onRestart();
+  }
+
+  private setVolumeControlVisible(visible: boolean): void {
+    this.volumeControl.style.display = visible ? 'flex' : 'none';
+    this.volumeControl.inert = !visible;
   }
 
   dispose(): void {
+    if (this.disposed) return;
     this.disposed = true;
+    this.titleDispose?.();
+    this.titleDispose = null;
     for (const id of this.timers) window.clearTimeout(id);
     this.timers = [];
     cancelAnimationFrame(this.raf);
+    this.raf = 0;
     for (const [type, fn] of this.docListeners) document.removeEventListener(type, fn);
+    this.docListeners = [];
+    if (this.host.pointerLocked) document.exitPointerLock();
     this.pauseOverlay?.remove();
+    this.pauseOverlay = null;
     for (const el of this.overlays) el.remove();
+    this.overlays = [];
     this.hud.dispose();
     this.audio.dispose();
     this.host.dispose();
@@ -406,8 +543,9 @@ export class Game {
       this.hud.setClock(SESSION_LENGTH - this.director.t);
       this.hud.setObjectiveProgress(
         this.host.mmo.sim.player.coins,
-        this.host.mmo.sim.stats.objectiveHit,
         this.host.mmo.sim.player.skills,
+        this.host.mmo.sim.questLabel(),
+        this.host.mmo.sim.stats.objectiveHit,
         this.host.mmo.sim.stats.statsBonusHit,
       );
       const prompt = this.host.mode === 'room' ? this.host.prompt : null;
@@ -419,6 +557,10 @@ export class Game {
     }
     this.hud.update(this.gameNow);
 
+    if (this.state === 'ended') {
+      this.raf = 0;
+      return;
+    }
     this.raf = requestAnimationFrame(this.tick);
   };
 }

@@ -20,6 +20,9 @@ export class InputRouter {
   onPromptOption: ((option: number) => void) | null = null;
   /** Click on the 3D canvas while unlocked (resume / acquire pointer lock). */
   onRoomClick: (() => void) | null = null;
+  /** Drop all held movement keys — fired when focus or pointer lock is lost,
+   *  so a key released off-window never sticks and drifts the avatar on resume. */
+  onClearKeys: (() => void) | null = null;
 
   private roomCanvas: HTMLElement;
   private disposers: (() => void)[] = [];
@@ -74,6 +77,9 @@ export class InputRouter {
 
     on('pointerlockchange', () => {
       this.skipNextMove = true;
+      // Losing the lock (Esc / Alt-Tab) never delivers keyups for held keys.
+      // Clear them now so the avatar doesn't drift when the player resumes.
+      if (document.pointerLockElement !== this.roomCanvas) this.onClearKeys?.();
     });
 
     on('mousemove', (e) => {
@@ -96,6 +102,11 @@ export class InputRouter {
     };
     this.roomCanvas.addEventListener('click', click);
     this.disposers.push(() => this.roomCanvas.removeEventListener('click', click));
+
+    // Window blur (Alt-Tab away) drops keyups too — release held keys.
+    const onBlur = (): void => this.onClearKeys?.();
+    window.addEventListener('blur', onBlur);
+    this.disposers.push(() => window.removeEventListener('blur', onBlur));
   }
 
   dispose(): void {

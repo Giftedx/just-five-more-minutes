@@ -1,10 +1,12 @@
 import { RESPONSE_OPTIONS } from '../director/director';
 import type { Skills } from '../mmo/sim/types';
 import {
-  bonusProgressLabel,
-  formatGp,
-  objectiveProgressLabel,
+  allSkillsAt99,
+  formatGpShort,
+  SESSION_COIN_TARGET,
 } from '../mmo/sim/osrs';
+
+export type ToastTone = 'neutral' | 'success' | 'danger';
 
 /** DOM overlay HUD: objective, chore chip, clock, subtitles, prompt. */
 export class Hud {
@@ -28,15 +30,25 @@ export class Hud {
     this.root.className = 'hud';
     parent.appendChild(this.root);
 
-    this.objectiveEl = this.div('hud-objective');
-    this.choreEl = this.div('hud-chores');
+    const taskStackEl = this.div('hud-task-stack');
+    this.objectiveEl = this.div('hud-objective', taskStackEl);
+    this.choreEl = this.div('hud-chores', taskStackEl);
     this.clockEl = this.div('hud-clock');
-    this.subtitleEl = this.div('hud-subtitle');
-    this.promptEl = this.div('hud-prompt');
+    const dialogueStackEl = this.div('hud-dialogue-stack');
+    this.promptEl = this.div('hud-prompt', dialogueStackEl);
+    this.subtitleEl = this.div('hud-subtitle', dialogueStackEl);
+    this.toastEl = this.div('hud-toast', dialogueStackEl);
     this.interactEl = this.div('hud-interact');
-    this.toastEl = this.div('hud-toast');
     this.crosshairEl = this.div('hud-crosshair');
     this.promptTimerFill = document.createElement('div');
+
+    for (const status of [this.subtitleEl, this.toastEl]) {
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      status.setAttribute('aria-atomic', 'true');
+    }
+    this.promptEl.setAttribute('role', 'group');
+    this.promptEl.setAttribute('aria-label', 'Respond to Mum');
 
     this.objectiveEl.style.display = 'none';
     this.choreEl.style.display = 'none';
@@ -46,10 +58,10 @@ export class Hud {
     this.toastEl.style.display = 'none';
   }
 
-  private div(cls: string): HTMLDivElement {
+  private div(cls: string, parent: HTMLElement = this.root): HTMLDivElement {
     const el = document.createElement('div');
     el.className = cls;
-    this.root.appendChild(el);
+    parent.appendChild(el);
     return el;
   }
 
@@ -61,19 +73,26 @@ export class Hud {
     this.objectiveEl.classList.add('hud-flash');
   }
 
-  setObjectiveProgress(coins: number, hit: boolean, skills: Skills, bonusHit: boolean): void {
+  setObjectiveProgress(
+    coins: number,
+    skills: Skills,
+    questLabel: string,
+    maxStackHit: boolean,
+    statsBonusHit: boolean,
+  ): void {
     if (this.objectiveEl.style.display === 'none') return;
-    const gp = objectiveProgressLabel(coins, hit);
-    const bonus = bonusProgressLabel(skills, bonusHit);
-    if (hit && bonusHit) {
-      this.objectiveEl.textContent = `Max stack & 99 all stats. Dinner, though. (${formatGp(coins)} gp)`;
-    } else if (hit) {
-      this.objectiveEl.textContent = `Max stack reached. Bonus: ${bonus}. (${formatGp(coins)} gp)`;
-    } else if (bonusHit) {
-      this.objectiveEl.textContent = `99 all stats! Main goal: ${gp}`;
-    } else {
-      this.objectiveEl.textContent = `Mudwick: ${gp} · Bonus: ${bonus}`;
-    }
+    const dinnerFund = `${formatGpShort(coins)} / ${SESSION_COIN_TARGET} gp`;
+    const allStatsLegend = statsBonusHit || allSkillsAt99(skills);
+    const legend = maxStackHit && allStatsLegend
+      ? 'MAX STACK · 99 ALL'
+      : maxStackHit
+        ? 'MAX STACK'
+        : allStatsLegend
+          ? '99 ALL'
+          : null;
+    this.objectiveEl.textContent = legend
+      ? `Dinner fund secured · ${questLabel} · ${legend}`
+      : `Dinner fund: ${dinnerFund} · Wyn: ${questLabel}`;
   }
 
   /** One chip per active chore, oldest first. Empty array hides the stack. */
@@ -108,8 +127,9 @@ export class Hud {
     this.subtitleUntil = now + durationMs;
   }
 
-  showToast(text: string, now: number, durationMs = 3000): void {
+  showToast(text: string, now: number, durationMs = 3000, tone: ToastTone = 'success'): void {
     this.toastEl.textContent = text;
+    this.toastEl.dataset.tone = tone;
     this.toastEl.style.display = 'block';
     this.toastUntil = now + durationMs;
   }
@@ -122,6 +142,7 @@ export class Hud {
     this.promptEl.appendChild(hint);
     RESPONSE_OPTIONS.forEach((text, i) => {
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'hud-prompt-option';
       const key = document.createElement('span');
       key.className = 'hud-key';

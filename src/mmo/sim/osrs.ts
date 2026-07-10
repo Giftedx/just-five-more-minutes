@@ -3,6 +3,7 @@ import type { SkillName, Skills } from './types';
 /** OSRS max stack size for coins (signed 32-bit). */
 export const MAX_COINS = 2_147_483_647;
 export const COIN_OBJECTIVE = MAX_COINS;
+export const SESSION_COIN_TARGET = 100;
 export const MAX_LEVEL = 99;
 
 export const SKILL_NAMES: readonly SkillName[] = ['woodcutting', 'attack', 'foraging'];
@@ -54,7 +55,10 @@ export function formatGpShort(n: number): string {
 
 export function objectiveProgressLabel(coins: number, objectiveHit: boolean): string {
   if (objectiveHit) return `Max stack reached — ${formatGpShort(coins)} gp`;
-  return `${formatGpShort(coins)} / ${formatGpShort(COIN_OBJECTIVE)} gp`;
+  if (coins >= SESSION_COIN_TARGET) {
+    return `Dinner fund secured — ${formatGpShort(coins)} / ${formatGpShort(COIN_OBJECTIVE)} gp to max stack`;
+  }
+  return `${formatGpShort(coins)} / ${formatGpShort(SESSION_COIN_TARGET)} gp`;
 }
 
 export function bonusProgressLabel(skills: Skills, bonusHit: boolean): string {

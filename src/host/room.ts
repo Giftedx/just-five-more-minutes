@@ -636,6 +636,18 @@ function makeWrapper(color: number): THREE.Group {
   tail.rotation.y = -0.7;
   g.add(tail);
   g.add(box(0.018, 0.005, 0.02, shine, 0.008, 0.012, 0.008)); // foil glint
+  const interactionProxy = new THREE.Mesh(
+    new THREE.BoxGeometry(0.13, 0.12, 0.13),
+    new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      colorWrite: false,
+      visible: false,
+    }),
+  );
+  interactionProxy.position.y = 0.06;
+  g.add(interactionProxy);
   g.rotation.y = Math.random() * Math.PI * 2;
   return g;
 }

@@ -429,7 +429,8 @@ export class MmoRenderer {
   private postWelcome(now: number): void {
     this.postMessage('Welcome to Mudwick Online.', now, '#ffd23f');
     this.postMessage('Left-click to act. Right-click for options.', now);
-    this.postMessage('Earn max stack before dinner. Bonus: 99 all stats.', now, '#9be8e0');
+    this.postMessage('Dinner fund target: 100 gp.', now, '#9be8e0');
+    this.postMessage('Max stack + 99 all: legendary goals.', now, '#9be8e0');
     const q = this.sim.quest;
     this.postMessage(
       `Active contract: ${this.questVerb(q.kind)} ${q.target} (${q.reward}gp bonus).`,

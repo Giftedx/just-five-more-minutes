@@ -229,6 +229,15 @@ describe('trading and economy', () => {
     stepUntil(sim, (ev) => ev.some((e) => e.type === 'openTrade'));
   });
 
+  it('counts each claimed Wyn contract exactly once', () => {
+    const sim = new MudwickSim(7);
+    sim.quest = { kind: 'logs', target: 1, progress: 1, reward: 22, claimed: false };
+    expect(sim.turnInQuest()).toBe(true);
+    expect(sim.stats.contractsCompleted).toBe(1);
+    expect(sim.turnInQuest()).toBe(false);
+    expect(sim.stats.contractsCompleted).toBe(1);
+  });
+
   it('latches the coin objective exactly once at max stack', () => {
     const sim = new MudwickSim(5);
     sim.player.coins = MAX_COINS - 3;

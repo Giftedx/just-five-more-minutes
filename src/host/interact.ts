@@ -27,12 +27,14 @@ export class InteractSystem {
     bin: new Set(),
     basket: new Set(),
   };
+  private readonly reducedMotion: boolean;
   onEnterPc: (() => void) | null = null;
   onTrackerEvents: ((events: ChoreTrackerEvent[]) => void) | null = null;
   onAct: ((kind: 'pickup' | 'place') => void) | null = null;
 
   constructor(room: Room) {
     this.room = room;
+    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.tracker = new ChoreTracker(room.items.map((i) => ({ id: i.id, chore: i.chore })));
     this.raycaster.far = REACH;
   }
@@ -80,9 +82,9 @@ export class InteractSystem {
       prompt = { label: `E — Put down the ${this.carriedName()}`, actionable: true };
     }
     this.setHighlight(prompt && prompt.actionable ? target : null);
-    // gentle pulse on whatever is highlighted
+    // Keep the highlight steady for reduced motion; otherwise give it a gentle pulse.
     if (this.hovered && nowMs > 0) {
-      const pulse = 0.3 + 0.13 * Math.sin(nowMs / 140);
+      const pulse = this.reducedMotion ? 0.35 : 0.3 + 0.13 * Math.sin(nowMs / 140);
       for (const mat of this.highlightMats.keys()) {
         mat.emissiveIntensity = pulse;
       }

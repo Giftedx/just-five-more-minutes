@@ -42,7 +42,14 @@ export const TREE_REGROW_TICKS = 8;
 export const LOG_PRICE = 7;
 export const FLAX_PRICE = 2;
 export const BREAD_HEAL = 4;
-export { COIN_OBJECTIVE, levelOf, MAX_COINS, MAX_LEVEL, xpForLevel } from './osrs';
+export {
+  COIN_OBJECTIVE,
+  levelOf,
+  MAX_COINS,
+  MAX_LEVEL,
+  SESSION_COIN_TARGET,
+  xpForLevel,
+} from './osrs';
 export const GOBLIN_DROP_MIN = 4;
 export const GOBLIN_DROP_MAX = 9;
 const GOBLIN_DEAGGRO_DIST = 7;
@@ -106,6 +113,7 @@ export class MudwickSim {
       statsBonusHit: false,
       killStreak: 0,
       bestStreak: 0,
+      contractsCompleted: 0,
     };
     this.quest = this.rollQuest();
   }
@@ -163,6 +171,7 @@ export class MudwickSim {
     if (q.claimed || q.progress < q.target) return false;
     this.addCoins(q.reward);
     q.claimed = true;
+    this.stats.contractsCompleted++;
     this.events.push({ type: 'questComplete', reward: q.reward, kind: q.kind });
     this.assignQuest();
     return true;

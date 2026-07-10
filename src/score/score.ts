@@ -3,7 +3,8 @@
  * Implements the locked formulas exactly.
  */
 import type { ChoreId, LineId } from '../director/director';
-import { COIN_OBJECTIVE } from '../mmo/sim/osrs';
+import { levelOf, SESSION_COIN_TARGET, SKILL_NAMES } from '../mmo/sim/osrs';
+import type { Skills } from '../mmo/sim/types';
 
 export interface PromptOutcome {
   lineId: LineId;
@@ -21,6 +22,12 @@ export interface ChoreOutcome {
 
 export interface SessionData {
   coins: number;
+  kills: number;
+  logsSold: number;
+  flaxSold: number;
+  bestStreak: number;
+  contractsCompleted: number;
+  skills: Skills;
   objectiveHit: boolean;
   statsBonusHit: boolean;
   deaths: number;
@@ -35,6 +42,7 @@ export interface SessionData {
 export type ComedyFactId =
   | 'oneSecSpam'
   | 'choreInDanger'
+  | 'contractor'
   | 'laundryIgnored'
   | 'choresWithoutGlory'
   | 'remoteDeath'
@@ -43,8 +51,9 @@ export type ComedyFactId =
 export const COMEDY_NOTES: Readonly<Record<ComedyFactId, string>> = {
   oneSecSpam: 'Said "One sec!" three or more times. It was never one sec.',
   choreInDanger: 'Completed a chore while something was actively biting them.',
+  contractor: 'Completed multiple freelance contracts during a domestic incident.',
   laundryIgnored: 'Hit max stack. The laundry remains at large.',
-  choresWithoutGlory: 'Did every chore and still failed the only quest that mattered.',
+  choresWithoutGlory: 'Did every chore. The 100 gp dinner fund remains mysteriously unfunded.',
   remoteDeath: 'Died to a goblin while physically in another room.',
   economyAtDinner: 'Responded to the dinner call with a macroeconomic argument.',
 };
@@ -71,12 +80,16 @@ export function completedChores(data: SessionData): number {
 }
 
 export function scoreMmoProgress(data: SessionData): number {
-  const coinPct = Math.log10(data.coins + 1) / Math.log10(COIN_OBJECTIVE + 1);
-  let s = coinPct * 20;
-  if (data.objectiveHit) s += 12;
-  if (data.statsBonusHit) s += 8;
-  s -= 5 * data.deaths;
-  return clamp(s, 0, 40);
+  const economy = Math.round(20 * clamp(data.coins / SESSION_COIN_TARGET, 0, 1));
+  const levelsGained = SKILL_NAMES.reduce(
+    (sum, skill) => sum + Math.max(0, levelOf(data.skills[skill]) - 1),
+    0,
+  );
+  const training = Math.min(6, levelsGained);
+  const contracts = Math.min(8, data.contractsCompleted * 4);
+  const streak = Math.min(4, data.bestStreak);
+  const legendary = Number(data.objectiveHit) + Number(data.statsBonusHit);
+  return clamp(economy + training + contracts + streak + legendary - 5 * data.deaths, 0, 40);
 }
 
 export function scoreHousehold(data: SessionData): number {
@@ -112,12 +125,18 @@ export function comedyFacts(data: SessionData): ComedyFactId[] {
   const oneSecs = data.prompts.filter((p) => p.result === 'answered' && p.option === 1).length;
   if (oneSecs >= 3) facts.push('oneSecSpam');
   if (data.choreCompletedInDanger) facts.push('choreInDanger');
+  if (data.contractsCompleted >= 2) facts.push('contractor');
 
   const laundry = data.chores.find((c) => c.id === 'laundry');
   if (data.objectiveHit && laundry && laundry.requestedAt !== null && laundry.completedAt === null) {
     facts.push('laundryIgnored');
   }
-  if (!data.objectiveHit && completedChores(data) === data.chores.length && data.chores.length > 0) {
+  if (
+    data.coins < SESSION_COIN_TARGET &&
+    !data.objectiveHit &&
+    completedChores(data) === data.chores.length &&
+    data.chores.length > 0
+  ) {
     facts.push('choresWithoutGlory');
   }
   if (data.deathsWhileAway > 0) facts.push('remoteDeath');
@@ -136,9 +155,13 @@ export function endingTitle(data: SessionData): string {
   let title: string;
   if (data.objectiveHit && data.statsBonusHit) title = 'Max Stack, Max Cape, No Dinner';
   else if (data.statsBonusHit) title = 'Max Cape (Bedroom Edition)';
-  else if (data.objectiveHit && allChores) title = 'Functional Adult (Suspicious)';
-  else if (data.objectiveHit) title = 'The Economy Needed You';
+  else if (data.objectiveHit && allChores) title = 'Max Stack and Matching Socks';
+  else if (data.objectiveHit) title = 'The Economy Actually Needed You';
+  else if (data.coins >= SESSION_COIN_TARGET && allChores) title = 'Functional Adult (Suspicious)';
+  else if (data.contractsCompleted >= 2) title = "Wyn's Employee of the Minute";
+  else if (data.coins >= SESSION_COIN_TARGET) title = 'The Economy Needed You';
   else if (allChores) title = 'Employee of the Month (This House)';
+  else if (data.kills >= 4) title = 'Goblin Performance Reviewer';
   else title = 'Goblin Spreadsheet Enjoyer';
   if (data.deaths >= 2) title += ' (Posthumous Mention)';
   return title;
@@ -155,7 +178,7 @@ export function computeScore(data: SessionData): ScoreBreakdown {
     household,
     vibe,
     comedy,
-    total: Math.round(mmo + household + vibe + comedy),
+    total: mmo + household + vibe + comedy,
     facts: facts.map((id) => ({ id, note: COMEDY_NOTES[id] })),
     endingTitle: endingTitle(data),
   };

@@ -25,20 +25,60 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 
 const evalGame = (fn) => page.evaluate(fn);
-const aimAndPress = async (sx, sz, ix, iy, iz) => {
+const aimAt = async (sx, sz, ix, iy, iz) => {
   await page.evaluate(`${aimSnippet}(${sx},${sz},${ix},${iy},${iz})`);
-  await page.waitForTimeout(120); // let a frame raycast
-  await page.keyboard.press('e');
-  await page.waitForTimeout(80);
 };
 
-const carryTo = async (item, target) => {
-  await aimAndPress(...item);
-  const carried = await evalGame(() => window.__game['host'].interact.tracker.carried?.id ?? null);
-  if (!carried) throw new Error(`pickup failed at ${item}`);
-  await aimAndPress(...target);
-  const still = await evalGame(() => window.__game['host'].interact.tracker.carried?.id ?? null);
-  if (still) throw new Error(`place failed for ${still} at ${target}`);
+const itemName = (itemId) => {
+  if (itemId.startsWith('mug')) return 'mug';
+  if (itemId.startsWith('wrap')) return 'wrapper';
+  if (itemId === 'cloth0') return 'hoodie';
+  if (itemId === 'cloth1') return 'sock';
+  if (itemId === 'cloth2') return 'shirt';
+  throw new Error(`unknown item id ${itemId}`);
+};
+
+const carryTo = async (itemId, item, target) => {
+  await aimAt(...item);
+  await page.waitForFunction(
+    ({ id, label }) => {
+      const host = window.__game['host'];
+      const resolved = host.interact['resolveTarget'](host.camera).action?.interact;
+      return host.interact.tracker.item(id)?.state === 'world'
+        && resolved?.type === 'item'
+        && resolved.itemId === id
+        && host.prompt?.actionable === true
+        && host.prompt.label === label;
+    },
+    { id: itemId, label: `E — Pick up ${itemName(itemId)}` },
+    { timeout: 5_000, polling: 'raf' },
+  );
+  await page.keyboard.press('e');
+  await page.waitForFunction(
+    (id) => window.__game['host'].interact.tracker.carried?.id === id,
+    itemId,
+    { timeout: 5_000, polling: 'raf' },
+  );
+
+  await aimAt(...target);
+  await page.waitForFunction(
+    (id) => {
+      const host = window.__game['host'];
+      const resolved = host.interact['resolveTarget'](host.camera).action?.interact;
+      return host.interact.tracker.carried?.id === id
+        && resolved?.type === 'target'
+        && host.prompt?.actionable === true
+        && host.prompt.label.startsWith('E — Put ');
+    },
+    itemId,
+    { timeout: 5_000, polling: 'raf' },
+  );
+  await page.keyboard.press('e');
+  await page.waitForFunction(
+    (id) => window.__game['host'].interact.tracker.item(id)?.state === 'placed',
+    itemId,
+    { timeout: 5_000, polling: 'raf' },
+  );
 };
 
 const waitForChore = async (chore) => {
@@ -70,22 +110,22 @@ try {
 
   await waitForChore('mugs');
   await answerPrompt('mugs', 2);
-  await carryTo([0.28, -0.8, 0.28, 0.82, -1.42], TRAY);
-  await carryTo([1.5, -0.8, 1.5, 0.82, -1.38], TRAY);
-  await carryTo([1.56, -0.8, 1.56, 0.82, -1.74], TRAY);
+  await carryTo('mug0', [0.28, -0.8, 0.28, 0.82, -1.42], TRAY);
+  await carryTo('mug1', [1.5, -0.8, 1.5, 0.82, -1.38], TRAY);
+  await carryTo('mug2', [1.56, -0.8, 1.56, 0.82, -1.74], TRAY);
 
   await waitForChore('wrappers');
   await answerPrompt('wrappers', 3);
-  await carryTo([0.3, 0.8, 0.3, 0.04, 0.1], BIN);
-  await carryTo([1.5, 0.3, 1.5, 0.04, -0.4], BIN);
-  await carryTo([-0.55, 0.4, -0.55, 0.04, 1.1], BIN);
-  await carryTo([0.32, -0.8, 0.32, 0.82, -1.72], BIN);
+  await carryTo('wrap0', [0.3, 0.8, 0.3, 0.04, 0.1], BIN);
+  await carryTo('wrap1', [1.5, 0.3, 1.5, 0.04, -0.4], BIN);
+  await carryTo('wrap2', [-0.55, 0.4, -0.55, 0.04, 1.1], BIN);
+  await carryTo('wrap3', [0.32, -0.8, 0.32, 0.82, -1.72], BIN);
 
   await waitForChore('laundry');
   await answerPrompt('laundry', 4);
-  await carryTo([-0.9, 0.5, -0.9, 0.05, -0.2], BASKET);
-  await carryTo([-0.2, 0.65, -0.2, 0.05, 1.35], BASKET);
-  await carryTo([-1.1, 0.2, -1.9, 0.5, 0.2], BASKET);
+  await carryTo('cloth0', [-0.9, 0.5, -0.9, 0.05, -0.2], BASKET);
+  await carryTo('cloth1', [-0.2, 0.65, -0.2, 0.05, 1.35], BASKET);
+  await carryTo('cloth2', [-1.1, 0.2, -1.9, 0.5, 0.2], BASKET);
 
   const chores = await evalGame(() => {
     const t = window.__game['host'].interact.tracker;
@@ -105,12 +145,16 @@ try {
   // Expected: mmo 0 (no coins), household 30 (3x8+6), vibe 20 (20-3+6 clamped),
   // comedy 2 (choresWithoutGlory), total 52, Employee of the Month.
   const expectRows = ['0 / 40', '30 / 30', '20 / 20', '2 / 10'];
-  rows.forEach((r, i) => {
-    if (r?.trim() !== expectRows[i]) throw new Error(`row ${i}: got "${r}", want "${expectRows[i]}"`);
-  });
+  const actualRows = rows.map((row) => row?.trim() ?? '');
+  if (
+    actualRows.length !== expectRows.length
+    || actualRows.some((row, index) => row !== expectRows[index])
+  ) {
+    throw new Error(`rows: got ${JSON.stringify(actualRows)}, want ${JSON.stringify(expectRows)}`);
+  }
   if (!total?.includes('52 / 100')) throw new Error(`total: ${total}`);
   if (!ending?.includes('Employee of the Month (This House)')) throw new Error(`ending: ${ending}`);
-  if (!notes.some((n) => n?.includes('failed the only quest'))) throw new Error(`notes: ${notes}`);
+  if (!notes.some((n) => n?.includes('100 gp dinner fund'))) throw new Error(`notes: ${notes}`);
 
   console.log(`E2E PASS — rows [${rows.join(' | ')}], ${total?.trim()}, ending "${ending?.trim()}"`);
 } finally {

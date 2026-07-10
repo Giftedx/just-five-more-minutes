@@ -5,6 +5,8 @@ import {
   levelOf,
   MAX_COINS,
   MAX_LEVEL,
+  objectiveProgressLabel,
+  SESSION_COIN_TARGET,
   XP_FOR_LEVEL_99,
   xpForLevel,
 } from './osrs';
@@ -17,9 +19,16 @@ describe('OSRS progression', () => {
     expect(levelOf(13_034_431)).toBe(99);
   });
 
-  it('caps coin objective at max stack', () => {
+  it('keeps max stack legendary behind the reachable session target', () => {
+    expect(SESSION_COIN_TARGET).toBe(100);
     expect(COIN_OBJECTIVE).toBe(MAX_COINS);
     expect(COIN_OBJECTIVE).toBe(2_147_483_647);
+    expect(objectiveProgressLabel(50, false)).toBe('50 / 100 gp');
+    const postTarget = objectiveProgressLabel(SESSION_COIN_TARGET, false);
+    expect(postTarget).toContain('Dinner fund secured');
+    expect(postTarget).toContain('100 / 2.1B gp');
+    expect(postTarget).toContain('max stack');
+    expect(objectiveProgressLabel(MAX_COINS, true)).toBe('Max stack reached — 2.1B gp');
   });
 
   it('detects 99 in all trainable stats', () => {

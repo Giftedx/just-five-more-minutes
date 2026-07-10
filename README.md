@@ -13,6 +13,8 @@ Walk around your room in first person, sit at the CRT to click goblins, chop all
 
 The mini-MMO keeps ticking whether you're at the keyboard or not (walking away mid-combat is a personal choice). After five minutes you receive a typewritten **HOUSEHOLD INCIDENT REPORT** grading your MMO progress, household responsibility, vibe preservation, and comedy output.
 
+The achievable Mudwick goal is a **100 gp dinner fund**, with the current job from Wyn shown alongside it in the Room Mode HUD. A max cash stack and level 99 in every skill still exist as legendary stretch goals, but nobody sensible expects either during one five-minute session. Each incident report also keeps a tiny local career file: run count, personal best, and comparison with your previous run. No account or analytics required.
+
 Everything — art, audio, goblins — is generated at runtime. There are no asset files and no third-party content.
 
 <p align="center">
@@ -22,6 +24,9 @@ Everything — art, audio, goblins — is generated at runtime. There are no ass
 ## Screenshots
 
 <table>
+  <tr>
+    <td align="center" colspan="2"><img src="docs/screenshots/title.png" alt="Just Five More Minutes title screen with its tiny live Mudwick CRT and Mum's five-minute warning" width="800"><br><sub>One domestic incident, five minutes, several terrible priorities</sub></td>
+  </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/parity-3d.png" alt="First-person view of the bedroom desk with Mudwick running on the CRT" width="400"><br><sub>Room Mode — the desk, the dread, the deadline</sub></td>
     <td align="center"><img src="docs/screenshots/ui-mmo-full.png" alt="Mudwick Online running on the in-game CRT monitor" width="400"><br><sub>PC Mode — grind goblins, ignore chores</sub></td>
@@ -61,9 +66,12 @@ git clone https://github.com/Giftedx/just-five-more-minutes.git
 cd just-five-more-minutes
 npm install
 npm run dev        # dev server at http://localhost:5173
-npm test           # vitest — director, score, sim, chores (75 tests)
+npm test           # vitest — director, score, sim, chores, input (109 tests)
 npm run build      # tsc --noEmit && vite build -> dist/
-npm run preview    # serve the production build
+npm run size:check # verify compressed JS/CSS budgets for the current dist/
+npm run test:browser # managed preview + isolated smoke + full interaction E2E
+npm run verify     # unit, standalone build, size, browser, and mounted build gates
+npm run preview    # manually serve the current production build
 ```
 
 Dev affordances (query params):
@@ -72,12 +80,13 @@ Dev affordances (query params):
 |---|---|
 | `?speed=N` | Multiply the session clock and sim tick rate (e.g. `?speed=10`) |
 | `?t=SECONDS` | Seed the session clock (e.g. `?t=250` to jump near dinner) |
+| `?seed=N` | Reproduce a run with a decimal or `0x`-prefixed integer seed (the report shows a copy-ready form such as `0x00C0FFEE`) |
 | `?skipTitle=1` | Auto-start without the title screen |
 | `?dev=mmo` | Standalone Mudwick dev route |
 | `?dev=room` | Standalone bedroom dev route |
 | `?dev=host` | Standalone mode-switching dev route |
 
-Smoke test (optional, needs Playwright + Chromium): run `npm run preview`, then `node scripts/smoke.mjs`.
+Browser checks need Playwright's Chromium installed once (`npx playwright install chromium`). `npm run test:browser` then starts and owns a strict local preview of the current `dist/`, runs both browser suites, and stops the preview even if a check fails. For the complete local release gate, use `npm run verify`.
 
 ## Deploying
 

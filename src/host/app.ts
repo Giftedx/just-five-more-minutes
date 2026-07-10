@@ -36,7 +36,7 @@ export class HostApp {
   private root: HTMLElement;
   private crtScreen: HTMLDivElement;
   private monitorTex: THREE.CanvasTexture;
-  private monitorRefreshAcc = 0;
+  private monitorRefreshAcc = MONITOR_REFRESH_MS;
   private currentPrompt: { label: string; actionable: boolean } | null = null;
   /** 2D stand-ins for the chore items on the 3D desk, keyed by item id. */
   private deskItemEls = new Map<string, HTMLElement>();
@@ -183,6 +183,7 @@ export class HostApp {
       }
     };
     this.router.onPromptOption = (n) => this.hooks.onPromptOption?.(n);
+    this.router.onClearKeys = () => this.player.clearKeys();
     this.interact.onEnterPc = () => this.enterPc();
 
     window.addEventListener('resize', this.onResize);
@@ -244,9 +245,16 @@ export class HostApp {
   /** Advance everything by dtMs of real time. */
   update(dtMs: number): void {
     const dt = dtMs / 1000;
+    this.monitorRefreshAcc += dtMs;
+    const monitorDue = this.monitorRefreshAcc >= MONITOR_REFRESH_MS;
+    const renderMmo = this.mode === 'pc' || monitorDue;
     // The sim always ticks (unless globally paused).
     this.mmo.paused = this.paused;
-    this.mmo.update(dtMs, this.mode === 'room');
+    this.mmo.update(dtMs, this.mode === 'room', renderMmo);
+    if (monitorDue) {
+      this.monitorRefreshAcc %= MONITOR_REFRESH_MS;
+      this.monitorTex.needsUpdate = true;
+    }
 
     if (this.mode === 'room') {
       if (!this.paused) {
@@ -254,11 +262,6 @@ export class HostApp {
         this.currentPrompt = this.interact.update(this.camera, performance.now());
         this.interact.updateCarried(this.camera);
         this.room.npcTick(performance.now()); // door swing + mum idle
-      }
-      this.monitorRefreshAcc += dtMs;
-      if (this.monitorRefreshAcc >= MONITOR_REFRESH_MS) {
-        this.monitorRefreshAcc = 0;
-        this.monitorTex.needsUpdate = true;
       }
       this.renderer.render(this.room.scene, this.camera);
     } else {
@@ -283,6 +286,7 @@ export class HostApp {
       }
     });
     this.renderer.dispose();
+    this.renderer.forceContextLoss();
     this.root.innerHTML = '';
   }
 

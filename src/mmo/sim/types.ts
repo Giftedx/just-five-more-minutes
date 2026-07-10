@@ -97,6 +97,7 @@ export interface SimStats {
   killStreak: number;
   /** Best streak this session. */
   bestStreak: number;
+  contractsCompleted: number;
 }
 
 /** What a tile resolves to for clicks / hover / context menus. */

@@ -604,10 +604,19 @@ body {
   flex: none;
 }
 
-.hud-objective {
+.hud-task-stack {
   position: absolute;
   top: 18px;
   left: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* Rotation, tape, and the note's -8px entrance all consume visual space;
+     keep 12px clear even while a two-line objective is settling. */
+  gap: 32px;
+}
+
+.hud-objective {
   max-width: 360px;
   background: linear-gradient(165deg, rgba(34, 24, 13, 0.88), rgba(18, 13, 8, 0.88));
   backdrop-filter: blur(5px);
@@ -642,9 +651,6 @@ body {
 
 /* chores: mum's requests arrive as sticky notes, same paper as the wall */
 .hud-chores {
-  position: absolute;
-  top: 86px;
-  left: 18px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -737,12 +743,22 @@ body {
   50% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 90, 40, 0.35); }
 }
 
+/* One collision-proof lane for Mum's line and the player's response. */
+.hud-dialogue-stack {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(24px, 6vh, 64px);
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
 /* subtitles: mum's voice, bottom center */
 .hud-subtitle {
-  position: absolute;
-  bottom: 8%;
-  left: 50%;
-  transform: translateX(-50%);
   max-width: min(680px, 80vw);
   background: linear-gradient(165deg, rgba(30, 22, 13, 0.92), rgba(14, 10, 6, 0.92));
   backdrop-filter: blur(6px);
@@ -767,33 +783,50 @@ body {
 }
 
 .hud-toast {
-  position: absolute;
-  bottom: 22%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(165deg, rgba(26, 38, 20, 0.92), rgba(14, 22, 11, 0.92));
+  order: -1;
+  max-width: min(620px, calc(100vw - 48px));
+  background: linear-gradient(165deg, rgba(38, 33, 25, 0.94), rgba(18, 16, 12, 0.94));
   backdrop-filter: blur(5px);
-  border: 1px solid rgba(140, 220, 140, 0.4);
-  color: #c8f0c0;
+  border: 1px solid rgba(224, 205, 165, 0.38);
+  color: #efe4cd;
   padding: 8px 18px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
+  text-align: center;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
 .hud-toast::before {
+  content: '•  ';
+  color: #d8c08b;
+  font-weight: 800;
+}
+
+.hud-toast[data-tone='success'] {
+  background: linear-gradient(165deg, rgba(26, 38, 20, 0.94), rgba(14, 22, 11, 0.94));
+  border-color: rgba(140, 220, 140, 0.4);
+  color: #c8f0c0;
+}
+
+.hud-toast[data-tone='success']::before {
   content: '✓  ';
   color: #8be86b;
-  font-weight: 800;
+}
+
+.hud-toast[data-tone='danger'] {
+  background: linear-gradient(165deg, rgba(55, 25, 20, 0.96), rgba(28, 13, 11, 0.96));
+  border-color: rgba(255, 135, 105, 0.58);
+  color: #ffd5c8;
+}
+
+.hud-toast[data-tone='danger']::before {
+  content: '!  ';
+  color: #ff9a78;
 }
 
 /* the 1-4 response card */
 .hud-prompt {
-  position: absolute;
-  bottom: 17%;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -809,7 +842,7 @@ body {
 }
 
 @keyframes promptin {
-  from { transform: translate(-50%, 10px); opacity: 0; }
+  from { opacity: 0; }
 }
 
 .hud-prompt-hint {
@@ -1418,7 +1451,8 @@ body {
 .title-footer-note {
   margin: 0;
   font-size: 11px;
-  color: #5e5648;
+  color: #a79a83;
+  letter-spacing: 0.25px;
 }
 
 .title-footer-note kbd {
@@ -1429,7 +1463,7 @@ body {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
   font: 600 10px Consolas, monospace;
-  color: #7a7264;
+  color: #c0b29a;
 }
 
 @media (max-width: 680px) {
@@ -1462,18 +1496,30 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title-screen--exit,
-  .title-card,
-  .title-word,
-  .title-word-hero,
-  .title-begin,
-  .title-motes,
-  .title-colon,
-  .title-atmosphere,
-  .title-crt-flicker,
-  .title-crt-led {
+  :is(.hud, .title-screen, .scorecard),
+  :is(.hud, .title-screen, .scorecard)::before,
+  :is(.hud, .title-screen, .scorecard)::after,
+  :is(.hud, .title-screen, .scorecard) *,
+  :is(.hud, .title-screen, .scorecard) *::before,
+  :is(.hud, .title-screen, .scorecard) *::after {
     animation: none !important;
     transition: none !important;
+  }
+
+  .crt-flicker,
+  .title-crt-flicker {
+    display: none !important;
+  }
+
+  .sc-card,
+  .sc-stamp,
+  .sc-career,
+  .sc-career-stamp {
+    transform: none !important;
+  }
+
+  .hud-clock-late {
+    animation: none !important;
   }
 }
 
@@ -1484,13 +1530,14 @@ body {
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 24px max(18px, 4vw);
   background: rgba(6, 5, 9, 0.88);
   overflow: auto;
 }
 
 .sc-card {
+  flex: 0 0 auto;
+  margin: auto;
   width: min(520px, 92vw);
   /* ruled paper with a red margin line, like it was torn from a pad */
   background:
@@ -1591,7 +1638,43 @@ body {
 .sc-meta {
   font-size: 11.5px;
   color: #6a6052;
-  margin: 6px 0 14px;
+  margin: 7px 0 8px;
+  line-height: 1.45;
+}
+
+.sc-meta-line + .sc-meta-line {
+  margin-top: 2px;
+}
+
+.sc-career {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 12px;
+  margin: 8px -3px 5px;
+  padding: 6px 3px 5px;
+  border-top: 1px dashed rgba(42, 36, 26, 0.45);
+  border-bottom: 1px dashed rgba(42, 36, 26, 0.45);
+  color: #5f5547;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  transform: rotate(0.15deg);
+}
+
+.sc-career-stamp {
+  border: 2px solid #a03028;
+  color: #a03028;
+  padding: 2px 6px 1px;
+  letter-spacing: 1.2px;
+  transform: rotate(-2deg);
+}
+
+.sc-seed {
+  margin: 0 0 12px;
+  color: #786c5b;
+  font-size: 9.5px;
+  letter-spacing: 1.25px;
 }
 
 .sc-notes-title {
@@ -1648,6 +1731,11 @@ body {
   background: #4a3e2a;
 }
 
+.sc-restart:focus-visible {
+  outline: 3px solid #a03028;
+  outline-offset: 3px;
+}
+
 /* ---------- pause + mobile gate ---------- */
 
 .pause-overlay {
@@ -1667,6 +1755,23 @@ body {
 .pause-overlay-hint {
   pointer-events: auto;
   cursor: pointer;
+  border: 1px solid rgba(232, 195, 63, 0.58);
+  border-radius: 9px;
+  background: rgba(40, 31, 17, 0.94);
+  color: #ffe7a0;
+  padding: 11px 18px;
+  font: inherit;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+}
+
+.pause-overlay-hint:hover {
+  background: rgba(72, 54, 25, 0.98);
+  border-color: rgba(255, 220, 120, 0.82);
+}
+
+.pause-overlay-hint:focus-visible {
+  outline: 3px solid #e8c33f;
+  outline-offset: 4px;
 }
 
 .mobile-gate {

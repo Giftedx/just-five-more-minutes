@@ -1,11 +1,11 @@
-/** Title screen overlay. Resolves its promise when the player clicks begin. */
+/** Title screen overlay. Begins synchronously from the player's activation. */
 
 import type { AudioSynth } from '../audio/synth';
 
 const TITLE_CHAT = [
   'Welcome to Mudwick Online.',
   'Left-click to act. Right-click for options.',
-  'Earn max stack before dinner.',
+  'Build the 100 gp dinner fund.',
   '"Show me the goods." — Wyn',
   'Could you move those mugs?',
 ];
@@ -30,7 +30,11 @@ const MUM_QUOTES = [
 ] as const;
 
 /** Tiny live Mudwick vignette for the title CRT. */
-function startTitleCrt(canvas: HTMLCanvasElement, audio?: AudioSynth): () => void {
+function startTitleCrt(
+  canvas: HTMLCanvasElement,
+  reducedMotion: boolean,
+  audio?: AudioSynth,
+): () => void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return () => {};
   const w = canvas.width;
@@ -59,8 +63,9 @@ function startTitleCrt(canvas: HTMLCanvasElement, audio?: AudioSynth): () => voi
   let hitFlash = 0;
   let coinFlash = 0;
   let raf = 0;
+  let active = true;
 
-  const loop = (): void => {
+  const drawFrame = (): void => {
     frame++;
     if (hitFlash > 0) hitFlash--;
     if (coinFlash > 0) coinFlash--;
@@ -154,36 +159,58 @@ function startTitleCrt(canvas: HTMLCanvasElement, audio?: AudioSynth): () => voi
     for (let i = 0; i < 3; i++) {
       ctx.fillRect(viewW + 5 + i * 5, 40, 3, 3);
     }
-
-    raf = requestAnimationFrame(loop);
   };
 
-  raf = requestAnimationFrame(loop);
-  return () => cancelAnimationFrame(raf);
+  const loop = (): void => {
+    if (!active) return;
+    drawFrame();
+    if (active) raf = requestAnimationFrame(loop);
+  };
+
+  drawFrame();
+  if (!reducedMotion) raf = requestAnimationFrame(loop);
+  return () => {
+    if (!active) return;
+    active = false;
+    if (raf !== 0) cancelAnimationFrame(raf);
+  };
 }
 
 function startMumKnocks(quote: HTMLElement, audio?: AudioSynth): () => void {
   let quoteIdx = 0;
+  let disposed = false;
+  let swapTimer = 0;
   const textEl = quote.querySelector<HTMLElement>('.title-mum-quote-text');
   const footEl = quote.querySelector<HTMLElement>('.title-mum-quote-foot');
 
-  const knock = (): void => {
-    quote.classList.add('title-mum-quote--knock');
-    audio?.knock();
-    window.setTimeout(() => {
-      quoteIdx = (quoteIdx + 1) % MUM_QUOTES.length;
-      const q = MUM_QUOTES[quoteIdx];
-      if (q && textEl && footEl) {
-        textEl.textContent = `"${q.text}"`;
-        footEl.textContent = q.foot;
-      }
-      quote.classList.remove('title-mum-quote--knock');
-    }, 220);
+  const swapQuote = (): void => {
+    if (disposed) return;
+    quoteIdx = (quoteIdx + 1) % MUM_QUOTES.length;
+    const q = MUM_QUOTES[quoteIdx];
+    if (q && textEl && footEl) {
+      textEl.textContent = `"${q.text}"`;
+      footEl.textContent = q.foot;
+    }
+    quote.classList.remove('title-mum-quote--knock');
   };
 
-  window.setTimeout(knock, 2200);
-  const id = window.setInterval(knock, 9000);
-  return () => window.clearInterval(id);
+  const knock = (): void => {
+    if (disposed) return;
+    quote.classList.add('title-mum-quote--knock');
+    audio?.knock();
+    swapTimer = window.setTimeout(swapQuote, 220);
+  };
+
+  const firstTimer = window.setTimeout(knock, 2200);
+  const interval = window.setInterval(knock, 9000);
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    window.clearTimeout(firstTimer);
+    window.clearTimeout(swapTimer);
+    window.clearInterval(interval);
+    quote.classList.remove('title-mum-quote--knock');
+  };
 }
 
 function startParallax(screen: HTMLElement): () => void {
@@ -201,10 +228,15 @@ function startParallax(screen: HTMLElement): () => void {
 
 export function showTitle(
   parent: HTMLElement,
-  audio?: AudioSynth,
-): { el: HTMLDivElement; begun: Promise<void> } {
+  audio: AudioSynth | undefined,
+  onBegin: () => void,
+): () => void {
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const el = document.createElement('div');
   el.className = 'title-screen';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-labelledby', 'title-screen-heading');
   el.innerHTML = `
     <div class="title-atmosphere" aria-hidden="true">
       <div class="title-lamp"></div>
@@ -221,7 +253,7 @@ export function showTitle(
             Dinner in 5<span class="title-colon">:</span>00
           </span>
         </div>
-        <h1 class="title-name" aria-label="Just Five More Minutes">
+        <h1 class="title-name" id="title-screen-heading" aria-label="Just Five More Minutes">
           <span class="title-word">Just</span>
           <span class="title-word title-word-hero">Five</span>
           <span class="title-word">More</span>
@@ -266,49 +298,79 @@ export function showTitle(
       </p>
       <footer class="title-footer">
         <button type="button" class="title-begin">Begin</button>
-        <p class="title-footer-note">2,147,483,647 gp · 99 all stats · <kbd>Enter</kbd></p>
+        <p class="title-footer-note">LEGENDARY GOALS · 2,147,483,647 gp · 99 all stats · <kbd>Enter</kbd></p>
       </footer>
     </div>
   `;
   parent.appendChild(el);
 
   const disposers: (() => void)[] = [];
-  disposers.push(startParallax(el));
+  if (!reducedMotion) disposers.push(startParallax(el));
 
   const canvas = el.querySelector<HTMLCanvasElement>('.title-crt');
-  if (canvas) disposers.push(startTitleCrt(canvas, audio));
+  if (canvas) disposers.push(startTitleCrt(canvas, reducedMotion, audio));
 
   const quote = el.querySelector<HTMLElement>('.title-mum-quote');
-  if (quote) disposers.push(startMumKnocks(quote, audio));
+  if (quote && !reducedMotion) disposers.push(startMumKnocks(quote, audio));
 
-  const begun = new Promise<void>((resolve) => {
-    let done = false;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.code === 'Enter' || e.code === 'Space') {
-        e.preventDefault();
-        finish();
-      }
-    };
-    const finish = (): void => {
-      if (done) return;
-      done = true;
-      document.removeEventListener('keydown', onKey);
-      for (const d of disposers) d();
-      audio?.titleBegin();
-      el.classList.add('title-screen--exit');
-      window.setTimeout(() => {
-        el.remove();
-        resolve();
-      }, 520);
-    };
+  const beginButton = el.querySelector<HTMLButtonElement>('.title-begin');
+  let done = false;
+  let disposed = false;
+  let activityStopped = false;
+  let removalTimer = 0;
 
-    document.addEventListener('keydown', onKey);
-    el.querySelector('.title-begin')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      finish();
-    });
-    el.addEventListener('click', finish);
-  });
+  const stopActivity = (): void => {
+    if (activityStopped) return;
+    activityStopped = true;
+    for (const dispose of disposers) dispose();
+  };
+  const removeInputListeners = (): void => {
+    document.removeEventListener('keydown', onKey);
+    beginButton?.removeEventListener('click', onBeginClick);
+    el.removeEventListener('click', onScreenClick);
+  };
+  const finish = (): void => {
+    if (done || disposed) return;
+    done = true;
+    removeInputListeners();
+    stopActivity();
+    audio?.titleBegin();
+    onBegin();
+    if (disposed) return;
+    el.classList.add('title-screen--exit');
+    removalTimer = window.setTimeout(() => el.remove(), 520);
+  };
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.code !== 'Enter' && e.code !== 'Space') return;
+    const target = e.target;
+    if (
+      e.code === 'Space' &&
+      target instanceof Element &&
+      target.closest('button, input, select, textarea, a[href], [contenteditable="true"]')
+    ) {
+      return;
+    }
+    e.preventDefault();
+    finish();
+  };
+  const onBeginClick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    finish();
+  };
+  const onScreenClick = (): void => finish();
 
-  return { el, begun };
+  document.addEventListener('keydown', onKey);
+  beginButton?.addEventListener('click', onBeginClick);
+  el.addEventListener('click', onScreenClick);
+  beginButton?.focus();
+
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    done = true;
+    removeInputListeners();
+    stopActivity();
+    window.clearTimeout(removalTimer);
+    el.remove();
+  };
 }

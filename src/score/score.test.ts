@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { xpForLevel } from '../mmo/sim/osrs';
 import {
+  COMEDY_NOTES,
   comedyFacts,
   computeScore,
   endingTitle,
@@ -13,6 +15,12 @@ import {
 function base(overrides: Partial<SessionData> = {}): SessionData {
   return {
     coins: 0,
+    kills: 0,
+    logsSold: 0,
+    flaxSold: 0,
+    bestStreak: 0,
+    contractsCompleted: 0,
+    skills: { woodcutting: 0, attack: 0, foraging: 0 },
     objectiveHit: false,
     statsBonusHit: false,
     deaths: 0,
@@ -29,22 +37,31 @@ function base(overrides: Partial<SessionData> = {}): SessionData {
 }
 
 describe('MMO progress (0-40)', () => {
-  it('uses log-scaled coin progress toward max stack', () => {
-    expect(scoreMmoProgress(base({ coins: 0 }))).toBe(0);
-    expect(scoreMmoProgress(base({ coins: 100 }))).toBeGreaterThan(0);
-    expect(scoreMmoProgress(base({ coins: 100 }))).toBeLessThan(5);
+  it('scores reachable economy, training, contracts, and streaks', () => {
+    const data = base({
+      coins: 100,
+      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2) },
+      contractsCompleted: 2,
+      bestStreak: 4,
+    });
+    expect(scoreMmoProgress(data)).toBe(38);
   });
 
-  it('adds for max-stack and 99-all bonus, subtracts 5 per death', () => {
-    expect(scoreMmoProgress(base({ objectiveHit: true }))).toBe(12);
-    expect(scoreMmoProgress(base({ statsBonusHit: true }))).toBe(8);
-    expect(scoreMmoProgress(base({ objectiveHit: true, statsBonusHit: true }))).toBe(20);
-    expect(scoreMmoProgress(base({ objectiveHit: true, deaths: 1 }))).toBe(7);
+  it('reserves the final two MMO points for legendary goals', () => {
+    const ordinary = base({
+      coins: 100,
+      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2) },
+      contractsCompleted: 2,
+      bestStreak: 4,
+    });
+    expect(scoreMmoProgress({ ...ordinary, objectiveHit: true, statsBonusHit: true })).toBe(40);
   });
 
-  it('clamps to 0-40', () => {
+  it('rounds economy points, applies death penalties, and clamps to 0-40', () => {
+    expect(scoreMmoProgress(base({ coins: 49 }))).toBe(10);
+    expect(Number.isInteger(scoreMmoProgress(base({ coins: 33 })))).toBe(true);
     expect(scoreMmoProgress(base({ coins: 0, deaths: 5 }))).toBe(0);
-    expect(scoreMmoProgress(base({ objectiveHit: true, statsBonusHit: true, deaths: 1 }))).toBe(15);
+    expect(scoreMmoProgress(base({ coins: 100, deaths: 1 }))).toBe(15);
   });
 });
 
@@ -164,7 +181,7 @@ describe('Comedy facts (0-10)', () => {
     expect(comedyFacts(laundryDone)).not.toContain('laundryIgnored');
   });
 
-  it('choresWithoutGlory: all chores done, objective failed', () => {
+  it('choresWithoutGlory: all chores done, dinner fund missed', () => {
     const allDone = base({
       chores: [
         { id: 'mugs', requestedAt: 90, startedAt: 95, completedAt: 110 },
@@ -173,7 +190,11 @@ describe('Comedy facts (0-10)', () => {
       ],
     });
     expect(comedyFacts(allDone)).toContain('choresWithoutGlory');
+    expect(comedyFacts({ ...allDone, coins: 100 })).not.toContain('choresWithoutGlory');
     expect(comedyFacts({ ...allDone, objectiveHit: true })).not.toContain('choresWithoutGlory');
+    expect(COMEDY_NOTES.choresWithoutGlory).toBe(
+      'Did every chore. The 100 gp dinner fund remains mysteriously unfunded.',
+    );
   });
 
   it('remoteDeath: died while away from the PC', () => {
@@ -186,6 +207,14 @@ describe('Comedy facts (0-10)', () => {
     expect(comedyFacts(data)).toContain('economyAtDinner');
     const wrongOption = base({ prompts: [{ lineId: 'warn', result: 'answered', option: 2 }] });
     expect(comedyFacts(wrongOption)).not.toContain('economyAtDinner');
+  });
+
+  it('contractor: completed at least two Wyn contracts', () => {
+    expect(comedyFacts(base({ contractsCompleted: 2 }))).toContain('contractor');
+    expect(comedyFacts(base({ contractsCompleted: 1 }))).not.toContain('contractor');
+    expect(COMEDY_NOTES.contractor).toBe(
+      'Completed multiple freelance contracts during a domestic incident.',
+    );
   });
 
   it('comedy score is 2 per fact capped at 10', () => {
@@ -217,14 +246,20 @@ describe('ending matrix', () => {
 
   it('covers primary endings and bonus titles', () => {
     expect(endingTitle(base({ objectiveHit: true, chores: allDoneChores }))).toBe(
-      'Functional Adult (Suspicious)',
+      'Max Stack and Matching Socks',
     );
-    expect(endingTitle(base({ objectiveHit: true }))).toBe('The Economy Needed You');
+    expect(endingTitle(base({ objectiveHit: true }))).toBe('The Economy Actually Needed You');
     expect(endingTitle(base({ statsBonusHit: true }))).toBe('Max Cape (Bedroom Edition)');
     expect(endingTitle(base({ objectiveHit: true, statsBonusHit: true }))).toBe(
       'Max Stack, Max Cape, No Dinner',
     );
+    expect(endingTitle(base({ coins: 100, chores: allDoneChores }))).toBe(
+      'Functional Adult (Suspicious)',
+    );
+    expect(endingTitle(base({ contractsCompleted: 2 }))).toBe("Wyn's Employee of the Minute");
+    expect(endingTitle(base({ coins: 100 }))).toBe('The Economy Needed You');
     expect(endingTitle(base({ chores: allDoneChores }))).toBe('Employee of the Month (This House)');
+    expect(endingTitle(base({ kills: 4 }))).toBe('Goblin Performance Reviewer');
     expect(endingTitle(base())).toBe('Goblin Spreadsheet Enjoyer');
   });
 
@@ -252,16 +287,16 @@ describe('computeScore', () => {
       ],
     });
     const s = computeScore(data);
-    expect(s.mmo).toBeGreaterThan(0);
-    expect(s.mmo).toBeLessThan(40);
+    expect(s.mmo).toBe(16);
     expect(s.household).toBe(22); // 16 + 6
     expect(s.vibe).toBe(20); // 20 - 4 + 2 + 2, clamped to 20
     // facts: laundryIgnored + economyAtDinner = 2 -> 4
     expect(s.comedy).toBe(4);
-    expect(s.total).toBe(Math.round(s.mmo + s.household + s.vibe + s.comedy));
+    expect(s.total).toBe(62);
+    expect(s.total).toBe(s.mmo + s.household + s.vibe + s.comedy);
     expect(s.facts.map((f) => f.id)).toEqual(['laundryIgnored', 'economyAtDinner']);
     expect(s.facts.every((f) => f.note.length > 0)).toBe(true);
-    expect(s.endingTitle).toBe('The Economy Needed You');
+    expect(s.endingTitle).toBe('The Economy Actually Needed You');
   });
 
   it('a player who ignores absolutely everything still gets a scorecard', () => {
