@@ -189,9 +189,10 @@ try {
   const ending = await get('.sc-ending');
   const notes = await page.$$eval('.sc-notes li', (els) => els.map((e) => e.textContent));
 
-  // Expected: mmo 0 (no coins), household 30 (3x8+6), vibe 20 (20-3+6 clamped),
-  // comedy 2 (choresWithoutGlory), total 52, Employee of the Month.
-  const expectRows = ['0 / 40', '30 / 30', '20 / 20', '2 / 10'];
+  // Spec §5 Monday derivation: mmo 0 (never at the PC), household 30 (3x8+6),
+  // vibe 20 (20 - floor(susp 2/2) + 6 quickstarts, clamped), comedy 4
+  // (choresWithoutGlory + archivist), total 54, Employee of the Month.
+  const expectRows = ['0 / 40', '30 / 30', '20 / 20', '4 / 10'];
   const actualRows = rows.map((row) => row?.trim() ?? '');
   if (
     actualRows.length !== expectRows.length
@@ -199,7 +200,7 @@ try {
   ) {
     throw new Error(`rows: got ${JSON.stringify(actualRows)}, want ${JSON.stringify(expectRows)}`);
   }
-  if (!total?.includes('52 / 100')) throw new Error(`total: ${total}`);
+  if (!total?.includes('54 / 100')) throw new Error(`total: ${total}`);
   if (!ending?.includes('Employee of the Month (This House)')) throw new Error(`ending: ${ending}`);
   if (!notes.some((n) => n?.includes('100 gp dinner fund'))) throw new Error(`notes: ${notes}`);
 

@@ -211,6 +211,21 @@ try {
     assert.ok(second.includes('translate'), `unexpected parallax transform: ${second}`);
   });
 
+  await scenario('title shows the school week strip on a fresh career', { viewport: { width: 1000, height: 700 } }, async (page) => {
+    await gotoOk(page, { seed: 6 });
+    await page.locator('.title-week').waitFor({ state: 'visible' });
+    const strip = await page.evaluate(() => ({
+      days: document.querySelectorAll('.title-week-day').length,
+      tonight: document.querySelectorAll('.title-week-day--tonight').length,
+      card: document.querySelector('.title-week-card')?.textContent ?? '',
+      reset: document.querySelector('.title-reset') !== null,
+    }));
+    assert.equal(strip.days, 5, 'expected five weekday chips');
+    assert.equal(strip.tonight, 1, 'expected exactly one highlighted night');
+    assert.ok(strip.card.includes('MONDAY'), `fresh career should start Monday: ${strip.card}`);
+    assert.ok(strip.reset, 'full reset control missing');
+  });
+
   await scenario('scorecard is semantic, focused, and short-screen reachable', { viewport: { width: 900, height: 400 } }, async (page) => {
     await gotoOk(page, { speed: 20, t: 299, skipTitle: 1, seed: '0x0badc0de' });
     await page.locator('.sc-card').waitFor({ state: 'visible', timeout: 10_000 });
