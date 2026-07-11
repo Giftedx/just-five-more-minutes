@@ -35,6 +35,8 @@ export interface CareerWeek {
   night: 0 | 1 | 2 | 3 | 4;
   suspicionCarry: number;
   lieDebt: number;
+  /** "Historical preservation" only lands once a week. She remembers. */
+  archivistUsed: boolean;
   reports: NightReportSummary[];
 }
 
@@ -53,7 +55,7 @@ export function freshCareer(): Career {
   return {
     version: 1,
     character: { coins: 0, xp, bridgePass: false, awayPlan: { ...DEFAULT_AWAY_PLAN } },
-    week: { night: 0, suspicionCarry: 0, lieDebt: 0, reports: [] },
+    week: { night: 0, suspicionCarry: 0, lieDebt: 0, archivistUsed: false, reports: [] },
     gallery: [],
     weeksCompleted: [],
   };
@@ -138,6 +140,7 @@ function parseWeek(raw: unknown): CareerWeek | undefined {
   if (!isCount(w.night) || w.night > 4) return undefined;
   if (!isCount(w.suspicionCarry) || w.suspicionCarry > 10) return undefined;
   if (!isCount(w.lieDebt)) return undefined;
+  if (!isBoolean(w.archivistUsed)) return undefined;
   if (!Array.isArray(w.reports)) return undefined;
   // reports.length === night while the week runs; Friday-complete (verdict
   // pending) holds night=4 with all five reports.
@@ -154,6 +157,7 @@ function parseWeek(raw: unknown): CareerWeek | undefined {
     night: w.night as CareerWeek['night'],
     suspicionCarry: w.suspicionCarry,
     lieDebt: w.lieDebt,
+    archivistUsed: w.archivistUsed,
     reports,
   };
 }
@@ -219,6 +223,7 @@ export function recordNight(
   report: NightReportSummary,
   suspicionEnd: number,
   lieDebtDelta: number,
+  archivistUsed = false,
 ): Career {
   const nextNight = Math.min(4, career.week.night + 1) as CareerWeek['night'];
   return {
@@ -227,6 +232,7 @@ export function recordNight(
       night: nextNight,
       suspicionCarry: clampSuspicion(Math.round(clampSuspicion(suspicionEnd) / 2)),
       lieDebt: career.week.lieDebt + lieDebtDelta,
+      archivistUsed: career.week.archivistUsed || archivistUsed,
       reports: [...career.week.reports, report],
     },
   };
@@ -241,7 +247,7 @@ export function weekComplete(career: Career): boolean {
 export function completeWeek(career: Career, endingId: string, total: number): Career {
   return {
     ...career,
-    week: { night: 0, suspicionCarry: 0, lieDebt: 0, reports: [] },
+    week: { night: 0, suspicionCarry: 0, lieDebt: 0, archivistUsed: false, reports: [] },
     gallery: career.gallery.includes(endingId)
       ? career.gallery.slice()
       : [...career.gallery, endingId],

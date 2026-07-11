@@ -103,6 +103,17 @@ describe('recordNight', () => {
     expect(c.week.night).toBe(0); // pure — original untouched
   });
 
+  it('remembers the archivist line for the rest of the week', () => {
+    const c = freshCareer();
+    const spent = recordNight(c, report(50), 0, 0, true);
+    expect(spent.week.archivistUsed).toBe(true);
+    const later = recordNight(spent, report(50), 0, 0, false);
+    expect(later.week.archivistUsed).toBe(true); // sticky within the week
+    let done = later;
+    for (let n = later.week.night; n < 5; n++) done = recordNight(done, report(50), 0, 0);
+    expect(completeWeek(done, 'lostWeek', 250).week.archivistUsed).toBe(false);
+  });
+
   it('clamps out-of-domain suspicion into 0..10 before halving', () => {
     const c = freshCareer();
     expect(recordNight(c, report(10), 25, 0).week.suspicionCarry).toBe(5);

@@ -29,7 +29,10 @@ export const CHORE3_CAP = Math.min(
 );
 
 export type ChoreId = 'mugs' | 'wrappers' | 'laundry';
-export type LineId = 'intro' | 'mugs' | 'wrappers' | 'laundry' | 'warn';
+export type LineId = 'intro' | 'mugs' | 'wrappers' | 'laundry' | 'warn' | 'inspect';
+
+/** Footsteps on the stairs: how many seconds of warning each line fire gets. */
+export const PROMPT_LEAD_IN = 1.5;
 
 export const NPC_LINES: Readonly<Record<LineId, string>> = {
   intro: "Dinner's in about five minutes. Give your room a quick tidy if you get a second.",
@@ -37,6 +40,7 @@ export const NPC_LINES: Readonly<Record<LineId, string>> = {
   wrappers: 'Is the bin full, or are the wrappers just choosing not to participate?',
   laundry: "Laundry in the basket. I'm not asking you to defeat it, just contain it.",
   warn: "Dinner's ready in one minute. Save your goblin spreadsheet.",
+  inspect: 'What exactly is happening in here?',
 };
 
 export const RESPONSE_OPTIONS: readonly string[] = [
@@ -51,6 +55,7 @@ export type DirectorEvent =
   | { type: 'objectiveBanner' }
   | { type: 'choreRequested'; chore: ChoreId }
   | { type: 'promptClosed'; lineId: LineId; result: 'answered' | 'ignored'; option: number | null }
+  | { type: 'promptLeadIn'; lineId: LineId }
   | { type: 'sessionEnd' };
 
 export interface PromptRecord {
@@ -90,6 +95,7 @@ export class Director {
   private warnFired = false;
   private endFired = false;
   private firedLines: LineId[] = [];
+  private leadInsFired = new Set<LineId>();
 
   constructor(startAt = 0) {
     this.t = Math.max(0, startAt);
@@ -137,6 +143,19 @@ export class Director {
       this.bannerFired = true;
       events.push({ type: 'objectiveBanner' });
     }
+    // Footsteps on the stairs — a short audible warning before each line.
+    for (const id of CHORE_ORDER) {
+      const c = this.chores[id];
+      if (c.requestedAt === null && !this.leadInsFired.has(id)
+        && this.t >= this.choreFireAt[id] - PROMPT_LEAD_IN) {
+        this.leadInsFired.add(id);
+        events.push({ type: 'promptLeadIn', lineId: id });
+      }
+    }
+    if (!this.warnFired && !this.leadInsFired.has('warn') && this.t >= WARN_AT - PROMPT_LEAD_IN) {
+      this.leadInsFired.add('warn');
+      events.push({ type: 'promptLeadIn', lineId: 'warn' });
+    }
     for (const id of CHORE_ORDER) {
       const c = this.chores[id];
       if (c.requestedAt === null && this.t >= this.choreFireAt[id]) {
@@ -168,6 +187,31 @@ export class Director {
       events.push({ type: 'sessionEnd' });
     }
     return events;
+  }
+
+  /**
+   * "One sec!" currency: push the next not-yet-requested chore back a little.
+   * No-op when every chore has already been asked for.
+   */
+  extendNextChore(seconds: number): boolean {
+    for (const id of CHORE_ORDER) {
+      if (this.chores[id].requestedAt === null) {
+        let fireAt = this.choreFireAt[id] + seconds;
+        if (id === 'laundry') fireAt = Math.min(fireAt, CHORE3_CAP);
+        this.choreFireAt[id] = fireAt;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The Thursday knock. The night layer decides when; the line obeys every
+   * existing prompt invariant (supersede, timeout, no repeats).
+   */
+  fireInspection(): DirectorEvent[] {
+    if (this.ended) return [];
+    return this.fireLine('inspect');
   }
 
   /** Player picked response option (1-4). Returns false when no prompt is open. */
