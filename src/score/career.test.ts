@@ -7,7 +7,6 @@ import {
   completeWeek,
   saveCareer,
   weekComplete,
-  type Career,
   type NightReportSummary,
 } from './career';
 import { SKILL_NAMES } from '../mmo/sim/osrs';
@@ -19,7 +18,7 @@ function memoryStorage(initial: Record<string, string> = {}): ReportHistoryStora
   const data = { ...initial };
   return {
     data,
-    getItem: (key) => (key in data ? data[key] : null),
+    getItem: (key) => data[key] ?? null,
     setItem: (key, value) => {
       data[key] = value;
     },
@@ -148,18 +147,19 @@ describe('completeWeek', () => {
   });
 });
 
-function withCharacter(patch: Partial<Career['character']>): Career {
+// Fixture builders for deliberately-malformed payloads: loose records, not
+// Career, so invalid values (night: 5, xp: Infinity) can be expressed.
+function withCharacter(patch: Record<string, unknown>): Record<string, unknown> {
   const c = freshCareer();
   return { ...c, character: { ...c.character, ...patch } };
 }
 
-function withXp(value: number): Career {
+function withXp(value: number): Record<string, unknown> {
   const c = freshCareer();
-  c.character.xp[SKILL_NAMES[0]] = value;
-  return c;
+  return withCharacter({ xp: { ...c.character.xp, woodcutting: value } });
 }
 
-function withWeek(patch: Partial<Career['week']>): Career {
+function withWeek(patch: Record<string, unknown>): Record<string, unknown> {
   const c = freshCareer();
   return { ...c, week: { ...c.week, ...patch } };
 }
