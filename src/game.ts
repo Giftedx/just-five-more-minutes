@@ -102,6 +102,23 @@ function loadCareerSafely(): Career {
   }
 }
 
+/**
+ * Embedded webviews can forbid pointer lock via permissions policy; requesting
+ * it there rejects with a SecurityError forever. Detect that up front so the
+ * game can fall back to drag-look instead of freezing at "click to start".
+ */
+export function pointerLockAvailable(doc: Document = document): boolean {
+  const policy = (doc as { featurePolicy?: { allowsFeature?: (name: string) => boolean } }).featurePolicy;
+  if (policy?.allowsFeature) {
+    try {
+      return policy.allowsFeature('pointer-lock');
+    } catch {
+      return true;
+    }
+  }
+  return true; // no Permissions Policy API (e.g. Firefox): assume available
+}
+
 /** Mum's comeback for each of the four excuses. She has heard them all. */
 const MUM_RETORTS: readonly string[] = [
   "Mm. Starting the sixty seconds I don't believe in.",
@@ -347,10 +364,16 @@ export class Game {
   private begin(lockPointer: boolean): void {
     if (this.state !== 'title') return;
     this.state = 'playing';
-    this.pointerLockRequired = lockPointer;
+    const canLock = lockPointer && pointerLockAvailable();
+    this.pointerLockRequired = canLock;
+    if (lockPointer && !canLock) {
+      // Locked-down embed: play anyway, drag to look.
+      this.host.router.dragLook = true;
+      this.hud.showToast('Pointer lock unavailable here — hold the mouse button and drag to look.', this.gameNow, 6000);
+    }
     this.hud.setCrosshairVisible(true);
     this.syncPauseOverlay();
-    if (lockPointer) this.host.requestPointerLock();
+    if (canLock) this.host.requestPointerLock();
   }
 
   private wire(): void {

@@ -84,6 +84,15 @@ try {
 
   await scenario('first pointer-lock rejection freezes time', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await page.addInitScript(() => {
+      // Pin the permissions policy to "allowed": this scenario tests the
+      // TRANSIENT rejection freeze (Esc cooldown), not the policy-forbidden
+      // drag-look fallback. Headless Chromium otherwise forbids the feature.
+      Object.defineProperty(Document.prototype, 'featurePolicy', {
+        configurable: true,
+        get() {
+          return { allowsFeature: (name) => name === 'pointer-lock' };
+        },
+      });
       Object.defineProperty(HTMLCanvasElement.prototype, 'requestPointerLock', {
         configurable: true,
         value() {

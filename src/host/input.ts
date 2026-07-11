@@ -12,6 +12,12 @@ export class InputRouter {
   /** Set by the app while an NPC response prompt is open. */
   promptActive = false;
   enabled = true;
+  /**
+   * Embedded contexts (permissions policy) can forbid pointer lock outright.
+   * When set, holding the left button drags the camera instead.
+   */
+  dragLook = false;
+  private dragging = false;
 
   onMoveKey: ((code: string, down: boolean) => void) | null = null;
   onLook: ((dx: number, dy: number) => void) | null = null;
@@ -92,21 +98,36 @@ export class InputRouter {
 
     on('mousemove', (e) => {
       if (!this.enabled) return;
-      if (this.mode === 'room' && document.pointerLockElement === this.roomCanvas) {
-        if (this.skipNextMove) {
-          this.skipNextMove = false;
-          return;
-        }
-        // Clamp residual spikes (legit flicks stay well under this).
-        const dx = Math.max(-180, Math.min(180, e.movementX));
-        const dy = Math.max(-180, Math.min(180, e.movementY));
-        this.onLook?.(dx, dy);
+      if (this.mode !== 'room') return;
+      const locked = document.pointerLockElement === this.roomCanvas;
+      if (!locked && !(this.dragLook && this.dragging)) return;
+      if (this.skipNextMove) {
+        this.skipNextMove = false;
+        return;
       }
+      // Clamp residual spikes (legit flicks stay well under this).
+      const dx = Math.max(-180, Math.min(180, e.movementX));
+      const dy = Math.max(-180, Math.min(180, e.movementY));
+      this.onLook?.(dx, dy);
     });
+
+    // Drag-to-look for environments that forbid pointer lock.
+    const onDown = (e: MouseEvent): void => {
+      if (!this.enabled || !this.dragLook || this.mode !== 'room' || e.button !== 0) return;
+      this.dragging = true;
+      this.skipNextMove = true; // first delta after grabbing is often junk
+    };
+    const onUp = (): void => {
+      this.dragging = false;
+    };
+    this.roomCanvas.addEventListener('mousedown', onDown);
+    document.addEventListener('mouseup', onUp);
+    this.disposers.push(() => this.roomCanvas.removeEventListener('mousedown', onDown));
+    this.disposers.push(() => document.removeEventListener('mouseup', onUp));
 
     const click = (): void => {
       if (!this.enabled) return;
-      if (this.mode === 'room') this.onRoomClick?.();
+      if (this.mode === 'room' && !this.dragLook) this.onRoomClick?.();
     };
     this.roomCanvas.addEventListener('click', click);
     this.disposers.push(() => this.roomCanvas.removeEventListener('click', click));
