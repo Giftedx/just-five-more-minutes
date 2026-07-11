@@ -157,4 +157,33 @@ describe('ChoreTracker', () => {
       expect(t.item('mug0')?.state).toBe('world');
     });
   });
+
+  describe('tug chores', () => {
+    it('completes point-by-point with the same event flow as carries', () => {
+      const t = new ChoreTracker([
+        { id: 'bed0', chore: 'wrappers' },
+        { id: 'bed1', chore: 'wrappers' },
+      ]);
+      t.request('wrappers');
+      const first = t.tug('bed0');
+      expect(first.map((e) => e.type)).toEqual(['choreStarted', 'choreProgress']);
+      expect(t.item('bed0')?.state).toBe('placed');
+      // Tugging the same point again is a no-op.
+      expect(t.tug('bed0')).toEqual([]);
+      const second = t.tug('bed1');
+      expect(second.map((e) => e.type)).toEqual(['choreProgress', 'choreCompleted']);
+      expect(t.isCompleted('wrappers')).toBe(true);
+    });
+
+    it('tug points placed before the request count when it arrives', () => {
+      const t = new ChoreTracker([
+        { id: 'curt0', chore: 'laundry' },
+        { id: 'curt1', chore: 'laundry' },
+      ]);
+      t.tug('curt0');
+      t.tug('curt1');
+      const events = t.request('laundry');
+      expect(events.map((e) => e.type)).toEqual(['choreCompleted']);
+    });
+  });
 });

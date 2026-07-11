@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import { MmoGame } from '../mmo/render/game';
+import type { SimCharacter } from '../mmo/sim/sim';
+import { CHORE_DEFS, type ChoreDef } from './chores';
+import type { ChoreId } from '../director/director';
 import { InteractSystem } from './interact';
 import { InputRouter, type Mode } from './input';
 import { PlayerController } from './player';
-import { buildRoom, type Room } from './room';
+import { buildRoom, MONDAY_ROOM_CONFIG, type Room, type RoomNightConfig } from './room';
 
 const MONITOR_REFRESH_MS = 100; // ~10fps mirror on the 3D monitor
 
@@ -12,6 +15,17 @@ export interface AppHooks {
   onModeChange?: (mode: Mode) => void;
   /** Player pressed 1-4 while a prompt was open. */
   onPromptOption?: (option: number) => void;
+}
+
+export interface HostAppOpts {
+  speed?: number;
+  seed?: number;
+  /** Tonight's slot -> physical chore staging. Defaults to Monday. */
+  roomConfig?: RoomNightConfig;
+  choreDefs?: Readonly<Record<ChoreId, ChoreDef>>;
+  /** Persistent Mudwick character carried in from the career file. */
+  character?: SimCharacter;
+  doubleXp?: boolean;
 }
 
 /**
@@ -36,13 +50,15 @@ export class HostApp {
   private root: HTMLElement;
   private crtScreen: HTMLDivElement;
   private monitorTex: THREE.CanvasTexture;
+  private homeworkTex: THREE.CanvasTexture | null = null;
+  private homeworkOn = false;
   private monitorRefreshAcc = MONITOR_REFRESH_MS;
   private currentPrompt: { label: string; actionable: boolean } | null = null;
   /** 2D stand-ins for the chore items on the 3D desk, keyed by item id. */
   private deskItemEls = new Map<string, HTMLElement>();
   private deskItemOrig = new Map<string, THREE.Vector3>();
 
-  constructor(root: HTMLElement, opts: { speed?: number; seed?: number } = {}) {
+  constructor(root: HTMLElement, opts: HostAppOpts = {}) {
     this.root = root;
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
@@ -50,11 +66,14 @@ export class HostApp {
     this.renderer.domElement.id = 'room-canvas';
     root.appendChild(this.renderer.domElement);
 
-    this.room = buildRoom();
+    this.room = buildRoom(opts.roomConfig ?? MONDAY_ROOM_CONFIG);
     this.camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 50);
     this.player = new PlayerController(this.camera, this.room.playerSpawn, this.room.colliders);
-    this.interact = new InteractSystem(this.room);
-    this.mmo = new MmoGame(opts.seed, opts.speed ?? 1);
+    this.interact = new InteractSystem(this.room, opts.choreDefs ?? CHORE_DEFS);
+    this.mmo = new MmoGame(opts.seed, opts.speed ?? 1, {
+      character: opts.character,
+      doubleXp: opts.doubleXp,
+    });
 
     // PC overlay (hidden until the player sits down)
     this.pcWrap = document.createElement('div');
@@ -194,6 +213,24 @@ export class HostApp {
     return this.currentPrompt;
   }
 
+  /**
+   * The oldest trick: flip the 3D monitor to a very serious document. The
+   * PC-mode overlay is unaffected — the ruse only matters from the doorway.
+   */
+  setHomework(on: boolean): void {
+    if (on === this.homeworkOn) return;
+    this.homeworkOn = on;
+    const mat = this.room.monitorScreen.material as THREE.MeshBasicMaterial;
+    if (on) {
+      this.homeworkTex ??= new THREE.CanvasTexture(drawHomeworkDoc());
+      this.homeworkTex.colorSpace = THREE.SRGBColorSpace;
+      mat.map = this.homeworkTex;
+    } else {
+      mat.map = this.monitorTex;
+    }
+    mat.needsUpdate = true;
+  }
+
   /** Show a 2D desk item only while it's genuinely still on the 3D desk. */
   private syncDeskProps(): void {
     for (const [id, el] of this.deskItemEls) {
@@ -273,6 +310,7 @@ export class HostApp {
     this.router.dispose();
     window.removeEventListener('resize', this.onResize);
     this.monitorTex.dispose();
+    this.homeworkTex?.dispose();
     // Free GPU resources created in buildRoom (texture dispose is idempotent,
     // so the monitor screen's map appearing here too is fine).
     this.room.scene.traverse((o) => {
@@ -325,4 +363,58 @@ export class HostApp {
     const wall = Math.max(220, Math.min(2.06 * half, headroom / 0.24));
     this.pcWrap.style.setProperty('--wall', `${wall.toFixed(0)}px`);
   }
+}
+
+/** A very convincing 320x240 Word-2003 document. The essay is due Friday. */
+function drawHomeworkDoc(): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 240;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+
+  // Application chrome
+  ctx.fillStyle = '#d4d0c8';
+  ctx.fillRect(0, 0, 320, 240);
+  ctx.fillStyle = '#0a246a';
+  ctx.fillRect(0, 0, 320, 16);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 9px monospace';
+  ctx.fillText('homework.doc - Word', 5, 11);
+  ctx.fillStyle = '#d4d0c8';
+  ctx.fillRect(302, 3, 14, 10);
+  ctx.strokeStyle = '#404040';
+  ctx.strokeRect(302.5, 3.5, 13, 10);
+  ctx.fillStyle = '#000000';
+  ctx.font = '8px monospace';
+  ctx.fillText('x', 306, 11);
+  // Menu + toolbar strips
+  ctx.fillText('File  Edit  View  Insert  Format  Help', 6, 26);
+  ctx.fillStyle = '#c0bcb4';
+  ctx.fillRect(0, 30, 320, 12);
+
+  // The page
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(30, 48, 260, 184);
+  ctx.strokeStyle = '#808080';
+  ctx.strokeRect(30.5, 48.5, 259, 183);
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 10px serif';
+  ctx.fillText('The Industrial Revolution', 48, 68);
+  ctx.font = '8px serif';
+  ctx.fillStyle = '#222222';
+  const lines = [
+    'The Industrial Revolution changed many',
+    'things. Before it, things were different,',
+    'and afterwards they were not the same.',
+    '',
+    'One major factor was the economy, which',
+    'needed several people. Goblins did not',
+    'exist yet, which historians agree was',
+    'a missed opportunity for the mines.',
+  ];
+  lines.forEach((line, i) => ctx.fillText(line, 48, 86 + i * 12));
+  // Blinking cursor, caught mid-blink forever.
+  ctx.fillRect(48 + 148, 172, 1, 9);
+  return canvas;
 }

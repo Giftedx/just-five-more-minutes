@@ -17,6 +17,8 @@ export class InputRouter {
   onLook: ((dx: number, dy: number) => void) | null = null;
   onInteract: (() => void) | null = null;
   onStandUp: (() => void) | null = null;
+  /** F — the oldest trick in the book (homework.doc). Works in either mode. */
+  onPanic: (() => void) | null = null;
   onPromptOption: ((option: number) => void) | null = null;
   /** Click on the 3D canvas while unlocked (resume / acquire pointer lock). */
   onRoomClick: (() => void) | null = null;
@@ -51,6 +53,12 @@ export class InputRouter {
           this.onPromptOption?.(opt);
           return;
         }
+      }
+
+      if (e.code === 'KeyF') {
+        e.preventDefault();
+        this.onPanic?.();
+        return;
       }
 
       if (this.mode === 'room') {

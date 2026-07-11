@@ -1,6 +1,7 @@
 import { AudioSynth } from './audio/synth';
-import { CHORE_DEFS } from './host/chores';
+import { choreDefsFor, type ChoreDef } from './host/chores';
 import { HostApp } from './host/app';
+import type { RoomNightConfig } from './host/room';
 import {
   BANNER_AT,
   Director,
@@ -8,12 +9,27 @@ import {
   SESSION_LENGTH,
   type ChoreId,
   type DirectorEvent,
+  type LineId,
 } from './director/director';
+import {
+  BarkScheduler,
+  MUM_TIER_LABELS,
+  MumState,
+  nightSpec,
+  type BarkTrigger,
+  type NightSpec,
+} from './director/nights';
 import { computeScore, type SessionData } from './score/score';
 import {
   recordReport,
   type ReportHistorySummary,
 } from './score/history';
+import {
+  loadCareer,
+  recordNight,
+  saveCareer,
+  type Career,
+} from './score/career';
 import { levelOf } from './mmo/sim/osrs';
 import type { SimEvent } from './mmo/sim/types';
 import { createSessionSeed } from './session';
@@ -26,6 +42,19 @@ export interface GameOptions {
   startAt: number;
   skipTitle: boolean;
   seed?: number;
+  /** Dev override (?night=0..4); defaults to the career's current night. */
+  night?: number;
+}
+
+function roomConfigFor(spec: NightSpec): RoomNightConfig {
+  return {
+    chores: (['mugs', 'wrappers', 'laundry'] as const).map((slot) => ({
+      slot,
+      physical: spec.slots[slot].id,
+      count: spec.slots[slot].count,
+    })),
+    phone: spec.beats.phone !== undefined,
+  };
 }
 
 const CHORE_ORDER: readonly ChoreId[] = ['mugs', 'wrappers', 'laundry'];
@@ -61,6 +90,14 @@ function recordReportSafely(total: number): ReportHistorySummary {
   }
 }
 
+function loadCareerSafely(): Career {
+  try {
+    return loadCareer(localStorage);
+  } catch {
+    return loadCareer({ getItem: () => null, setItem: () => undefined });
+  }
+}
+
 /** Mum's comeback for each of the four excuses. She has heard them all. */
 const MUM_RETORTS: readonly string[] = [
   "Mm. Starting the sixty seconds I don't believe in.",
@@ -81,6 +118,30 @@ export class Game {
   private state: 'title' | 'playing' | 'ended' = 'title';
   private choreCompletedInDanger = false;
   private silhouetteHideAt = 0;
+  // ---- the school week
+  private career: Career;
+  private readonly night: NightSpec;
+  private readonly choreDefs: Record<ChoreId, ChoreDef>;
+  private mum: MumState;
+  private barks: BarkScheduler;
+  private lieDebtTonight = 0;
+  private archivistSpentTonight = false;
+  private lastTradeT = Number.NEGATIVE_INFINITY;
+  private factFlags = {
+    technicallyTrue: false,
+    evidenceBased: false,
+    archivist: false,
+    modemScream: false,
+    oldestTrick: false,
+  };
+  private inspectionFailed = false;
+  private phonePhase: 'idle' | 'down' | 'done' = 'idle';
+  private combatAtDisconnect = false;
+  private deathsAtDisconnect = 0;
+  private inspectionFired = false;
+  private panicArmedUntil = Number.NEGATIVE_INFINITY;
+  private homeworkOffAt = Number.NEGATIVE_INFINITY;
+  private lampOn = false;
   /** Pause-frozen HUD clock (ms). Director time freezes on pause; wall-clock
    *  timers would desync subtitles/prompt bar from the director, so the HUD
    *  runs on this clock instead. */
@@ -107,8 +168,27 @@ export class Game {
     this.root = root;
     this.opts = opts;
     this.sessionSeed = opts.seed ?? createSessionSeed();
-    const hostOpts = { speed: opts.speed, seed: this.sessionSeed };
-    this.host = new HostApp(root, hostOpts);
+
+    this.career = loadCareerSafely();
+    const nightIndex = opts.night ?? this.career.week.night;
+    this.night = nightSpec(nightIndex);
+    this.choreDefs = choreDefsFor(this.night);
+    this.mum = new MumState(this.career.week.suspicionCarry);
+    this.barks = new BarkScheduler(this.night.barks);
+
+    this.host = new HostApp(root, {
+      speed: opts.speed,
+      seed: this.sessionSeed,
+      roomConfig: roomConfigFor(this.night),
+      choreDefs: this.choreDefs,
+      character: {
+        coins: this.career.character.coins,
+        xp: { ...this.career.character.xp },
+        bridgePass: this.career.character.bridgePass,
+      },
+      doubleXp: this.night.beats.doubleXp ?? false,
+    });
+    this.host.mmo.sim.awayPlan = { ...this.career.character.awayPlan };
     this.director = new Director(opts.startAt);
     this.hud = new Hud(root);
     this.audio = new AudioSynth();
@@ -224,6 +304,7 @@ export class Game {
           this.director.noteChoreStarted(e.chore);
         } else if (e.type === 'choreCompleted') {
           this.director.noteChoreCompleted(e.chore);
+          this.mum.onChoreCompleted();
           const sim = this.host.mmo.sim;
           const completedInDanger = this.host.mmo.inCombat || sim.player.hp <= 4;
           if (completedInDanger) {
@@ -231,14 +312,17 @@ export class Game {
           }
           const { done, total } = this.host.interact.tracker.progress(e.chore);
           this.hud.showToast(
-            choreDoneToast(`${CHORE_DEFS[e.chore].chip} ${done}/${total}`, completedInDanger),
+            choreDoneToast(`${this.choreDefs[e.chore].chip} ${done}/${total}`, completedInDanger),
             this.gameNow,
           );
           this.audio.choreDone();
+          this.sayBark('choreDone');
         }
       }
       this.refreshChoreChip();
     };
+
+    this.host.router.onPanic = () => this.panic();
 
     this.host.interact.onAct = (kind) => {
       if (kind === 'pickup') this.audio.pickup();
@@ -255,6 +339,7 @@ export class Game {
 
   private handleMmoEvents(events: readonly SimEvent[]): void {
     for (const e of events) {
+      if (e.type === 'trade') this.lastTradeT = this.director.t;
       const toast = crossWorldToast(e);
       if (toast !== null) {
         this.hud.showToast(
@@ -343,20 +428,52 @@ export class Game {
     return wrap;
   }
 
+  /** Tonight's script for a line, in Mum's current tone. */
+  private lineText(lineId: LineId, fallback: string): string {
+    const line = this.night.lines[lineId];
+    if (!line) return fallback;
+    return this.mum.tier >= 2 ? line.tier2 : line.base;
+  }
+
+  private sayBark(trigger: BarkTrigger): void {
+    // Barks never talk over an open prompt — Mum is many things, not rude.
+    if (this.director.activePrompt !== null) return;
+    const line = this.barks.pick(trigger, this.mum.tier, this.director.t);
+    if (!line) return;
+    this.hud.showSubtitle(line, this.gameNow, 4500 / this.opts.speed);
+    this.audio.npcVoice(Math.min(6, Math.max(3, Math.round(line.split(' ').length / 2.5))));
+  }
+
+  private panic(): void {
+    if (this.state !== 'playing') return;
+    this.host.setHomework(true);
+    this.homeworkOffAt = this.gameNow + 3000 / this.opts.speed;
+    this.panicArmedUntil = this.director.t + 10;
+    if (!this.factFlags.oldestTrick) {
+      this.factFlags.oldestTrick = true;
+      this.hud.showToast('homework.doc engaged. A classic.', this.gameNow);
+    }
+    this.audio.uiClick();
+  }
+
   private handleDirectorEvent(ev: DirectorEvent): void {
     switch (ev.type) {
       case 'npcLine': {
-        this.hud.showSubtitle(ev.text, this.gameNow, 6000 / this.opts.speed);
+        const text = this.lineText(ev.lineId, ev.text);
+        this.hud.showSubtitle(text, this.gameNow, 6000 / this.opts.speed);
         this.hud.openPrompt(this.gameNow, (PROMPT_DURATION * 1000) / this.opts.speed);
         this.host.router.promptActive = true;
         this.host.room.npcSilhouette.visible = true;
         this.host.room.setHallLight(true);
         this.silhouetteHideAt = this.gameNow + 6000 / this.opts.speed;
         this.audio.knock();
-        const syllables = Math.min(6, Math.max(3, Math.round(ev.text.split(' ').length / 2.5)));
+        const syllables = Math.min(6, Math.max(3, Math.round(text.split(' ').length / 2.5)));
         this.later(420, () => this.audio.npcVoice(syllables));
         break;
       }
+      case 'promptLeadIn':
+        this.audio.footsteps();
+        break;
       case 'objectiveBanner':
         this.revealObjective();
         break;
@@ -367,9 +484,34 @@ export class Game {
         this.refreshChoreChip();
         break;
       }
-      case 'promptClosed':
+      case 'promptClosed': {
         this.hud.closePrompt();
         this.host.router.promptActive = false;
+        const judgement = this.mum.onPromptClosed(ev.result, ev.option, {
+          inCombat: this.host.mmo.inCombat,
+          tradedRecently: this.director.t - this.lastTradeT <= 20,
+          usedArchivistThisWeek: this.career.week.archivistUsed || this.archivistSpentTonight,
+        });
+        if (judgement.graceExtendSeconds > 0) {
+          this.director.extendNextChore(judgement.graceExtendSeconds);
+        }
+        this.lieDebtTonight += judgement.lieDebtDelta;
+        if (judgement.archivistSpent) this.archivistSpentTonight = true;
+        if (judgement.facts.technicallyTrue) this.factFlags.technicallyTrue = true;
+        if (judgement.facts.evidenceBased) this.factFlags.evidenceBased = true;
+        if (judgement.facts.archivist) this.factFlags.archivist = true;
+
+        if (ev.lineId === 'inspect') {
+          const defused = this.director.t <= this.panicArmedUntil;
+          this.mum.onInspection(defused);
+          if (!defused) this.inspectionFailed = true;
+          this.later(900 / this.opts.speed, () => {
+            if (this.disposed || this.state !== 'playing') return;
+            this.sayBark(defused ? 'inspectionDefused' : 'inspectionFailed');
+          });
+          break;
+        }
+
         if (ev.result === 'answered') {
           this.audio.uiClick();
           // She always gets the last word. Always.
@@ -384,6 +526,7 @@ export class Game {
           }
         }
         break;
+      }
       case 'sessionEnd':
         this.endSession();
         break;
@@ -396,9 +539,54 @@ export class Game {
     for (const c of CHORE_ORDER) {
       if (!tracker.isRequested(c) || tracker.isCompleted(c)) continue;
       const { done, total } = tracker.progress(c);
-      chips.push(`${CHORE_DEFS[c].chip} ${done}/${total}`);
+      chips.push(`${this.choreDefs[c].chip} ${done}/${total}`);
     }
     this.hud.setChoreChips(chips);
+  }
+
+  /** Wednesday's phone call and Thursday's knock, driven off the director clock. */
+  private runNightBeats(): void {
+    const t = this.director.t;
+    const phone = this.night.beats.phone;
+    if (phone && this.phonePhase === 'idle' && t >= phone.at) {
+      this.phonePhase = 'down';
+      this.combatAtDisconnect = this.host.mmo.inCombat;
+      this.deathsAtDisconnect = this.host.mmo.sim.stats.deaths;
+      this.host.mmo.sim.setConnected(false);
+      this.audio.modemDown();
+      this.sayBark('phoneForeshadow');
+      this.hud.showToast('Connection lost. The landline wins.', this.gameNow, 3600, 'danger');
+    }
+    if (phone && this.phonePhase === 'down' && t >= phone.until) {
+      this.phonePhase = 'done';
+      this.host.mmo.sim.setConnected(true);
+      this.audio.modemScreech();
+      this.sayBark('modemReturn');
+      if (this.combatAtDisconnect && this.host.mmo.sim.stats.deaths === this.deathsAtDisconnect) {
+        this.factFlags.modemScream = true;
+      }
+    }
+
+    const inspection = this.night.beats.inspection;
+    if (
+      inspection && !this.inspectionFired && t >= inspection.at
+      && this.mum.suspicion >= inspection.minSuspicion
+    ) {
+      this.inspectionFired = true;
+      for (const ev of this.director.fireInspection()) this.handleDirectorEvent(ev);
+    }
+
+    // The evening gets on with itself.
+    this.host.room.setDusk(t / SESSION_LENGTH);
+    if (!this.lampOn && t >= 210) {
+      this.lampOn = true;
+      this.host.room.setDeskLamp(true);
+      this.sayBark('lampOn');
+    }
+    if (this.homeworkOffAt !== Number.NEGATIVE_INFINITY && this.gameNow >= this.homeworkOffAt) {
+      this.homeworkOffAt = Number.NEGATIVE_INFINITY;
+      this.host.setHomework(false);
+    }
   }
 
   private revealObjective(): void {
@@ -447,9 +635,39 @@ export class Game {
       })),
       chores: CHORE_ORDER.map((c) => ({ ...this.director.chores[c] })),
       choreCompletedInDanger: this.choreCompletedInDanger,
+      inspectionFailed: this.inspectionFailed,
     };
     const score = computeScore(data);
     const history = recordReportSafely(score.total);
+
+    // Fold the night into the career: the character keeps what it earned.
+    this.career = recordNight(
+      {
+        ...this.career,
+        character: {
+          coins: sim.player.coins,
+          xp: { ...sim.player.skills },
+          bridgePass: sim.bridgePass,
+          awayPlan: { ...sim.awayPlan },
+        },
+        version: 1,
+      },
+      {
+        total: score.total,
+        rows: [score.mmo, score.household, score.vibe, score.comedy],
+        endingTitle: score.endingTitle,
+        seed: this.sessionSeed,
+        milestones: [...sim.milestones],
+      },
+      this.mum.suspicion,
+      this.lieDebtTonight,
+      this.archivistSpentTonight,
+    );
+    try {
+      saveCareer(localStorage, this.career);
+    } catch {
+      // A blocked localStorage costs persistence, not the report.
+    }
     const card = showScorecard(
       this.root,
       score,
@@ -533,6 +751,7 @@ export class Game {
       for (const ev of this.director.update((dtMs / 1000) * this.opts.speed)) {
         this.handleDirectorEvent(ev);
       }
+      if (this.state === 'playing') this.runNightBeats();
     }
     if (this.state !== 'ended') {
       this.host.update(dtMs);
@@ -550,6 +769,7 @@ export class Game {
       );
       const prompt = this.host.mode === 'room' ? this.host.prompt : null;
       this.hud.setInteractLabel(prompt?.label ?? null, prompt?.actionable ?? true);
+      this.hud.setMumStatus(MUM_TIER_LABELS[this.mum.tier] ?? null, this.mum.tier);
       if (this.host.room.npcSilhouette.visible && this.gameNow > this.silhouetteHideAt) {
         this.host.room.npcSilhouette.visible = false;
         this.host.room.setHallLight(false);

@@ -1,4 +1,4 @@
-import { MudwickSim } from '../sim/sim';
+import { MudwickSim, type SimCharacter } from '../sim/sim';
 import type { MenuOption, SimEvent } from '../sim/types';
 import { MmoRenderer } from './renderer';
 
@@ -21,8 +21,16 @@ export class MmoGame {
   private now = 0;
   private renderAcc = 0;
 
-  constructor(seed?: number, speed = 1) {
-    this.sim = seed === undefined ? new MudwickSim() : new MudwickSim(seed);
+  constructor(
+    seed?: number,
+    speed = 1,
+    simOpts: { character?: SimCharacter | undefined; doubleXp?: boolean | undefined } = {},
+  ) {
+    const opts: ConstructorParameters<typeof MudwickSim>[0] = {};
+    if (seed !== undefined) opts.seed = seed;
+    if (simOpts.character !== undefined) opts.character = simOpts.character;
+    if (simOpts.doubleXp !== undefined) opts.doubleXp = simOpts.doubleXp;
+    this.sim = new MudwickSim(opts);
     this.speed = speed;
     this.renderer = new MmoRenderer(this.sim, BASE_TICK_MS / speed);
   }

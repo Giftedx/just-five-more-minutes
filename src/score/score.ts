@@ -37,6 +37,8 @@ export interface SessionData {
   chores: ChoreOutcome[];
   /** Host fact: some chore was completed during combat or at <=4 HP. */
   choreCompletedInDanger: boolean;
+  /** Host fact: Thursday's knock landed with no homework.doc in sight. */
+  inspectionFailed?: boolean;
 }
 
 export type ComedyFactId =

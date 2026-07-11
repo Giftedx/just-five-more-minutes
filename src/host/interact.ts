@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { CHORE_DEFS, ChoreTracker, type ChoreTrackerEvent } from './chores';
+import { CHORE_DEFS, ChoreTracker, type ChoreDef, type ChoreTrackerEvent } from './chores';
+import type { ChoreId } from '../director/director';
 import type { Interactable, Room } from './room';
 
 const REACH = 2.5;
@@ -16,6 +17,7 @@ export interface InteractPrompt {
  */
 export class InteractSystem {
   readonly tracker: ChoreTracker;
+  private readonly defs: Readonly<Record<ChoreId, ChoreDef>>;
   private room: Room;
   private raycaster = new THREE.Raycaster();
   private hovered: THREE.Object3D | null = null;
@@ -32,8 +34,9 @@ export class InteractSystem {
   onTrackerEvents: ((events: ChoreTrackerEvent[]) => void) | null = null;
   onAct: ((kind: 'pickup' | 'place') => void) | null = null;
 
-  constructor(room: Room) {
+  constructor(room: Room, defs: Readonly<Record<ChoreId, ChoreDef>> = CHORE_DEFS) {
     this.room = room;
+    this.defs = defs;
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.tracker = new ChoreTracker(room.items.map((i) => ({ id: i.id, chore: i.chore })));
     this.raycaster.far = REACH;
@@ -122,6 +125,18 @@ export class InteractSystem {
       case 'pc':
         this.onEnterPc?.();
         return true;
+      case 'tug': {
+        const events = this.tracker.tug(interact.itemId);
+        if (events.length === 0 && this.tracker.item(interact.itemId)?.state !== 'world') {
+          return false; // already tugged
+        }
+        // The point visibly settles: duvet corner flattens, curtain opens.
+        obj.scale.y = Math.max(0.2, obj.scale.y * 0.25);
+        obj.position.y = Math.max(0.02, obj.position.y - 0.02);
+        this.onTrackerEvents?.(events);
+        this.onAct?.('place');
+        return true;
+      }
       case 'item': {
         if (!this.tracker.canPickUp(interact.itemId)) return false;
         const events = this.tracker.pickUp(interact.itemId);
@@ -154,6 +169,13 @@ export class InteractSystem {
     switch (interact.type) {
       case 'pc':
         return { label: 'E — Sit down at Mudwick Online', actionable: true };
+      case 'tug': {
+        const item = this.tracker.item(interact.itemId);
+        if (!item || item.state !== 'world') {
+          return { label: `${interact.name} — sorted`, actionable: false };
+        }
+        return { label: `E — ${interact.action}`, actionable: true };
+      }
       case 'item': {
         if (this.tracker.carried) {
           return { label: `Hands full — carrying the ${this.carriedName()}`, actionable: false };
@@ -163,7 +185,7 @@ export class InteractSystem {
       case 'target': {
         const carried = this.tracker.carried;
         if (!carried) {
-          const def = CHORE_DEFS[interact.accepts];
+          const def = this.defs[interact.accepts];
           return { label: `${interact.name} (${def.plural} go here)`, actionable: false };
         }
         const carriedName = this.carriedName();
@@ -199,7 +221,7 @@ export class InteractSystem {
     this.slotByItem.delete(itemId);
     const item = this.tracker.item(itemId);
     if (!item) return;
-    const target = CHORE_DEFS[item.chore].target as 'tray' | 'bin' | 'basket';
+    const target = this.defs[item.chore].target as 'tray' | 'bin' | 'basket';
     this.usedSlots[target].delete(idx);
   }
 

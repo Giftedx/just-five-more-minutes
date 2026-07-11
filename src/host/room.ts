@@ -4,6 +4,7 @@ import type { ChoreId } from '../director/director';
 export type Interactable =
   | { type: 'item'; itemId: string; chore: ChoreId; name: string }
   | { type: 'target'; target: 'tray' | 'bin' | 'basket'; accepts: ChoreId; name: string }
+  | { type: 'tug'; itemId: string; chore: ChoreId; name: string; action: string }
   | { type: 'pc' };
 
 export interface RoomItemDef {
@@ -11,6 +12,22 @@ export interface RoomItemDef {
   chore: ChoreId;
   name: string;
 }
+
+/** Which physical chore fills each director slot tonight, plus night props. */
+export interface RoomNightConfig {
+  chores: { slot: ChoreId; physical: 'mugs' | 'wrappers' | 'laundry' | 'bed' | 'curtains'; count: number }[];
+  /** Wednesday: the landline appears by the door. */
+  phone: boolean;
+}
+
+export const MONDAY_ROOM_CONFIG: RoomNightConfig = {
+  chores: [
+    { slot: 'mugs', physical: 'mugs', count: 3 },
+    { slot: 'wrappers', physical: 'wrappers', count: 4 },
+    { slot: 'laundry', physical: 'laundry', count: 3 },
+  ],
+  phone: false,
+};
 
 export interface Room {
   scene: THREE.Scene;
@@ -28,6 +45,10 @@ export interface Room {
   npcTick: (nowMs: number) => void;
   /** Toggle the warm hallway light behind the door (NPC presence). */
   setHallLight: (on: boolean) => void;
+  /** Evening slide: 0 at 17:25, 1 at half past. Dims ambient, deepens the window. */
+  setDusk: (f: number) => void;
+  /** The little desk lamp ("you'll ruin your eyes"). */
+  setDeskLamp: (on: boolean) => void;
   playerSpawn: THREE.Vector3;
 }
 
@@ -768,7 +789,7 @@ function makeSock(color: number): THREE.Group {
 
 // ---------------------------------------------------------------- room
 
-export function buildRoom(): Room {
+export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x12101a);
 
@@ -1101,7 +1122,7 @@ export function buildRoom(): Room {
   interactables.push(basket);
   colliders.push(colliderAt(-1.85, 1.55, 0.6, 0.6, 0.4));
 
-  // ---- chore items
+  // ---- chore items (which sets spawn depends on tonight's config)
   const addItem = (id: string, chore: ChoreId, name: string, obj: THREE.Object3D, x: number, y: number, z: number): void => {
     obj.position.set(x, y, z);
     tagInteract(obj, { type: 'item', itemId: id, chore, name });
@@ -1111,18 +1132,69 @@ export function buildRoom(): Room {
     items.push({ id, chore, name });
   };
 
-  addItem('mug0', 'mugs', 'mug', makeMug(0x3c6e8f), 0.28, 0.78, -1.42);
-  addItem('mug1', 'mugs', 'mug', makeMug(0x8f3c50), 1.5, 0.78, -1.38);
-  addItem('mug2', 'mugs', 'mug', makeMug(0x4a8f3c), 1.56, 0.78, -1.74);
+  const addTug = (id: string, chore: ChoreId, name: string, action: string, obj: THREE.Object3D, x: number, y: number, z: number): void => {
+    obj.position.set(x, y, z);
+    tagInteract(obj, { type: 'tug', itemId: id, chore, name, action });
+    scene.add(obj);
+    interactables.push(obj);
+    itemObjects.set(id, obj);
+    items.push({ id, chore, name });
+  };
 
-  addItem('wrap0', 'wrappers', 'wrapper', makeWrapper(0xd8a02a), 0.3, 0, 0.1);
-  addItem('wrap1', 'wrappers', 'wrapper', makeWrapper(0x3ca8d8), 1.5, 0, -0.4);
-  addItem('wrap2', 'wrappers', 'wrapper', makeWrapper(0xd84a8a), -0.55, 0, 1.1);
-  addItem('wrap3', 'wrappers', 'wrapper', makeWrapper(0x8ad84a), 0.32, 0.78, -1.72);
+  const spawnPhysical = (slot: ChoreId, physical: RoomNightConfig['chores'][number]['physical'], count: number): void => {
+    switch (physical) {
+      case 'mugs':
+        addItem('mug0', slot, 'mug', makeMug(0x3c6e8f), 0.28, 0.78, -1.42);
+        addItem('mug1', slot, 'mug', makeMug(0x8f3c50), 1.5, 0.78, -1.38);
+        addItem('mug2', slot, 'mug', makeMug(0x4a8f3c), 1.56, 0.78, -1.74);
+        break;
+      case 'wrappers': {
+        addItem('wrap0', slot, 'wrapper', makeWrapper(0xd8a02a), 0.3, 0, 0.1);
+        addItem('wrap1', slot, 'wrapper', makeWrapper(0x3ca8d8), 1.5, 0, -0.4);
+        addItem('wrap2', slot, 'wrapper', makeWrapper(0xd84a8a), -0.55, 0, 1.1);
+        addItem('wrap3', slot, 'wrapper', makeWrapper(0x8ad84a), 0.32, 0.78, -1.72);
+        // Friday's fifth wrapper hides at the bed's edge, as is tradition.
+        if (count >= 5) addItem('wrap4', slot, 'wrapper', makeWrapper(0xd8d84a), -1.42, 0, 0.42);
+        break;
+      }
+      case 'laundry':
+        addItem('cloth0', slot, 'hoodie', makeHoodie(0x4a5a8f), -0.9, 0, -0.2);
+        addItem('cloth1', slot, 'sock', makeSock(0x8f8f3c), -0.2, 0, 1.35);
+        addItem('cloth2', slot, 'shirt', makeShirt(0x8f5a3c), -1.9, 0.48, 0.2);
+        break;
+      case 'bed': {
+        // Rumpled duvet corners at the foot of the bed; a tug settles them.
+        const rumple = (tint: number): THREE.Mesh =>
+          box(0.2, 0.12, 0.2, lambert(tint), 0, 0, 0);
+        addTug('bed0', slot, 'duvet corner', 'Tug the duvet straight', rumple(0x7e5a9c), -1.68, 0.46, 0.42);
+        addTug('bed1', slot, 'duvet corner', 'Tug the duvet straight', rumple(0x5e3a7c), -2.22, 0.46, 0.32);
+        break;
+      }
+      case 'curtains': {
+        // Bunched curtain gathers on each panel; a tug throws them open.
+        const gather = (tint: number): THREE.Mesh =>
+          box(0.09, 0.5, 0.3, lambert(tint), 0, 0, 0);
+        addTug('curt0', slot, 'curtain', 'Throw the curtains open', gather(0x7e5a9c), 2.33, 1.35, -0.05);
+        addTug('curt1', slot, 'curtain', 'Throw the curtains open', gather(0x7e5a9c), 2.33, 1.35, 0.85);
+        break;
+      }
+    }
+  };
 
-  addItem('cloth0', 'laundry', 'hoodie', makeHoodie(0x4a5a8f), -0.9, 0, -0.2);
-  addItem('cloth1', 'laundry', 'sock', makeSock(0x8f8f3c), -0.2, 0, 1.35);
-  addItem('cloth2', 'laundry', 'shirt', makeShirt(0x8f5a3c), -1.9, 0.48, 0.2);
+  for (const chore of config.chores) {
+    spawnPhysical(chore.slot, chore.physical, chore.count);
+  }
+
+  // ---- the landline (Wednesdays): a wall phone by the door, all Mum's
+  if (config.phone) {
+    const phone = new THREE.Group();
+    const body = box(0.09, 0.2, 0.05, lambert(0xd8d0c0), 0, 0, 0);
+    phone.add(body);
+    phone.add(box(0.07, 0.08, 0.02, lambert(0x3a3630), 0, 0.03, -0.032)); // handset window
+    phone.add(box(0.05, 0.015, 0.02, lambert(0xb8b0a0), 0, -0.055, -0.033)); // hook
+    phone.position.set(0.35, 1.35, 1.97);
+    scene.add(phone);
+  }
 
   // ---- decoration pass (visual only: nothing here is interactable or solid)
 
@@ -1263,7 +1335,8 @@ export function buildRoom(): Room {
   };
 
   // ---- lighting: one warm point light + dim ambient + faint window blue
-  scene.add(new THREE.AmbientLight(0x9a90b8, 0.55));
+  const ambient = new THREE.AmbientLight(0x9a90b8, 0.55);
+  scene.add(ambient);
   const lamp = new THREE.PointLight(0xffc878, 14, 0, 1.8);
   lamp.position.set(-0.4, 2.25, -0.2);
   scene.add(lamp);
@@ -1293,10 +1366,40 @@ export function buildRoom(): Room {
   windowLight.position.set(2.1, 1.6, 0.4);
   scene.add(windowLight);
 
+  // Desk lamp — dark until Mum's "you'll ruin your eyes" beat flips it on.
+  const deskLamp = new THREE.PointLight(0xffd8a0, 0, 2.2, 1.7);
+  deskLamp.position.set(1.15, 1.05, -1.6);
+  scene.add(deskLamp);
+  const deskLampShadeMat = lambert(0x4a8f6a, { emissive: 0x000000, emissiveIntensity: 0 });
+  const deskLampGroup = new THREE.Group();
+  deskLampGroup.add(box(0.07, 0.02, 0.07, lambert(0x3a3630), 0, 0.01, 0)); // base
+  deskLampGroup.add(box(0.016, 0.2, 0.016, lambert(0x3a3630), 0, 0.11, 0)); // stem
+  const deskShade = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.07, 12, 1, true), deskLampShadeMat);
+  deskShade.position.set(0, 0.24, 0);
+  deskLampGroup.add(deskShade);
+  deskLampGroup.position.set(1.15, 0.78, -1.62);
+  scene.add(deskLampGroup);
+
   const setHallLight = (on: boolean): void => {
     hallLight.intensity = on ? 2.4 : 0;
     mumFill.intensity = on ? 1.8 : 0;
     doorTarget = on ? DOOR_OPEN : 0;
+  };
+
+  // The five-minute slide into proper evening: ambient dims, the window's
+  // blue goes deeper and colder, the ceiling lamp carries more of the room.
+  const setDusk = (f: number): void => {
+    const t = Math.max(0, Math.min(1, f));
+    ambient.intensity = 0.55 - 0.2 * t;
+    windowLight.intensity = 2.2 - 1.1 * t;
+    windowLight.color.setHSL(0.62, 0.45, 0.42 - 0.14 * t);
+    lamp.intensity = 14 + 3 * t;
+  };
+
+  const setDeskLamp = (on: boolean): void => {
+    deskLamp.intensity = on ? 2.4 : 0;
+    deskLampShadeMat.emissive.setHex(on ? 0xffd8a0 : 0x000000);
+    deskLampShadeMat.emissiveIntensity = on ? 0.5 : 0;
   };
 
   return {
@@ -1310,6 +1413,8 @@ export function buildRoom(): Room {
     npcSilhouette: mum.group,
     npcTick: roomTick,
     setHallLight,
+    setDusk,
+    setDeskLamp,
     playerSpawn: new THREE.Vector3(-0.6, 0, 0.9),
   };
 }

@@ -173,6 +173,49 @@ export class AudioSynth {
     this.tone(1250, { dur: 0.035, gain: 0.1 });
   }
 
+  /** Stairs. Someone is on the stairs. */
+  footsteps(): void {
+    if (!this.ready) return;
+    this.thump(95, 55, { dur: 0.08, gain: 0.22, noise: 0.12, noiseFreq: 140 });
+    this.thump(90, 52, { at: 0.28, dur: 0.08, gain: 0.26, noise: 0.14, noiseFreq: 140 });
+    this.thump(98, 56, { at: 0.55, dur: 0.08, gain: 0.3, noise: 0.16, noiseFreq: 140 });
+  }
+
+  /** The line goes dead: a sad descending buzz. */
+  modemDown(): void {
+    if (!this.ready) return;
+    this.tone(440, { type: 'sawtooth', dur: 0.5, gain: 0.08, glideTo: 90 });
+    this.tone(220, { type: 'square', at: 0.1, dur: 0.4, gain: 0.05, glideTo: 60 });
+  }
+
+  /** The 56k handshake, abridged for dramatic effect. */
+  modemScreech(): void {
+    if (!this.ready) return;
+    this.tone(1200, { type: 'square', dur: 0.18, gain: 0.06 });
+    this.tone(2100, { type: 'square', at: 0.2, dur: 0.16, gain: 0.06 });
+    this.tone(980, { type: 'sawtooth', at: 0.38, dur: 0.3, gain: 0.07, glideTo: 1600 });
+    this.tone(1750, { type: 'square', at: 0.62, dur: 0.12, gain: 0.05 });
+    this.tone(2400, { type: 'sawtooth', at: 0.76, dur: 0.35, gain: 0.06, glideTo: 1900 });
+    if (this.ctx && this.master) {
+      // white hiss under the tail, like the real thing
+      const t0 = this.ctx.currentTime + 0.7;
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noiseBuffer(0.5);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.05 * this.gainScale, t0);
+      g.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.5);
+      src.connect(g).connect(this.master);
+      src.start(t0);
+    }
+  }
+
+  /** Period-correct instant-messenger doonk for toasts. */
+  doonk(): void {
+    if (!this.ready) return;
+    this.tone(880, { type: 'sine', dur: 0.09, gain: 0.12 });
+    this.tone(660, { type: 'sine', at: 0.1, dur: 0.14, gain: 0.12 });
+  }
+
   mmoClick(): void {
     if (!this.ready) return;
     this.tone(820, { dur: 0.03, gain: 0.09 });

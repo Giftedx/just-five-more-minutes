@@ -11,6 +11,8 @@ const speed = Math.max(0.1, Number(params.get('speed') ?? '1') || 1);
 const startAt = Math.max(0, Number(params.get('t') ?? '0') || 0);
 const skipTitle = params.get('skipTitle') === '1';
 const seed = parseSessionSeed(params.get('seed'));
+const nightRaw = params.get('night');
+const night = nightRaw === null ? undefined : Math.max(0, Math.min(4, Number(nightRaw) || 0));
 
 const app = document.getElementById('app');
 if (!app) throw new Error('missing #app');
@@ -22,9 +24,9 @@ if (params.get('dev') === 'mmo') {
 } else if (params.get('dev') === 'host') {
   runHostDev(app, speed);
 } else {
-  const gameOptions: GameOptions = seed === undefined
-    ? { speed, startAt, skipTitle }
-    : { speed, startAt, skipTitle, seed };
+  const gameOptions: GameOptions = { speed, startAt, skipTitle };
+  if (seed !== undefined) gameOptions.seed = seed;
+  if (night !== undefined) gameOptions.night = night;
   const debugWindow = window as unknown as Record<string, unknown>;
   let game: Game | null = null;
   let blockReason: DeviceBlockReason | null = null;

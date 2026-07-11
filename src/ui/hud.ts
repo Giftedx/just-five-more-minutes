@@ -13,6 +13,7 @@ export class Hud {
   readonly root: HTMLDivElement;
   private objectiveEl: HTMLDivElement;
   private choreEl: HTMLDivElement;
+  private mumEl: HTMLDivElement;
   private clockEl: HTMLDivElement;
   private subtitleEl: HTMLDivElement;
   private promptEl: HTMLDivElement;
@@ -33,6 +34,7 @@ export class Hud {
     const taskStackEl = this.div('hud-task-stack');
     this.objectiveEl = this.div('hud-objective', taskStackEl);
     this.choreEl = this.div('hud-chores', taskStackEl);
+    this.mumEl = this.div('hud-mum', taskStackEl);
     this.clockEl = this.div('hud-clock');
     const dialogueStackEl = this.div('hud-dialogue-stack');
     this.promptEl = this.div('hud-prompt', dialogueStackEl);
@@ -52,6 +54,7 @@ export class Hud {
 
     this.objectiveEl.style.display = 'none';
     this.choreEl.style.display = 'none';
+    this.mumEl.style.display = 'none';
     this.subtitleEl.style.display = 'none';
     this.promptEl.style.display = 'none';
     this.interactEl.style.display = 'none';
@@ -93,6 +96,17 @@ export class Hud {
     this.objectiveEl.textContent = legend
       ? `Dinner fund secured · ${questLabel} · ${legend}`
       : `Dinner fund: ${dinnerFund} · Wyn: ${questLabel}`;
+  }
+
+  /** Mum's read on the situation, tiered by suspicion. Null hides it. */
+  setMumStatus(label: string | null, tier = 0): void {
+    if (label === null) {
+      this.mumEl.style.display = 'none';
+      return;
+    }
+    this.mumEl.style.display = 'block';
+    this.mumEl.textContent = `MUM: ${label}`;
+    this.mumEl.dataset['tier'] = String(tier);
   }
 
   /** One chip per active chore, oldest first. Empty array hides the stack. */

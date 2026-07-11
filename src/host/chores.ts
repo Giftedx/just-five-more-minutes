@@ -3,24 +3,47 @@
  * completion rules are unit-testable.
  */
 import type { ChoreId } from '../director/director';
+import type { NightSpec, PhysicalChore } from '../director/nights';
 
 export interface ChoreDef {
+  /** The physical chore staged for this slot tonight. */
+  physical: PhysicalChore['id'];
+  /** Carry to a target, or tug fixed points straight. */
+  verb: 'carry' | 'tug';
   /** HUD chip label, e.g. "Mugs". */
   chip: string;
   /** Item noun for prompts, e.g. "mug". */
   noun: string;
   /** Plural noun for prompts, e.g. "mugs" (laundry is its own plural). */
   plural: string;
-  /** Where items go, for prompts, e.g. "tray". */
+  /** Where carried items go, for prompts, e.g. "tray". Tug chores have none. */
   target: string;
   count: number;
 }
 
-export const CHORE_DEFS: Readonly<Record<ChoreId, ChoreDef>> = {
-  mugs: { chip: 'Mugs', noun: 'mug', plural: 'mugs', target: 'tray', count: 3 },
-  wrappers: { chip: 'Wrappers', noun: 'wrapper', plural: 'wrappers', target: 'bin', count: 4 },
-  laundry: { chip: 'Laundry', noun: 'laundry', plural: 'laundry', target: 'basket', count: 3 },
+const PHYSICAL_DEFS: Record<PhysicalChore['id'], Omit<ChoreDef, 'count' | 'physical'>> = {
+  mugs: { verb: 'carry', chip: 'Mugs', noun: 'mug', plural: 'mugs', target: 'tray' },
+  wrappers: { verb: 'carry', chip: 'Wrappers', noun: 'wrapper', plural: 'wrappers', target: 'bin' },
+  laundry: { verb: 'carry', chip: 'Laundry', noun: 'laundry', plural: 'laundry', target: 'basket' },
+  bed: { verb: 'tug', chip: 'Bed', noun: 'duvet corner', plural: 'duvet corners', target: '' },
+  curtains: { verb: 'tug', chip: 'Curtains', noun: 'curtain', plural: 'curtains', target: '' },
 };
+
+/** Monday's classic set — the default when no night is specified. */
+export const CHORE_DEFS: Readonly<Record<ChoreId, ChoreDef>> = {
+  mugs: { physical: 'mugs', ...PHYSICAL_DEFS.mugs, count: 3 },
+  wrappers: { physical: 'wrappers', ...PHYSICAL_DEFS.wrappers, count: 4 },
+  laundry: { physical: 'laundry', ...PHYSICAL_DEFS.laundry, count: 3 },
+};
+
+/** Resolve tonight's slot -> physical chore definitions. */
+export function choreDefsFor(spec: NightSpec): Record<ChoreId, ChoreDef> {
+  const resolve = (slot: ChoreId): ChoreDef => {
+    const physical = spec.slots[slot];
+    return { physical: physical.id, ...PHYSICAL_DEFS[physical.id], count: physical.count };
+  };
+  return { mugs: resolve('mugs'), wrappers: resolve('wrappers'), laundry: resolve('laundry') };
+}
 
 export type ItemState = 'world' | 'carried' | 'placed';
 
@@ -113,6 +136,26 @@ export class ChoreTracker {
       this.started.add(it.chore);
       events.push({ type: 'choreStarted', chore: it.chore });
     }
+    return events;
+  }
+
+  /**
+   * A tug-point chore action: the fixed point goes straight from world to
+   * placed (no carrying a duvet corner around the room). Fires the same
+   * started/progress/completion events as a carried placement.
+   */
+  tug(itemId: string): ChoreTrackerEvent[] {
+    const it = this.items.get(itemId);
+    if (!it || it.state !== 'world') return [];
+    const events: ChoreTrackerEvent[] = [];
+    if (this.requested.has(it.chore) && !this.started.has(it.chore) && !this.completed.has(it.chore)) {
+      this.started.add(it.chore);
+      events.push({ type: 'choreStarted', chore: it.chore });
+    }
+    it.state = 'placed';
+    const { done, total } = this.progress(it.chore);
+    events.push({ type: 'choreProgress', chore: it.chore, done, total });
+    events.push(...this.checkCompletion(it.chore));
     return events;
   }
 
