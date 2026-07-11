@@ -33,6 +33,7 @@ import {
 import { levelOf } from './mmo/sim/osrs';
 import type { SimEvent } from './mmo/sim/types';
 import { createSessionSeed } from './session';
+import { MILESTONE_LABELS } from './mmo/render/renderer';
 import { Hud } from './ui/hud';
 import { showScorecard } from './ui/scorecard';
 import { showTitle } from './ui/title';
@@ -375,16 +376,36 @@ export class Game {
           break;
         case 'eat':
         case 'flax':
+        case 'fishCaught':
+        case 'breadBought':
           this.audio.pickup();
           break;
+        case 'shrimpCooked':
+          this.audio.place();
+          break;
         case 'invFull':
+        case 'shrimpBurnt':
+        case 'tooPoor':
+        case 'levelTooLow':
           this.audio.uiClick();
+          break;
+        case 'tollPaid':
+        case 'gravestoneReclaimed':
+          this.audio.coin();
+          break;
+        case 'milestone':
+          this.audio.doonk();
+          this.hud.showToast(`Mudwick: ${MILESTONE_LABELS[e.id]}`, this.gameNow, 3200, 'success');
           break;
         case 'log':
         case 'openTrade':
         case 'questProgress':
         case 'questReady':
         case 'questAssigned':
+        case 'gravestoneCreated':
+        case 'gravestoneLost':
+        case 'loggedOut':
+        case 'loggedIn':
           break;
       }
     }

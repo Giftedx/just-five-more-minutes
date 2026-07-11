@@ -110,24 +110,34 @@ export class MmoGame {
   private handleLeftClick(cx: number, cy: number): void {
     if (this.renderer.tradeOpen) {
       const btn = this.renderer.tradeButtonAt(cx, cy);
-      if (btn === 'log' || btn === 'flax') {
-        const result = this.sim.sell(btn);
+      if (!btn) return;
+      if (btn.kind === 'sell') {
+        const result = this.sim.sell(btn.item);
         if (result.sold === 0) return;
         this.onUiSound?.('confirm');
-        const events = this.sim.drainEvents();
-        this.renderer.consumeEvents(events, this.nowMs());
-        this.onEvents?.(events);
-      } else if (btn === 'quest') {
+        this.flushEvents();
+      } else if (btn.kind === 'bread') {
+        if (this.sim.buyBread()) {
+          this.onUiSound?.('confirm');
+          this.flushEvents();
+        }
+      } else if (btn.kind === 'quest') {
         if (this.sim.turnInQuest()) {
           this.onUiSound?.('confirm');
-          const events = this.sim.drainEvents();
-          this.renderer.consumeEvents(events, this.nowMs());
-          this.onEvents?.(events);
+          this.flushEvents();
         }
-      } else if (btn === 'done') {
+      } else {
         this.renderer.tradeOpen = false;
         this.onUiSound?.('click');
       }
+      return;
+    }
+
+    // Standing orders row (top-right of the world view).
+    const planKey = this.renderer.awayPlanButtonAt(cx, cy);
+    if (planKey) {
+      this.sim.awayPlan = { ...this.sim.awayPlan, [planKey]: !this.sim.awayPlan[planKey] };
+      this.onUiSound?.('click');
       return;
     }
 
@@ -160,6 +170,13 @@ export class MmoGame {
 
   private nowMs(): number {
     return this.now;
+  }
+
+  private flushEvents(): void {
+    const events = this.sim.drainEvents();
+    if (events.length === 0) return;
+    this.renderer.consumeEvents(events, this.nowMs());
+    this.onEvents?.(events);
   }
 
   private toCanvas(el: HTMLElement, e: MouseEvent): { x: number; y: number } {

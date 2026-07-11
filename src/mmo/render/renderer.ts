@@ -4,8 +4,55 @@ import {
   formatGpShort,
   objectiveProgressLabel,
 } from '../sim/osrs';
-import { levelOf, MudwickSim, MAX_LEVEL, PLAYER_MAX_HP, xpForLevel } from '../sim/sim';
-import type { MenuOption, Point, QuestKind, SimEvent, SkillName } from '../sim/types';
+import {
+  BREAD_PRICE,
+  ITEM_PRICES,
+  levelOf,
+  MudwickSim,
+  MAX_LEVEL,
+  PLAYER_MAX_HP,
+  xpForLevel,
+} from '../sim/sim';
+import type {
+  AwayPlan,
+  ItemKind,
+  MenuOption,
+  MilestoneId,
+  Point,
+  QuestKind,
+  SimEvent,
+  SkillName,
+} from '../sim/types';
+
+export type TradeAction =
+  | { kind: 'quest' }
+  | { kind: 'sell'; item: ItemKind }
+  | { kind: 'bread' }
+  | { kind: 'done' };
+
+/** Hobgoblins: like goblins, but with ambition. Rust skin, meaner eyes. */
+const HOB_SPRITE: Sprite = {
+  ...GOBLIN_SPRITE,
+  palette: { ...GOBLIN_SPRITE.palette, g: '#a8703c', e: '#7a4e26', r: '#5a3a7a' },
+};
+const HOB_ANGRY_SPRITE: Sprite = {
+  ...HOB_SPRITE,
+  palette: { ...HOB_SPRITE.palette, y: '#ff6040' },
+};
+
+export const MILESTONE_LABELS: Readonly<Record<MilestoneId, string>> = {
+  firstBlood: 'First blood!',
+  pocketMoney: 'Pocket money: 25gp earned tonight.',
+  twoDinnersAhead: 'Two dinners ahead: 60gp earned.',
+  dinnerFund: 'DINNER FUND BANKED — 100gp earned tonight!',
+  theThousandaire: 'The Thousandaire. In one evening.',
+  contractor: 'Contractor: first Wyn job done.',
+  levelFive: 'Level five! The grind is grinding.',
+  tollPaid: 'Toll paid. The far bank is yours.',
+  bullyTheBully: 'Hobgoblin down. Bully the bully.',
+  undertaker: 'Undertaker: gravestone reclaimed.',
+  chefActually: 'A chef, actually: shrimp cooked.',
+};
 import {
   drawSprite,
   GOBLIN_ANGRY_SPRITE,
@@ -228,6 +275,17 @@ export class MmoRenderer {
         sayUntil: 0,
         nextSayAt: 34000,
       },
+      {
+        // Life on the far bank — visible proof the world doesn't need you.
+        id: 'ghost5',
+        name: 'oakl0rd',
+        pos: { x: 26, y: 5 },
+        sprite: recolorPlayer('#3c8a8a', '#2a6060', '#d8b46a'),
+        nextMoveAt: 0,
+        say: null,
+        sayUntil: 0,
+        nextSayAt: 44000,
+      },
     ];
   }
 
@@ -335,6 +393,7 @@ export class MmoRenderer {
           );
           const d = this.disp.get('player');
           if (d) this.spawnBurst(d.x + 8, d.y + 8, ['#c0c0c0', '#8a8a8a'], 8, now, 550);
+          this.ghostReact(Math.random() < 0.5 ? 'lol' : 'F', now);
           break;
         }
         case 'invFull':
@@ -354,6 +413,50 @@ export class MmoRenderer {
         case 'openTrade':
           this.tradeOpen = true;
           this.postMessage('"Show me the goods." — Wyn', now, '#9be8e0');
+          break;
+        case 'fishCaught': {
+          const d = this.disp.get('player');
+          if (d) this.spawnBurst(d.x + 8, d.y + 10, ['#d88a8a', '#cfe0ff'], 4, now, 500);
+          this.xpDrops.push({ text: '+10 Fishing', until: now + 1300 });
+          this.postMessage('You catch some shrimp.', now);
+          break;
+        }
+        case 'shrimpCooked':
+          this.xpDrops.push({ text: '+5 Fishing', until: now + 1300 });
+          this.postMessage('You cook the shrimp. Nailed it.', now);
+          break;
+        case 'shrimpBurnt':
+          this.postMessage('You accidentally burn the shrimp.', now, '#e88a6a');
+          break;
+        case 'tollPaid':
+          this.postMessage(`You pay the ${ev.cost}gp toll. The far bank is yours, forever.`, now, '#ffd23f');
+          break;
+        case 'tooPoor':
+          this.postMessage(`You need ${ev.need}gp for the toll. The troll is unmoved.`, now, '#e88a6a');
+          break;
+        case 'levelTooLow':
+          this.postMessage(`You need ${skillLabel(ev.skill)} ${ev.need} for that.`, now, '#e88a6a');
+          break;
+        case 'breadBought':
+          this.postMessage(`You buy a loaf for ${ev.cost}gp. Health insurance.`, now);
+          break;
+        case 'gravestoneCreated':
+          this.postMessage(`Your things (${ev.itemCount}) wait at a gravestone. Sixty seconds.`, now, '#e88a6a');
+          break;
+        case 'gravestoneReclaimed':
+          this.postMessage(`You reclaim your things (${ev.itemCount}). Dignity pending.`, now, '#8be86b');
+          break;
+        case 'gravestoneLost':
+          this.postMessage(`The gravestone crumbles. ${ev.itemCount} items, gone to the mud.`, now, '#e88a6a');
+          break;
+        case 'loggedOut':
+          this.ghostReact('gone?? lol', now);
+          break;
+        case 'loggedIn':
+          this.postMessage('Welcome back to Mudwick Online.', now, '#ffd23f');
+          break;
+        case 'milestone':
+          this.postMessage(MILESTONE_LABELS[ev.id], now, '#ffd23f');
           break;
         case 'chop': {
           // chips fly off the tree under the axe (intent still points at it)
@@ -448,7 +551,23 @@ export class MmoRenderer {
   }
 
   /** Wander + chatter for the cosmetic players. */
+  /** A bystander comments. They always comment. */
+  private ghostReact(line: string, now: number): void {
+    const g = this.ghosts[Math.floor(Math.random() * this.ghosts.length)];
+    if (!g) return;
+    g.say = line;
+    g.sayUntil = now + 2600;
+    this.postMessage(`${g.name}: ${line}`, now, '#8fb8ff');
+  }
+
+  private scamWhispered = false;
+
   private updateGhosts(now: number): void {
+    // One scam whisper per session, as tradition demands.
+    if (!this.scamWhispered && now > 90_000) {
+      this.scamWhispered = true;
+      this.postMessage('big_dave_2 whispers: free armour trimming meet me at bridge', now, '#d88ae8');
+    }
     for (const g of this.ghosts) {
       if (now >= g.nextMoveAt) {
         g.nextMoveAt = now + 900 + Math.random() * 1500;
@@ -542,16 +661,41 @@ export class MmoRenderer {
   }
 
   /** Trade dialog button under a canvas point: 'log' | 'flax' | 'quest' | 'done' | null. */
-  tradeButtonAt(cx: number, cy: number): 'log' | 'flax' | 'quest' | 'done' | null {
+  tradeButtonAt(cx: number, cy: number): TradeAction | null {
     if (!this.tradeOpen) return null;
     const L = this.tradeDialogLayout();
     if (cx < L.btnX || cx > L.btnX + L.btnW) return null;
     const hit = (by: number) => cy >= by && cy < by + L.btnH;
-    if (L.questBtnY !== null && hit(L.questBtnY)) return 'quest';
-    if (hit(L.logY)) return 'log';
-    if (hit(L.flaxY)) return 'flax';
-    if (hit(L.doneY)) return 'done';
+    if (L.questBtnY !== null && hit(L.questBtnY)) return { kind: 'quest' };
+    for (const row of L.sellRows) {
+      if (hit(row.y)) return { kind: 'sell', item: row.item };
+    }
+    if (hit(L.breadY)) return { kind: 'bread' };
+    if (hit(L.doneY)) return { kind: 'done' };
     return null;
+  }
+
+  /** Away-plan toggle under the crosshair, if any (viewport overlay row). */
+  awayPlanButtonAt(cx: number, cy: number): keyof AwayPlan | null {
+    for (const b of this.awayPlanButtons()) {
+      if (cx >= b.x && cx < b.x + b.w && cy >= b.y && cy < b.y + b.h) return b.key;
+    }
+    return null;
+  }
+
+  private awayPlanButtons(): { key: keyof AwayPlan; label: string; x: number; y: number; w: number; h: number }[] {
+    const defs: [keyof AwayPlan, string][] = [
+      ['keepWorking', 'wrk'],
+      ['eatBread', 'eat'],
+      ['runHome', 'run'],
+      ['autoSell', 'sel'],
+    ];
+    const w = 22;
+    const h = 11;
+    const gap = 2;
+    const total = defs.length * w + (defs.length - 1) * gap;
+    const x0 = VIEW_W - total - 4;
+    return defs.map(([key, label], i) => ({ key, label, x: x0 + i * (w + gap), y: 4, w, h }));
   }
 
   /** Shared trade-dialog geometry so draw + hit tests stay aligned. */
@@ -565,32 +709,46 @@ export class MmoRenderer {
     btnH: number;
     questBtnY: number | null;
     questTextY: number;
-    logY: number;
-    flaxY: number;
+    sellRows: { item: ItemKind; y: number; label: string; count: number }[];
+    breadY: number;
     doneY: number;
   } {
     const x = 40;
-    const y = 58;
+    const y = 34;
     const w = 200;
     const btnX = x + 10;
     const btnW = w - 20;
-    const btnH = 16;
-    const rowStep = 20;
+    const btnH = 14;
+    const rowStep = 17;
 
-    let rowY = y + 34;
+    let rowY = y + 32;
     const questReady = this.sim.questReady();
     const questBtnY = questReady ? rowY : null;
     const questTextY = rowY + 4;
-    rowY += questReady ? rowStep : 13;
+    rowY += questReady ? rowStep : 12;
 
-    const logY = rowY;
-    rowY += rowStep;
-    const flaxY = rowY;
+    // One sell row per sellable kind currently carried (logs always shown so
+    // the dialog never looks empty), then bread, then done.
+    const sellable: { item: ItemKind; label: (n: number) => string }[] = [
+      { item: 'log', label: (n) => `Sell all logs (${n}) - ${ITEM_PRICES.log}gp each` },
+      { item: 'oakLog', label: (n) => `Sell oak logs (${n}) - ${ITEM_PRICES.oakLog}gp each` },
+      { item: 'flax', label: (n) => `Sell all flax (${n}) - ${ITEM_PRICES.flax}gp each` },
+      { item: 'shrimpCooked', label: (n) => `Sell shrimp (${n}) - ${ITEM_PRICES.shrimpCooked}gp each` },
+      { item: 'shrimpRaw', label: (n) => `Sell raw shrimp (${n}) - ${ITEM_PRICES.shrimpRaw}gp each` },
+    ];
+    const sellRows: { item: ItemKind; y: number; label: string; count: number }[] = [];
+    for (const s of sellable) {
+      const count = this.sim.invCount(s.item);
+      if (count === 0 && s.item !== 'log' && s.item !== 'flax') continue;
+      sellRows.push({ item: s.item, y: rowY, label: s.label(count), count });
+      rowY += rowStep;
+    }
+    const breadY = rowY;
     rowY += rowStep;
     const doneY = rowY;
-    const h = doneY + btnH + 10 - y;
+    const h = doneY + btnH + 8 - y;
 
-    return { x, y, w, h, btnX, btnW, btnH, questBtnY, questTextY, logY, flaxY, doneY };
+    return { x, y, w, h, btnX, btnW, btnH, questBtnY, questTextY, sellRows, breadY, doneY };
   }
 
   render(now: number, dtMs: number): void {
@@ -640,7 +798,9 @@ export class MmoRenderer {
     ctx.restore();
 
     if (this.vignette) ctx.drawImage(this.vignette, 0, 0);
+    if (this.sim.isLoggedOut) this.drawDisconnected(now);
     this.drawObjectiveBanner(now);
+    this.drawAwayPlanChips();
     this.drawChat(now);
     this.drawXpDrops(now);
     this.drawHoverText();
@@ -648,6 +808,41 @@ export class MmoRenderer {
     if (this.tradeOpen) this.drawTradeDialog();
     if (this.menu) this.drawMenu();
     this.drawLowHpPulse(now);
+  }
+
+  /** The landline has won. Period-perfect despair. */
+  private drawDisconnected(now: number): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(6,10,26,0.86)';
+    ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
+    ctx.fillStyle = '#c8d4f0';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Connection lost.', VIEW_W / 2, CANVAS_H / 2 - 10);
+    ctx.font = '8px monospace';
+    ctx.fillStyle = '#8a9ac0';
+    const dots = '.'.repeat(1 + (Math.floor(now / 500) % 3));
+    ctx.fillText(`Please wait${dots}`, VIEW_W / 2, CANVAS_H / 2 + 6);
+    ctx.fillText('(someone is on the phone)', VIEW_W / 2, CANVAS_H / 2 + 20);
+    ctx.textAlign = 'left';
+  }
+
+  /** Standing orders row, top-right of the world view. */
+  private drawAwayPlanChips(): void {
+    const ctx = this.ctx;
+    const plan = this.sim.awayPlan;
+    ctx.font = '6px monospace';
+    ctx.textAlign = 'center';
+    for (const b of this.awayPlanButtons()) {
+      const on = plan[b.key];
+      ctx.fillStyle = on ? 'rgba(60,110,60,0.85)' : 'rgba(30,30,36,0.7)';
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeStyle = on ? '#8be86b' : '#5a5a66';
+      ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+      ctx.fillStyle = on ? '#d8ffd0' : '#9a9aa6';
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + 8);
+    }
+    ctx.textAlign = 'left';
   }
 
   private drawTerrain(): void {
@@ -798,6 +993,58 @@ export class MmoRenderer {
             ctx.fillRect(px + 3, py + 6, 8, 1);
             break;
           }
+          case 'l': {
+            // toll sign: same joinery, one gold coin painted on
+            ctx.fillStyle = '#6b4a26';
+            ctx.fillRect(px + 7, py + 4, 2, 12);
+            ctx.fillStyle = '#8a6a3c';
+            ctx.fillRect(px + 2, py + 2, 12, 7);
+            ctx.fillStyle = '#e8c33f';
+            ctx.fillRect(px + 5, py + 4, 3, 3);
+            ctx.fillStyle = '#5c421f';
+            ctx.fillRect(px + 9, py + 5, 4, 1);
+            break;
+          }
+          case 'w': {
+            // the River Mud: banded blues with a slow shimmer
+            const band = (Math.floor(now / 700) + y) % 2 === 0;
+            ctx.fillStyle = band ? '#2c4a72' : '#274268';
+            ctx.fillRect(px, py, TILE, TILE);
+            const s = hash2(x * 3 + 1, y * 5 + 2);
+            if (s > 0.6) {
+              ctx.fillStyle = 'rgba(160,190,230,0.35)';
+              ctx.fillRect(px + Math.floor(s * 11), py + 4 + ((Math.floor(now / 900) + x) % 2) * 6, 4, 1);
+            }
+            break;
+          }
+          case 'B': {
+            // bridge: planks over the water
+            ctx.fillStyle = '#274268';
+            ctx.fillRect(px, py, TILE, TILE);
+            ctx.fillStyle = '#8a6a3c';
+            ctx.fillRect(px, py + 1, TILE, 14);
+            ctx.fillStyle = '#6b4a26';
+            for (let i = 0; i < 4; i++) ctx.fillRect(px, py + 2 + i * 4, TILE, 1);
+            ctx.fillStyle = '#54381c';
+            ctx.fillRect(px, py, TILE, 2);
+            ctx.fillRect(px, py + 14, TILE, 2);
+            break;
+          }
+          case 'p': {
+            // fishing spot: water plus a shrimp congregation
+            const band = (Math.floor(now / 700) + y) % 2 === 0;
+            ctx.fillStyle = band ? '#2c4a72' : '#274268';
+            ctx.fillRect(px, py, TILE, TILE);
+            const ph = Math.floor(now / 500) % 3;
+            ctx.strokeStyle = 'rgba(200,220,250,0.6)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(px + 8, py + 8, 2 + ph * 2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = '#d88a8a';
+            ctx.fillRect(px + 7 + (ph === 1 ? 1 : 0), py + 7, 2, 2);
+            break;
+          }
           default:
             break;
         }
@@ -829,14 +1076,44 @@ export class MmoRenderer {
       // each tree sways on its own slow phase
       const phase = Math.sin(now / 900 + hash2(t.pos.x, t.pos.y) * 6.28);
       const sway = phase > 0.6 ? 1 : phase < -0.6 ? -1 : 0;
+      const oak = t.kind === 'oak';
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
       ctx.fillRect(px + 1, py + 13, 14, 3);
-      ctx.fillStyle = '#2e5c1e';
-      ctx.fillRect(px - 1 + sway, py - 4, 18, 12);
-      ctx.fillStyle = '#3c7a2e';
-      ctx.fillRect(px + 1 + sway, py - 6, 14, 10);
-      ctx.fillStyle = '#4d9438';
-      ctx.fillRect(px + 3 + sway, py - 5, 7, 5);
+      if (oak) {
+        // oaks are broader, darker, and clearly worth fifteen gold
+        ctx.fillStyle = '#234a16';
+        ctx.fillRect(px - 3 + sway, py - 6, 22, 14);
+        ctx.fillStyle = '#2e5c1e';
+        ctx.fillRect(px - 1 + sway, py - 8, 18, 12);
+        ctx.fillStyle = '#3c7a2e';
+        ctx.fillRect(px + 2 + sway, py - 7, 10, 6);
+        ctx.fillStyle = '#8a6a3c';
+        ctx.fillRect(px + 6, py + 6, 4, 8);
+      } else {
+        ctx.fillStyle = '#2e5c1e';
+        ctx.fillRect(px - 1 + sway, py - 4, 18, 12);
+        ctx.fillStyle = '#3c7a2e';
+        ctx.fillRect(px + 1 + sway, py - 6, 14, 10);
+        ctx.fillStyle = '#4d9438';
+        ctx.fillRect(px + 3 + sway, py - 5, 7, 5);
+      }
+    }
+    // The gravestone waits exactly where it happened.
+    const grave = this.sim.gravestone;
+    if (grave) {
+      const gx = grave.pos.x * TILE;
+      const gy = grave.pos.y * TILE;
+      const expiring = grave.expiresAtTick - this.sim.tick <= 15;
+      if (!expiring || Math.floor(now / 300) % 2 === 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(gx + 3, gy + 13, 10, 2);
+        ctx.fillStyle = '#9a9a94';
+        ctx.fillRect(gx + 4, gy + 4, 8, 10);
+        ctx.fillRect(gx + 5, gy + 2, 6, 3);
+        ctx.fillStyle = '#7a7a74';
+        ctx.fillRect(gx + 7, gy + 5, 2, 5);
+        ctx.fillRect(gx + 5, gy + 7, 6, 2);
+      }
     }
   }
 
@@ -876,15 +1153,20 @@ export class MmoRenderer {
       const d = this.displayed(g.id, g.pos, dtMs);
       const moving = Math.abs(d.x - g.pos.x * TILE) > 0.5 || Math.abs(d.y - g.pos.y * TILE) > 0.5;
       const bob = moving && Math.floor(now / 150 + g.home.x) % 2 === 0 ? 1 : 0;
+      const hob = g.tier === 'hobgoblin';
       this.ctx.fillStyle = 'rgba(0,0,0,0.18)';
       this.ctx.fillRect(Math.round(d.x) + 3, Math.round(d.y) + 14, 10, 2);
-      drawSprite(this.ctx, g.aggro ? GOBLIN_ANGRY_SPRITE : GOBLIN_SPRITE, Math.round(d.x) + 2, Math.round(d.y) + 2 - bob);
-      if (g.hp < 3) {
+      const sprite = hob
+        ? g.aggro ? HOB_ANGRY_SPRITE : HOB_SPRITE
+        : g.aggro ? GOBLIN_ANGRY_SPRITE : GOBLIN_SPRITE;
+      drawSprite(this.ctx, sprite, Math.round(d.x) + 2, Math.round(d.y) + (hob ? 1 : 2) - bob);
+      const maxHp = hob ? 5 : 3;
+      if (g.hp < maxHp) {
         // tiny hp bar
         this.ctx.fillStyle = '#900';
         this.ctx.fillRect(Math.round(d.x) + 2, Math.round(d.y) - 2, 12, 2);
         this.ctx.fillStyle = '#0c0';
-        this.ctx.fillRect(Math.round(d.x) + 2, Math.round(d.y) - 2, Math.max(0, (g.hp / 3) * 12), 2);
+        this.ctx.fillRect(Math.round(d.x) + 2, Math.round(d.y) - 2, Math.max(0, (g.hp / maxHp) * 12), 2);
       }
     }
   }
@@ -1056,6 +1338,8 @@ export class MmoRenderer {
         const py = my + y * scaleY;
         const inPen = x >= 13 && x <= 16 && y >= 8 && y <= 11;
         if (ch === '#') ctx.fillStyle = '#243d18';
+        else if (ch === 'w' || ch === 'p') ctx.fillStyle = '#2c4a72';
+        else if (ch === 'B') ctx.fillStyle = '#8a6a3c';
         else if (inPen || ch === '+') ctx.fillStyle = '#8a7250';
         else ctx.fillStyle = '#48732f';
         ctx.fillRect(px, py, Math.ceil(scaleX), Math.ceil(scaleY));
@@ -1126,9 +1410,8 @@ export class MmoRenderer {
       wcY: 181,
       atkY: 193,
       frgY: 205,
-      questY: 217,
-      footDiv: 225,
-      brandY: 227,
+      fshY: 217,
+      questY: 230,
     } as const;
 
     const invCols = 4;
@@ -1189,8 +1472,6 @@ export class MmoRenderer {
 
     // inventory 4×7
     const inv = this.sim.player.inventory;
-    const logCount = inv.filter((i) => i === 'log').length;
-    const flaxCount = inv.filter((i) => i === 'flax').length;
     const { slot } = PL;
     const gx = invX;
     const gy = PL.invY;
@@ -1205,30 +1486,20 @@ export class MmoRenderer {
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fillRect(sx + 1, sy + 1, slot - 4, 1);
       const item = inv[i];
-      if (item === 'log') {
-        ctx.fillStyle = '#7a5a30';
-        ctx.fillRect(sx + 1, sy + 4, 8, 4);
-        ctx.fillStyle = '#caa86a';
-        ctx.fillRect(sx + 1, sy + 5, 8, 1);
-      } else if (item === 'flax') {
-        ctx.fillStyle = '#3c7a2e';
-        ctx.fillRect(sx + 4, sy + 5, 2, 4);
-        ctx.fillStyle = '#7fa8e8';
-        ctx.fillRect(sx + 3, sy + 2, 5, 4);
-      }
+      if (item !== undefined) this.drawItemGlyph(item, sx, sy);
     }
-    if (logCount > 1) {
+    // one stack count per distinct kind, drawn at its first occurrence
+    const counted = new Set<ItemKind>();
+    for (let i = 0; i < inv.length; i++) {
+      const kind = inv[i];
+      if (kind === undefined || counted.has(kind)) continue;
+      counted.add(kind);
+      const count = inv.filter((k) => k === kind).length;
+      if (count <= 1) continue;
+      const fx = gx + (i % 4) * slot;
+      const fy = gy + Math.floor(i / 4) * slot;
       ctx.fillStyle = '#ffe96b';
-      ctx.fillText(String(logCount), gx + slot - 8, gy + 9);
-    }
-    if (flaxCount > 1) {
-      const firstFlax = inv.indexOf('flax');
-      if (firstFlax >= 0) {
-        const fx = gx + (firstFlax % 4) * slot;
-        const fy = gy + Math.floor(firstFlax / 4) * slot;
-        ctx.fillStyle = '#ffe96b';
-        ctx.fillText(String(flaxCount), fx + slot - 8, fy + 9);
-      }
+      ctx.fillText(String(count), fx + slot - 8, fy + 9);
     }
 
     // skills (user said these are perfect — keep spacing)
@@ -1240,6 +1511,7 @@ export class MmoRenderer {
     this.drawSkillBar(skillX, PL.wcY, 'Wc', skills.woodcutting, skillBarW);
     this.drawSkillBar(skillX, PL.atkY, 'Atk', skills.attack, skillBarW);
     this.drawSkillBar(skillX, PL.frgY, 'Frg', skills.foraging, skillBarW);
+    this.drawSkillBar(skillX, PL.fshY, 'Fsh', skills.fishing, skillBarW);
 
     const q = this.sim.quest;
     ctx.fillStyle = q.progress >= q.target && !q.claimed ? '#8be86b' : '#5a4a30';
@@ -1247,12 +1519,53 @@ export class MmoRenderer {
     const qText = qLabel.length > 20 ? `${qLabel.slice(0, 19)}…` : qLabel;
     ctx.textAlign = 'center';
     ctx.fillText(qText, x0 + PANEL_W / 2, PL.questY);
-
-    ctx.fillStyle = '#8a754f';
-    ctx.fillRect(x0 + 8, PL.footDiv, PANEL_W - 16, 1);
-    ctx.fillStyle = '#7a6444';
-    ctx.fillText('Mudwick Online', x0 + PANEL_W / 2, PL.brandY);
     ctx.textAlign = 'left';
+  }
+
+  /** 9x9-ish pixel icons per item kind, drawn inside an inventory slot. */
+  private drawItemGlyph(item: ItemKind, sx: number, sy: number): void {
+    const ctx = this.ctx;
+    switch (item) {
+      case 'log':
+        ctx.fillStyle = '#7a5a30';
+        ctx.fillRect(sx + 1, sy + 4, 8, 4);
+        ctx.fillStyle = '#caa86a';
+        ctx.fillRect(sx + 1, sy + 5, 8, 1);
+        break;
+      case 'oakLog':
+        ctx.fillStyle = '#5c421f';
+        ctx.fillRect(sx + 1, sy + 3, 9, 5);
+        ctx.fillStyle = '#8a6a3c';
+        ctx.fillRect(sx + 1, sy + 5, 9, 1);
+        break;
+      case 'flax':
+        ctx.fillStyle = '#3c7a2e';
+        ctx.fillRect(sx + 4, sy + 5, 2, 4);
+        ctx.fillStyle = '#7fa8e8';
+        ctx.fillRect(sx + 3, sy + 2, 5, 4);
+        break;
+      case 'shrimpRaw':
+        ctx.fillStyle = '#d88a8a';
+        ctx.fillRect(sx + 2, sy + 4, 6, 3);
+        ctx.fillRect(sx + 7, sy + 3, 2, 2);
+        break;
+      case 'shrimpCooked':
+        ctx.fillStyle = '#e8762a';
+        ctx.fillRect(sx + 2, sy + 4, 6, 3);
+        ctx.fillRect(sx + 7, sy + 3, 2, 2);
+        break;
+      case 'shrimpBurnt':
+        ctx.fillStyle = '#3a3630';
+        ctx.fillRect(sx + 2, sy + 4, 6, 3);
+        ctx.fillRect(sx + 7, sy + 3, 2, 2);
+        break;
+      case 'bread':
+        ctx.fillStyle = '#d8a860';
+        ctx.fillRect(sx + 2, sy + 3, 7, 5);
+        ctx.fillStyle = '#f0d0a0';
+        ctx.fillRect(sx + 3, sy + 4, 5, 1);
+        break;
+    }
   }
 
   private drawTradeDialog(): void {
@@ -1271,13 +1584,11 @@ export class MmoRenderer {
     ctx.fillStyle = '#5a4a30';
     ctx.fillText('"Coins talk. Logs walk."', x + 8, y + 20);
 
-    const logs = this.sim.invCount('log');
-    const flax = this.sim.invCount('flax');
     const button = (by: number, label: string, enabled: boolean, highlight = false): void => {
       ctx.fillStyle = highlight ? '#a89060' : enabled ? '#8a754f' : '#a89878';
       ctx.fillRect(btnX, by, btnW, btnH);
       ctx.fillStyle = enabled ? '#ffe9b0' : '#cabfa6';
-      ctx.fillText(label, btnX + 6, by + 4);
+      ctx.fillText(label, btnX + 6, by + 3);
     };
 
     if (L.questBtnY !== null) {
@@ -1286,8 +1597,10 @@ export class MmoRenderer {
       ctx.fillStyle = '#7a6444';
       ctx.fillText(this.sim.questLabel(), x + 12, L.questTextY);
     }
-    button(L.logY, `Sell all logs (${logs}) - 7gp each`, logs > 0);
-    button(L.flaxY, `Sell all flax (${flax}) - 2gp each`, flax > 0);
+    for (const row of L.sellRows) {
+      button(row.y, row.label, row.count > 0);
+    }
+    button(L.breadY, `Buy bread (${BREAD_PRICE}gp) - heals 4`, this.sim.player.coins >= BREAD_PRICE);
     button(L.doneY, 'Done', true);
   }
 
