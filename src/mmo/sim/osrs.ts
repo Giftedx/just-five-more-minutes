@@ -6,7 +6,7 @@ export const COIN_OBJECTIVE = MAX_COINS;
 export const SESSION_COIN_TARGET = 100;
 export const MAX_LEVEL = 99;
 
-export const SKILL_NAMES: readonly SkillName[] = ['woodcutting', 'attack', 'foraging'];
+export const SKILL_NAMES: readonly SkillName[] = ['woodcutting', 'attack', 'foraging', 'fishing'];
 
 /** Cumulative XP required to reach a level (OSRS formula). Level 1 → 0. */
 export function xpForLevel(level: number): number {

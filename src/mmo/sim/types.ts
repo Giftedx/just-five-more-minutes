@@ -3,11 +3,11 @@ export interface Point {
   y: number;
 }
 
-export type ItemKind = 'log' | 'flax';
+export type ItemKind = 'log' | 'flax' | 'oakLog' | 'shrimpRaw' | 'shrimpCooked' | 'shrimpBurnt' | 'bread';
 
-export type SkillName = 'woodcutting' | 'attack' | 'foraging';
+export type SkillName = 'woodcutting' | 'attack' | 'foraging' | 'fishing';
 
-export type QuestKind = 'logs' | 'flax' | 'goblins';
+export type QuestKind = 'logs' | 'flax' | 'goblins' | 'shrimp' | 'oakLogs' | 'hobgoblins';
 
 export interface Quest {
   kind: QuestKind;
@@ -22,10 +22,14 @@ export interface Skills {
   woodcutting: number;
   attack: number;
   foraging: number;
+  fishing: number;
 }
+
+export type GoblinTier = 'goblin' | 'hobgoblin';
 
 export interface Goblin {
   id: string;
+  tier: GoblinTier;
   /** Home spawn tile. */
   home: Point;
   pos: Point;
@@ -38,11 +42,28 @@ export interface Goblin {
   nextAttacker: 'player' | 'goblin';
 }
 
+export type TreeKind = 'normal' | 'oak';
+
 export interface Tree {
   id: string;
+  kind: TreeKind;
   pos: Point;
   chopped: boolean;
   regrowTick: number;
+}
+
+/** Standing orders executed while the player is away from the keyboard. */
+export interface AwayPlan {
+  keepWorking: boolean;
+  eatBread: boolean;
+  runHome: boolean;
+  autoSell: boolean;
+}
+
+export interface Gravestone {
+  pos: Point;
+  items: ItemKind[];
+  expiresAtTick: number;
 }
 
 export interface PlayerState {
@@ -62,7 +83,11 @@ export type Intent =
   | { kind: 'chop'; treeId: string }
   | { kind: 'pick'; pos: Point }
   | { kind: 'trade' }
-  | { kind: 'eat' };
+  | { kind: 'eat' }
+  | { kind: 'fish'; pos: Point }
+  | { kind: 'cook' }
+  | { kind: 'cross' }
+  | { kind: 'reclaim' };
 
 export type SimEvent =
   | { type: 'playerSwing'; damage: number; goblinId: string }
@@ -82,14 +107,55 @@ export type SimEvent =
   | { type: 'questProgress'; kind: QuestKind; progress: number; target: number }
   | { type: 'questReady' }
   | { type: 'questComplete'; reward: number; kind: QuestKind }
-  | { type: 'questAssigned'; kind: QuestKind; target: number; reward: number };
+  | { type: 'questAssigned'; kind: QuestKind; target: number; reward: number }
+  | { type: 'fishCaught' }
+  | { type: 'shrimpCooked' }
+  | { type: 'shrimpBurnt' }
+  | { type: 'levelTooLow'; skill: SkillName; need: number }
+  | { type: 'tooPoor'; need: number }
+  | { type: 'tollPaid'; cost: number }
+  | { type: 'gravestoneCreated'; itemCount: number }
+  | { type: 'gravestoneReclaimed'; itemCount: number }
+  | { type: 'gravestoneLost'; itemCount: number }
+  | { type: 'breadBought'; cost: number }
+  | { type: 'loggedOut' }
+  | { type: 'loggedIn' }
+  | { type: 'milestone'; id: MilestoneId };
+
+/**
+ * The felt-progress ladder between "logged in" and the absurd stretch goals.
+ * All are session-scoped (earned tonight) except tollPaid, which fires on the
+ * one session the toll is actually paid — the pass itself persists.
+ */
+export type MilestoneId =
+  | 'firstBlood'
+  | 'pocketMoney'
+  | 'twoDinnersAhead'
+  | 'dinnerFund'
+  | 'theThousandaire'
+  | 'contractor'
+  | 'levelFive'
+  | 'tollPaid'
+  | 'bullyTheBully'
+  | 'undertaker'
+  | 'chefActually';
 
 export interface SimStats {
   deaths: number;
   deathsWhileAway: number;
   kills: number;
+  /** Hobgoblin kills (subset of kills). */
+  hobKills: number;
   logsSold: number;
   flaxSold: number;
+  oakLogsSold: number;
+  shrimpSold: number;
+  /** Coins earned this session (deaths do not subtract). */
+  coinsEarned: number;
+  shrimpCookedCount: number;
+  shrimpBurntCount: number;
+  /** Three consecutive burns happened at some point this session. */
+  shrimpBurnt3: boolean;
   objectiveHit: boolean;
   /** All trainable stats hit 99 (OSRS bonus goal). */
   statsBonusHit: boolean;
@@ -98,6 +164,8 @@ export interface SimStats {
   /** Best streak this session. */
   bestStreak: number;
   contractsCompleted: number;
+  /** A second death replaced an unreclaimed gravestone. */
+  doubleBereavement: boolean;
 }
 
 /** What a tile resolves to for clicks / hover / context menus. */
@@ -111,6 +179,11 @@ export type TileThing =
   | { kind: 'campfire'; pos: Point }
   | { kind: 'sign'; pos: Point }
   | { kind: 'fence'; pos: Point }
+  | { kind: 'water'; pos: Point }
+  | { kind: 'bridge'; pos: Point }
+  | { kind: 'toll'; pos: Point }
+  | { kind: 'fishingSpot'; pos: Point }
+  | { kind: 'gravestone'; pos: Point }
   | { kind: 'ground'; pos: Point };
 
 export interface MenuOption {

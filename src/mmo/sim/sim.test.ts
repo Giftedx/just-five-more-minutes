@@ -31,12 +31,12 @@ function stepUntil(
 }
 
 describe('map integrity', () => {
-  it('is 20x15 with consistent row lengths', () => {
+  it('matches its declared dimensions with consistent row lengths', () => {
     expect(MAP_ROWS).toHaveLength(MAP_H);
     for (const row of MAP_ROWS) expect(row).toHaveLength(MAP_W);
   });
 
-  it('has exactly 4 choppable trees and 3 goblin spawns', () => {
+  it('has exactly 4 choppable trees and 3 goblin spawns on the west side', () => {
     expect(TREE_TILES).toHaveLength(4);
     expect(GOBLIN_SPAWNS).toHaveLength(3);
   });

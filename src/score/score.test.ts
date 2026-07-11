@@ -20,7 +20,7 @@ function base(overrides: Partial<SessionData> = {}): SessionData {
     flaxSold: 0,
     bestStreak: 0,
     contractsCompleted: 0,
-    skills: { woodcutting: 0, attack: 0, foraging: 0 },
+    skills: { woodcutting: 0, attack: 0, foraging: 0, fishing: 0 },
     objectiveHit: false,
     statsBonusHit: false,
     deaths: 0,
@@ -40,7 +40,7 @@ describe('MMO progress (0-40)', () => {
   it('scores reachable economy, training, contracts, and streaks', () => {
     const data = base({
       coins: 100,
-      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2) },
+      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2), fishing: 0 },
       contractsCompleted: 2,
       bestStreak: 4,
     });
@@ -50,7 +50,7 @@ describe('MMO progress (0-40)', () => {
   it('reserves the final two MMO points for legendary goals', () => {
     const ordinary = base({
       coins: 100,
-      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2) },
+      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2), fishing: 0 },
       contractsCompleted: 2,
       bestStreak: 4,
     });

@@ -6,17 +6,14 @@
  * for storage that throws.
  */
 import { MAX_COINS, SKILL_NAMES } from '../mmo/sim/osrs';
-import type { SkillName } from '../mmo/sim/types';
+import { DEFAULT_AWAY_PLAN } from '../mmo/sim/sim';
+import type { AwayPlan, SkillName } from '../mmo/sim/types';
 import type { ReportHistoryStorage } from './history';
 
 const CAREER_KEY = 'j5mm-career-v1';
 
-export interface AwayPlan {
-  keepWorking: boolean;
-  eatBread: boolean;
-  runHome: boolean;
-  autoSell: boolean;
-}
+export type { AwayPlan } from '../mmo/sim/types';
+export { DEFAULT_AWAY_PLAN } from '../mmo/sim/sim';
 
 export interface CareerCharacter {
   coins: number;
@@ -49,13 +46,6 @@ export interface Career {
   gallery: string[];
   weeksCompleted: { endingId: string; total: number }[];
 }
-
-export const DEFAULT_AWAY_PLAN: AwayPlan = {
-  keepWorking: true,
-  eatBread: true,
-  runHome: true,
-  autoSell: false,
-};
 
 export function freshCareer(): Career {
   const xp = {} as Record<SkillName, number>;

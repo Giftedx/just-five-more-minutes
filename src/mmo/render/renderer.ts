@@ -5,7 +5,7 @@ import {
   objectiveProgressLabel,
 } from '../sim/osrs';
 import { levelOf, MudwickSim, MAX_LEVEL, PLAYER_MAX_HP, xpForLevel } from '../sim/sim';
-import type { MenuOption, Point, SimEvent, SkillName } from '../sim/types';
+import type { MenuOption, Point, QuestKind, SimEvent, SkillName } from '../sim/types';
 import {
   drawSprite,
   GOBLIN_ANGRY_SPRITE,
@@ -94,6 +94,8 @@ function skillLabel(skill: SkillName): string {
       return 'Attack';
     case 'foraging':
       return 'Foraging';
+    case 'fishing':
+      return 'Fishing';
   }
 }
 
@@ -387,7 +389,7 @@ export class MmoRenderer {
           break;
         case 'questAssigned':
           this.postMessage(
-            `Wyn's contract: ${this.questVerb(ev.kind)} ${ev.target} for ${ev.reward}gp bonus.`,
+            `Wyn's contract: ${this.questPhrase(ev.kind, ev.target)} for ${ev.reward}gp bonus.`,
             now,
             '#9be8e0',
           );
@@ -415,14 +417,20 @@ export class MmoRenderer {
     if (this.chat.length > 6) this.chat.shift();
   }
 
-  private questVerb(kind: 'logs' | 'flax' | 'goblins'): string {
+  private questPhrase(kind: QuestKind, count: number): string {
     switch (kind) {
       case 'logs':
-        return 'gather';
+        return `gather ${count} logs`;
       case 'flax':
-        return 'pick';
+        return `pick ${count} flax`;
       case 'goblins':
-        return 'slay';
+        return `slay ${count} goblins`;
+      case 'shrimp':
+        return `catch ${count} shrimp`;
+      case 'oakLogs':
+        return `gather ${count} oak logs`;
+      case 'hobgoblins':
+        return `slay ${count} hobgoblins`;
     }
   }
 
@@ -433,7 +441,7 @@ export class MmoRenderer {
     this.postMessage('Max stack + 99 all: legendary goals.', now, '#9be8e0');
     const q = this.sim.quest;
     this.postMessage(
-      `Active contract: ${this.questVerb(q.kind)} ${q.target} (${q.reward}gp bonus).`,
+      `Active contract: ${this.questPhrase(q.kind, q.target)} (${q.reward}gp bonus).`,
       now,
       '#9be8e0',
     );

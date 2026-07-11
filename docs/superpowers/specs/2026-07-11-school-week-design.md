@@ -69,6 +69,8 @@ Type fan-out (swept in one pass, compiler-guided): `ItemKind` += `oakLog | shrim
 
 A policy layer over the existing away simulation, configured from a compact toggle row on the Mudwick HUD (`AWAY PLAN: [Keep working] [Eat bread ≤4hp] [Run home <3hp] [Sell when full]`), persisted in the career. Defaults: keep working ON, eat ON, run home ON, sell OFF.
 
+**Defaults revised during build:** all four orders start **OFF**. Opt-in is the strategic act, and the classic hazard — your character blindly finishing the last click while a goblin eats them — stays the baseline experience the away plan exists to solve.
+
 Sim semantics (pure, per tick, only while `playerAway`):
 1. **Run home <3hp** (highest priority): drop intent, path to camp tile, goblins deaggro at camp (existing safe-tile behavior).
 2. **Eat bread ≤4hp**: if bread in inventory, synthesize `eat` intent.

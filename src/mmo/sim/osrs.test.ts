@@ -36,6 +36,7 @@ describe('OSRS progression', () => {
       woodcutting: XP_FOR_LEVEL_99,
       attack: XP_FOR_LEVEL_99,
       foraging: XP_FOR_LEVEL_99,
+      fishing: XP_FOR_LEVEL_99,
     };
     expect(allSkillsAt99(skills)).toBe(true);
     expect(allSkillsAt99({ ...skills, foraging: XP_FOR_LEVEL_99 - 1 })).toBe(false);
