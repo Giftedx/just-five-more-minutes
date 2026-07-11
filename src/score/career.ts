@@ -29,6 +29,8 @@ export interface NightReportSummary {
   endingTitle: string;
   seed: number;
   milestones: string[];
+  /** Chore slots completed (0-3) — the week verdict counts to fifteen. */
+  choresDone: number;
 }
 
 export interface CareerWeek {
@@ -125,12 +127,14 @@ function parseReport(raw: unknown): NightReportSummary | undefined {
   if (!Array.isArray(r.milestones) || !r.milestones.every((m) => typeof m === 'string')) {
     return undefined;
   }
+  if (!isCount(r.choresDone) || r.choresDone > 3) return undefined;
   return {
     total: r.total,
     rows: [mmo, household, vibe, comedy],
     endingTitle: r.endingTitle,
     seed: r.seed,
     milestones: r.milestones.slice(),
+    choresDone: r.choresDone,
   };
 }
 

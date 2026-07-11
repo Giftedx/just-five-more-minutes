@@ -1811,3 +1811,145 @@ body {
   accent-color: #e8c33f;
   cursor: pointer;
 }
+
+/* ---- Mum status chip (suspicion tier, diegetic-ish) ---- */
+
+.hud-mum {
+  background: rgba(20, 16, 24, 0.72);
+  color: #cfc4b0;
+  padding: 5px 10px;
+  font: 600 11px 'Courier New', monospace;
+  letter-spacing: 0.08em;
+  border-left: 3px solid #6a5a44;
+  text-transform: uppercase;
+}
+
+.hud-mum[data-tier='2'] {
+  color: #f0c060;
+  border-left-color: #c08a30;
+}
+
+.hud-mum[data-tier='3'] {
+  color: #ff9070;
+  border-left-color: #c05030;
+  animation: mumpulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mumpulse {
+  50% {
+    background: rgba(60, 24, 16, 0.78);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-mum[data-tier='3'] {
+    animation: none;
+    background: rgba(60, 24, 16, 0.78);
+  }
+}
+
+/* ---- Title week strip ---- */
+
+.title-week {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 2px;
+}
+
+.title-week-day {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 40px;
+  padding: 5px 6px;
+  background: rgba(28, 24, 34, 0.72);
+  border: 1px solid rgba(160, 140, 110, 0.25);
+  color: #8a8090;
+  font: 600 10px 'Courier New', monospace;
+  letter-spacing: 0.1em;
+}
+
+.title-week-day--done {
+  color: #cfc4b0;
+  border-color: rgba(200, 176, 136, 0.5);
+}
+
+.title-week-day--tonight {
+  color: #ffe96b;
+  border-color: #c8a040;
+  box-shadow: 0 0 12px rgba(200, 160, 64, 0.25);
+}
+
+.title-week-grade {
+  font-size: 14px;
+  min-height: 16px;
+}
+
+.title-week-card {
+  width: 100%;
+  text-align: center;
+  color: #b8a888;
+  font: 600 11px 'Courier New', monospace;
+  letter-spacing: 0.14em;
+  margin-top: 4px;
+}
+
+.title-reset {
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: #6a6274;
+  font: 500 11px 'Courier New', monospace;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.title-reset:hover {
+  color: #a89aae;
+}
+
+/* ---- Week verdict card ---- */
+
+.sc-week-grades {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 6px 0 12px;
+}
+
+.sc-week-day {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 9px;
+  border: 1px solid #b8a888;
+  color: #5a4a30;
+  font: 600 10px 'Courier New', monospace;
+}
+
+.sc-week-day strong {
+  font-size: 16px;
+}
+
+.sc-week-stamp {
+  margin: 6px auto;
+  width: fit-content;
+  padding: 4px 12px;
+  border: 2px solid #a03030;
+  color: #a03030;
+  font: 700 12px 'Courier New', monospace;
+  letter-spacing: 0.18em;
+  transform: rotate(-2deg);
+}
+
+.sc-week-blurb {
+  text-align: center;
+  color: #5a4a30;
+  font-style: italic;
+  margin: 4px 0 10px;
+}

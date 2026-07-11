@@ -25,18 +25,21 @@ import {
   type ReportHistorySummary,
 } from './score/history';
 import {
+  completeWeek,
   loadCareer,
   recordNight,
   saveCareer,
+  weekComplete,
   type Career,
 } from './score/career';
+import { gradeFor, weekVerdict } from './score/week';
 import { levelOf } from './mmo/sim/osrs';
 import type { SimEvent } from './mmo/sim/types';
 import { createSessionSeed } from './session';
 import { MILESTONE_LABELS } from './mmo/render/renderer';
 import { Hud } from './ui/hud';
-import { showScorecard } from './ui/scorecard';
-import { showTitle } from './ui/title';
+import { showScorecard, showWeekVerdict } from './ui/scorecard';
+import { showTitle, type WeekView } from './ui/title';
 
 export interface GameOptions {
   speed: number;
@@ -264,16 +267,81 @@ export class Game {
 
   start(): void {
     if (this.disposed) return;
+    // A week finished in a previous visit: the verdict comes before anything.
+    if (weekComplete(this.career) && this.opts.night === undefined) {
+      if (this.opts.skipTitle) {
+        this.finishWeekSilently();
+      } else {
+        this.showVerdictThenRestart();
+        this.loop();
+        return;
+      }
+    }
     if (this.opts.skipTitle) {
       this.begin(false);
     } else {
       this.setVolumeControlVisible(false);
-      this.titleDispose = showTitle(this.root, this.audio, () => {
-        this.setVolumeControlVisible(true);
-        this.begin(true);
-      });
+      const week: WeekView = {
+        grades: this.career.week.reports.map((r) => gradeFor(r.total)),
+        night: this.night.night,
+        card: this.night.card,
+        galleryCount: this.career.gallery.length,
+      };
+      this.titleDispose = showTitle(
+        this.root,
+        this.audio,
+        () => {
+          this.setVolumeControlVisible(true);
+          this.begin(true);
+        },
+        week,
+        () => this.fullReset(),
+      );
     }
     this.loop();
+  }
+
+  private finishWeekSilently(): void {
+    const verdict = weekVerdict(
+      this.career.week.reports,
+      this.career.week.lieDebt,
+      this.career.week.suspicionCarry * 2,
+    );
+    this.career = completeWeek(this.career, verdict.endingId, verdict.weekTotal);
+    try {
+      saveCareer(localStorage, this.career);
+    } catch {
+      // persistence optional
+    }
+  }
+
+  private showVerdictThenRestart(): void {
+    this.setVolumeControlVisible(false);
+    const verdict = weekVerdict(
+      this.career.week.reports,
+      this.career.week.lieDebt,
+      this.career.week.suspicionCarry * 2,
+    );
+    const card = showWeekVerdict(this.root, verdict, this.career.gallery.length + 1, () => {
+      this.career = completeWeek(this.career, verdict.endingId, verdict.weekTotal);
+      try {
+        saveCareer(localStorage, this.career);
+      } catch {
+        // persistence optional
+      }
+      this.restart();
+    });
+    this.overlays.push(card);
+  }
+
+  private fullReset(): void {
+    try {
+      localStorage.removeItem('j5mm-career-v1');
+      localStorage.removeItem('j5mm-report-history-v1');
+    } catch {
+      // nothing to forget, then
+    }
+    this.restart();
   }
 
   private begin(lockPointer: boolean): void {
@@ -639,6 +707,7 @@ export class Game {
     const tracker = this.host.interact.tracker;
     const data: SessionData = {
       coins: sim.player.coins,
+      coinsEarned: sim.stats.coinsEarned,
       objectiveHit: sim.stats.objectiveHit,
       statsBonusHit: sim.stats.statsBonusHit,
       deaths: sim.stats.deaths,
@@ -649,6 +718,8 @@ export class Game {
       bestStreak: sim.stats.bestStreak,
       contractsCompleted: sim.stats.contractsCompleted,
       skills: { ...sim.player.skills },
+      milestones: [...sim.milestones],
+      suspicionEnd: this.mum.suspicion,
       prompts: this.director.prompts.map((p) => ({
         lineId: p.lineId,
         result: p.result === 'answered' ? 'answered' : 'ignored',
@@ -657,6 +728,13 @@ export class Game {
       chores: CHORE_ORDER.map((c) => ({ ...this.director.chores[c] })),
       choreCompletedInDanger: this.choreCompletedInDanger,
       inspectionFailed: this.inspectionFailed,
+      technicallyTrue: this.factFlags.technicallyTrue,
+      evidenceBased: this.factFlags.evidenceBased,
+      archivist: this.factFlags.archivist,
+      doubleBereavement: sim.stats.doubleBereavement,
+      modemScream: this.factFlags.modemScream,
+      oldestTrick: this.factFlags.oldestTrick,
+      shrimpBurnt3: sim.stats.shrimpBurnt3,
     };
     const score = computeScore(data);
     const history = recordReportSafely(score.total);
@@ -679,6 +757,7 @@ export class Game {
         endingTitle: score.endingTitle,
         seed: this.sessionSeed,
         milestones: [...sim.milestones],
+        choresDone: CHORE_ORDER.filter((c) => tracker.isCompleted(c)).length,
       },
       this.mum.suspicion,
       this.lieDebtTonight,
@@ -689,11 +768,13 @@ export class Game {
     } catch {
       // A blocked localStorage costs persistence, not the report.
     }
+    const fridayDone = weekComplete(this.career);
     const card = showScorecard(
       this.root,
       score,
       {
         coins: sim.player.coins,
+        coinsEarned: sim.stats.coinsEarned,
         deaths: sim.stats.deaths,
         choresDone: CHORE_ORDER.filter((c) => tracker.isCompleted(c)).length,
         choresTotal: CHORE_ORDER.length,
@@ -705,11 +786,21 @@ export class Game {
           woodcutting: levelOf(sim.player.skills.woodcutting),
           attack: levelOf(sim.player.skills.attack),
           foraging: levelOf(sim.player.skills.foraging),
+          fishing: levelOf(sim.player.skills.fishing),
         },
         seed: this.sessionSeed,
+        nightCard: this.night.card,
         history,
       },
-      () => this.restart(),
+      () => {
+        if (fridayDone) {
+          card.remove();
+          this.showVerdictThenRestart();
+        } else {
+          this.restart();
+        }
+      },
+      fridayDone ? 'See the week verdict' : 'File another report (restart)',
     );
     this.overlays.push(card);
   }

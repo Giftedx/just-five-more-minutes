@@ -32,6 +32,7 @@ function report(total: number): NightReportSummary {
     endingTitle: 'Employee of the Month (This House)',
     seed: 12648430,
     milestones: ['pocketMoney'],
+    choresDone: 3,
   };
 }
 

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { xpForLevel } from '../mmo/sim/osrs';
 import {
   COMEDY_NOTES,
   comedyFacts,
@@ -15,6 +14,7 @@ import {
 function base(overrides: Partial<SessionData> = {}): SessionData {
   return {
     coins: 0,
+    coinsEarned: 0,
     kills: 0,
     logsSold: 0,
     flaxSold: 0,
@@ -25,6 +25,8 @@ function base(overrides: Partial<SessionData> = {}): SessionData {
     statsBonusHit: false,
     deaths: 0,
     deathsWhileAway: 0,
+    milestones: [],
+    suspicionEnd: 0,
     prompts: [],
     chores: [
       { id: 'mugs', requestedAt: 90, startedAt: null, completedAt: null },
@@ -32,36 +34,47 @@ function base(overrides: Partial<SessionData> = {}): SessionData {
       { id: 'laundry', requestedAt: 420, startedAt: null, completedAt: null },
     ],
     choreCompletedInDanger: false,
+    technicallyTrue: false,
+    evidenceBased: false,
+    archivist: false,
+    doubleBereavement: false,
+    modemScream: false,
+    oldestTrick: false,
+    shrimpBurnt3: false,
     ...overrides,
   };
 }
 
 describe('MMO progress (0-40)', () => {
-  it('scores reachable economy, training, contracts, and streaks', () => {
-    const data = base({
-      coins: 100,
-      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2), fishing: 0 },
-      contractsCompleted: 2,
-      bestStreak: 4,
-    });
-    expect(scoreMmoProgress(data)).toBe(38);
+  it('scores the session milestone ladder', () => {
+    expect(scoreMmoProgress(base())).toBe(0);
+    expect(scoreMmoProgress(base({ milestones: ['pocketMoney'] }))).toBe(6);
+    expect(
+      scoreMmoProgress(base({ milestones: ['pocketMoney', 'twoDinnersAhead', 'dinnerFund'] })),
+    ).toBe(22);
+    expect(
+      scoreMmoProgress(
+        base({ milestones: ['pocketMoney', 'twoDinnersAhead', 'dinnerFund', 'contractor', 'levelFive'] }),
+      ),
+    ).toBe(34);
   });
 
-  it('reserves the final two MMO points for legendary goals', () => {
-    const ordinary = base({
-      coins: 100,
-      skills: { woodcutting: xpForLevel(4), attack: xpForLevel(3), foraging: xpForLevel(2), fishing: 0 },
-      contractsCompleted: 2,
-      bestStreak: 4,
+  it('caps the full ladder at 40', () => {
+    const everything = base({
+      milestones: [
+        'pocketMoney', 'twoDinnersAhead', 'dinnerFund', 'contractor', 'levelFive',
+        'tollPaid', 'bullyTheBully', 'undertaker', 'chefActually',
+      ],
     });
-    expect(scoreMmoProgress({ ...ordinary, objectiveHit: true, statsBonusHit: true })).toBe(40);
+    expect(scoreMmoProgress(everything)).toBe(40);
   });
 
-  it('rounds economy points, applies death penalties, and clamps to 0-40', () => {
-    expect(scoreMmoProgress(base({ coins: 49 }))).toBe(10);
-    expect(Number.isInteger(scoreMmoProgress(base({ coins: 33 })))).toBe(true);
-    expect(scoreMmoProgress(base({ coins: 0, deaths: 5 }))).toBe(0);
-    expect(scoreMmoProgress(base({ coins: 100, deaths: 1 }))).toBe(15);
+  it('toast-only milestones score nothing', () => {
+    expect(scoreMmoProgress(base({ milestones: ['firstBlood', 'theThousandaire'] }))).toBe(0);
+  });
+
+  it('legendary goals still add their point each', () => {
+    expect(scoreMmoProgress(base({ objectiveHit: true, statsBonusHit: true }))).toBe(2);
   });
 });
 
@@ -109,18 +122,14 @@ describe('Vibe preservation (0-20)', () => {
     ).toBe(12);
   });
 
-  it('-3 per option reuse', () => {
-    expect(
-      scoreVibe(
-        base({
-          prompts: [
-            { lineId: 'intro', result: 'answered', option: 1 },
-            { lineId: 'mugs', result: 'answered', option: 1 },
-            { lineId: 'wrappers', result: 'answered', option: 1 },
-          ],
-        }),
-      ),
-    ).toBe(14); // two reuses of option 1
+  it('suspicion drags the vibe down, half a point per notch', () => {
+    expect(scoreVibe(base({ suspicionEnd: 4 }))).toBe(18);
+    expect(scoreVibe(base({ suspicionEnd: 10 }))).toBe(15);
+    expect(scoreVibe(base({ suspicionEnd: 25 }))).toBe(15); // clamped domain
+  });
+
+  it('a failed inspection costs 2 on its own', () => {
+    expect(scoreVibe(base({ inspectionFailed: true }))).toBe(18);
   });
 
   it('+2 per chore started within 15s of its request', () => {
@@ -139,6 +148,7 @@ describe('Vibe preservation (0-20)', () => {
 
   it('clamps at both ends', () => {
     const trashed = base({
+      suspicionEnd: 10,
       prompts: [
         { lineId: 'intro', result: 'ignored', option: null },
         { lineId: 'mugs', result: 'ignored', option: null },
@@ -181,7 +191,7 @@ describe('Comedy facts (0-10)', () => {
     expect(comedyFacts(laundryDone)).not.toContain('laundryIgnored');
   });
 
-  it('choresWithoutGlory: all chores done, dinner fund missed', () => {
+  it('choresWithoutGlory: all chores done, dinner fund not earned tonight', () => {
     const allDone = base({
       chores: [
         { id: 'mugs', requestedAt: 90, startedAt: 95, completedAt: 110 },
@@ -190,7 +200,7 @@ describe('Comedy facts (0-10)', () => {
       ],
     });
     expect(comedyFacts(allDone)).toContain('choresWithoutGlory');
-    expect(comedyFacts({ ...allDone, coins: 100 })).not.toContain('choresWithoutGlory');
+    expect(comedyFacts({ ...allDone, coinsEarned: 100 })).not.toContain('choresWithoutGlory');
     expect(comedyFacts({ ...allDone, objectiveHit: true })).not.toContain('choresWithoutGlory');
     expect(COMEDY_NOTES.choresWithoutGlory).toBe(
       'Did every chore. The 100 gp dinner fund remains mysteriously unfunded.',
@@ -212,28 +222,32 @@ describe('Comedy facts (0-10)', () => {
   it('contractor: completed at least two Wyn contracts', () => {
     expect(comedyFacts(base({ contractsCompleted: 2 }))).toContain('contractor');
     expect(comedyFacts(base({ contractsCompleted: 1 }))).not.toContain('contractor');
-    expect(COMEDY_NOTES.contractor).toBe(
-      'Completed multiple freelance contracts during a domestic incident.',
-    );
+  });
+
+  it('the night-layer facts flow straight through', () => {
+    const flags = base({
+      technicallyTrue: true,
+      evidenceBased: true,
+      archivist: true,
+      doubleBereavement: true,
+      modemScream: true,
+      oldestTrick: true,
+      shrimpBurnt3: true,
+    });
+    const facts = comedyFacts(flags);
+    for (const id of [
+      'technicallyTrue', 'evidenceBased', 'archivist', 'doubleBereavement',
+      'modemScream', 'oldestTrick', 'shrimpBurnt3',
+    ] as const) {
+      expect(facts).toContain(id);
+      expect(COMEDY_NOTES[id].length).toBeGreaterThan(0);
+    }
+    expect(scoreComedy(flags)).toBe(10); // 7 facts, capped
   });
 
   it('comedy score is 2 per fact capped at 10', () => {
     expect(scoreComedy(base())).toBe(0);
-    const everything = base({
-      objectiveHit: true,
-      deaths: 1,
-      deathsWhileAway: 1,
-      choreCompletedInDanger: true,
-      prompts: [
-        { lineId: 'intro', result: 'answered', option: 1 },
-        { lineId: 'mugs', result: 'answered', option: 1 },
-        { lineId: 'wrappers', result: 'answered', option: 1 },
-        { lineId: 'warn', result: 'answered', option: 3 },
-      ],
-    });
-    // oneSecSpam + choreInDanger + laundryIgnored + remoteDeath + economyAtDinner = 5 facts
-    expect(comedyFacts(everything)).toHaveLength(5);
-    expect(scoreComedy(everything)).toBe(10);
+    expect(scoreComedy(base({ choreCompletedInDanger: true, modemScream: true }))).toBe(4);
   });
 });
 
@@ -253,11 +267,11 @@ describe('ending matrix', () => {
     expect(endingTitle(base({ objectiveHit: true, statsBonusHit: true }))).toBe(
       'Max Stack, Max Cape, No Dinner',
     );
-    expect(endingTitle(base({ coins: 100, chores: allDoneChores }))).toBe(
+    expect(endingTitle(base({ coinsEarned: 100, chores: allDoneChores }))).toBe(
       'Functional Adult (Suspicious)',
     );
     expect(endingTitle(base({ contractsCompleted: 2 }))).toBe("Wyn's Employee of the Minute");
-    expect(endingTitle(base({ coins: 100 }))).toBe('The Economy Needed You');
+    expect(endingTitle(base({ coinsEarned: 100 }))).toBe('The Economy Needed You');
     expect(endingTitle(base({ chores: allDoneChores }))).toBe('Employee of the Month (This House)');
     expect(endingTitle(base({ kills: 4 }))).toBe('Goblin Performance Reviewer');
     expect(endingTitle(base())).toBe('Goblin Spreadsheet Enjoyer');
@@ -273,8 +287,10 @@ describe('computeScore', () => {
   it('sums the categories and carries fact notes', () => {
     const data = base({
       coins: 120,
+      coinsEarned: 120,
       objectiveHit: true,
       deaths: 1,
+      milestones: ['pocketMoney', 'twoDinnersAhead', 'dinnerFund'],
       chores: [
         { id: 'mugs', requestedAt: 90, startedAt: 95, completedAt: 110 },
         { id: 'wrappers', requestedAt: 240, startedAt: 245, completedAt: 260 },
@@ -287,21 +303,50 @@ describe('computeScore', () => {
       ],
     });
     const s = computeScore(data);
-    expect(s.mmo).toBe(16);
+    expect(s.mmo).toBe(23); // 6 + 6 + 10 + legendary 1
     expect(s.household).toBe(22); // 16 + 6
     expect(s.vibe).toBe(20); // 20 - 4 + 2 + 2, clamped to 20
     // facts: laundryIgnored + economyAtDinner = 2 -> 4
     expect(s.comedy).toBe(4);
-    expect(s.total).toBe(62);
+    expect(s.total).toBe(69);
     expect(s.total).toBe(s.mmo + s.household + s.vibe + s.comedy);
     expect(s.facts.map((f) => f.id)).toEqual(['laundryIgnored', 'economyAtDinner']);
     expect(s.facts.every((f) => f.note.length > 0)).toBe(true);
     expect(s.endingTitle).toBe('The Economy Actually Needed You');
   });
 
+  it('matches the spec Monday derivation (the browser E2E golden)', () => {
+    // Scripted run: answers 1,2,3,4,1 · all chores done and started fast ·
+    // never sits at the PC · suspicion nets out to zero.
+    const monday = base({
+      suspicionEnd: 0,
+      archivist: true, // option 4, judged by Mum, first use of the week
+      chores: [
+        { id: 'mugs', requestedAt: 38, startedAt: 40, completedAt: 60 },
+        { id: 'wrappers', requestedAt: 100, startedAt: 104, completedAt: 130 },
+        { id: 'laundry', requestedAt: 175, startedAt: 178, completedAt: 210 },
+      ],
+      prompts: [
+        { lineId: 'intro', result: 'answered', option: 1 },
+        { lineId: 'mugs', result: 'answered', option: 2 },
+        { lineId: 'wrappers', result: 'answered', option: 3 },
+        { lineId: 'laundry', result: 'answered', option: 4 },
+        { lineId: 'warn', result: 'answered', option: 1 },
+      ],
+    });
+    const s = computeScore(monday);
+    expect(s.mmo).toBe(0);
+    expect(s.household).toBe(30);
+    expect(s.vibe).toBe(20);
+    expect(s.comedy).toBe(4); // choresWithoutGlory + archivist
+    expect(s.total).toBe(54);
+    expect(s.endingTitle).toBe('Employee of the Month (This House)');
+  });
+
   it('a player who ignores absolutely everything still gets a scorecard', () => {
     const s = computeScore(
       base({
+        suspicionEnd: 10,
         prompts: [
           { lineId: 'intro', result: 'ignored', option: null },
           { lineId: 'mugs', result: 'ignored', option: null },

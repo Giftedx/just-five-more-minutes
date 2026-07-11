@@ -3,7 +3,7 @@
  * Implements the locked formulas exactly.
  */
 import type { ChoreId, LineId } from '../director/director';
-import { levelOf, SESSION_COIN_TARGET, SKILL_NAMES } from '../mmo/sim/osrs';
+import { SESSION_COIN_TARGET } from '../mmo/sim/osrs';
 import type { Skills } from '../mmo/sim/types';
 
 export interface PromptOutcome {
@@ -22,6 +22,8 @@ export interface ChoreOutcome {
 
 export interface SessionData {
   coins: number;
+  /** Coins earned tonight (career wealth does not pre-pay the dinner fund). */
+  coinsEarned: number;
   kills: number;
   logsSold: number;
   flaxSold: number;
@@ -33,12 +35,25 @@ export interface SessionData {
   deaths: number;
   /** Deaths that happened while the player was away from the PC. */
   deathsWhileAway: number;
+  /** Session milestone ids, in order of achievement (spec ladder). */
+  milestones: string[];
+  /** Mum's suspicion when the session ended, 0-10. */
+  suspicionEnd: number;
   prompts: PromptOutcome[];
   chores: ChoreOutcome[];
   /** Host fact: some chore was completed during combat or at <=4 HP. */
   choreCompletedInDanger: boolean;
   /** Host fact: Thursday's knock landed with no homework.doc in sight. */
   inspectionFailed?: boolean;
+  /** Excuse facts, judged by Mum at the moment of answering. */
+  technicallyTrue: boolean;
+  evidenceBased: boolean;
+  archivist: boolean;
+  /** Mudwick facts the sim testifies to. */
+  doubleBereavement: boolean;
+  modemScream: boolean;
+  oldestTrick: boolean;
+  shrimpBurnt3: boolean;
 }
 
 export type ComedyFactId =
@@ -48,7 +63,14 @@ export type ComedyFactId =
   | 'laundryIgnored'
   | 'choresWithoutGlory'
   | 'remoteDeath'
-  | 'economyAtDinner';
+  | 'economyAtDinner'
+  | 'technicallyTrue'
+  | 'evidenceBased'
+  | 'archivist'
+  | 'doubleBereavement'
+  | 'modemScream'
+  | 'oldestTrick'
+  | 'shrimpBurnt3';
 
 export const COMEDY_NOTES: Readonly<Record<ComedyFactId, string>> = {
   oneSecSpam: 'Said "One sec!" three or more times. It was never one sec.',
@@ -58,6 +80,13 @@ export const COMEDY_NOTES: Readonly<Record<ComedyFactId, string>> = {
   choresWithoutGlory: 'Did every chore. The 100 gp dinner fund remains mysteriously unfunded.',
   remoteDeath: 'Died to a goblin while physically in another room.',
   economyAtDinner: 'Responded to the dinner call with a macroeconomic argument.',
+  technicallyTrue: 'Claimed to be in combat while actually in combat. Unprecedented honesty.',
+  evidenceBased: 'Cited the economy, and had the receipts to prove it.',
+  archivist: 'Deployed the historical preservation defence. It works once a week.',
+  doubleBereavement: 'Lost a gravestone to a second gravestone. A bold estate strategy.',
+  modemScream: 'Survived a mid-combat disconnect. The modem screamed for both of them.',
+  oldestTrick: 'Flipped to homework.doc at speed. The oldest trick, executed adequately.',
+  shrimpBurnt3: 'Cremated three consecutive shrimp. The campfire has filed a complaint.',
 };
 
 export interface ScoreBreakdown {
@@ -81,17 +110,23 @@ export function completedChores(data: SessionData): number {
   return data.chores.filter((c) => c.completedAt !== null).length;
 }
 
+/** Session milestone values (spec §5): the felt-progress ladder, capped at 40. */
+export const MILESTONE_POINTS: Readonly<Record<string, number>> = {
+  pocketMoney: 6,
+  twoDinnersAhead: 6,
+  dinnerFund: 10,
+  contractor: 6,
+  levelFive: 6,
+  tollPaid: 3,
+  bullyTheBully: 3,
+  undertaker: 2,
+  chefActually: 2,
+};
+
 export function scoreMmoProgress(data: SessionData): number {
-  const economy = Math.round(20 * clamp(data.coins / SESSION_COIN_TARGET, 0, 1));
-  const levelsGained = SKILL_NAMES.reduce(
-    (sum, skill) => sum + Math.max(0, levelOf(data.skills[skill]) - 1),
-    0,
-  );
-  const training = Math.min(6, levelsGained);
-  const contracts = Math.min(8, data.contractsCompleted * 4);
-  const streak = Math.min(4, data.bestStreak);
+  const ladder = data.milestones.reduce((sum, id) => sum + (MILESTONE_POINTS[id] ?? 0), 0);
   const legendary = Number(data.objectiveHit) + Number(data.statsBonusHit);
-  return clamp(economy + training + contracts + streak + legendary - 5 * data.deaths, 0, 40);
+  return clamp(ladder + legendary, 0, 40);
 }
 
 export function scoreHousehold(data: SessionData): number {
@@ -103,16 +138,8 @@ export function scoreHousehold(data: SessionData): number {
 export function scoreVibe(data: SessionData): number {
   let s = 20;
   s -= 4 * data.prompts.filter((p) => p.result === 'ignored').length;
-
-  const used = new Map<number, number>();
-  for (const p of data.prompts) {
-    if (p.result === 'answered' && p.option !== null) {
-      used.set(p.option, (used.get(p.option) ?? 0) + 1);
-    }
-  }
-  for (const count of used.values()) {
-    if (count > 1) s -= 3 * (count - 1);
-  }
+  s -= Math.floor(clamp(data.suspicionEnd, 0, 10) / 2);
+  if (data.inspectionFailed) s -= 2;
 
   for (const c of data.chores) {
     if (c.requestedAt !== null && c.startedAt !== null && c.startedAt - c.requestedAt <= 15) {
@@ -134,7 +161,7 @@ export function comedyFacts(data: SessionData): ComedyFactId[] {
     facts.push('laundryIgnored');
   }
   if (
-    data.coins < SESSION_COIN_TARGET &&
+    data.coinsEarned < SESSION_COIN_TARGET &&
     !data.objectiveHit &&
     completedChores(data) === data.chores.length &&
     data.chores.length > 0
@@ -145,6 +172,14 @@ export function comedyFacts(data: SessionData): ComedyFactId[] {
 
   const warn = data.prompts.find((p) => p.lineId === 'warn');
   if (warn && warn.result === 'answered' && warn.option === 3) facts.push('economyAtDinner');
+
+  if (data.technicallyTrue) facts.push('technicallyTrue');
+  if (data.evidenceBased) facts.push('evidenceBased');
+  if (data.archivist) facts.push('archivist');
+  if (data.doubleBereavement) facts.push('doubleBereavement');
+  if (data.modemScream) facts.push('modemScream');
+  if (data.oldestTrick) facts.push('oldestTrick');
+  if (data.shrimpBurnt3) facts.push('shrimpBurnt3');
   return facts;
 }
 
@@ -154,14 +189,15 @@ export function scoreComedy(data: SessionData): number {
 
 export function endingTitle(data: SessionData): string {
   const allChores = completedChores(data) === data.chores.length && data.chores.length > 0;
+  const dinnerFund = data.coinsEarned >= SESSION_COIN_TARGET;
   let title: string;
   if (data.objectiveHit && data.statsBonusHit) title = 'Max Stack, Max Cape, No Dinner';
   else if (data.statsBonusHit) title = 'Max Cape (Bedroom Edition)';
   else if (data.objectiveHit && allChores) title = 'Max Stack and Matching Socks';
   else if (data.objectiveHit) title = 'The Economy Actually Needed You';
-  else if (data.coins >= SESSION_COIN_TARGET && allChores) title = 'Functional Adult (Suspicious)';
+  else if (dinnerFund && allChores) title = 'Functional Adult (Suspicious)';
   else if (data.contractsCompleted >= 2) title = "Wyn's Employee of the Minute";
-  else if (data.coins >= SESSION_COIN_TARGET) title = 'The Economy Needed You';
+  else if (dinnerFund) title = 'The Economy Needed You';
   else if (allChores) title = 'Employee of the Month (This House)';
   else if (data.kills >= 4) title = 'Goblin Performance Reviewer';
   else title = 'Goblin Spreadsheet Enjoyer';

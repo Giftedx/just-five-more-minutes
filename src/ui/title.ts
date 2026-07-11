@@ -2,6 +2,17 @@
 
 import type { AudioSynth } from '../audio/synth';
 
+/** What the title needs to know about the week without owning the career. */
+export interface WeekView {
+  /** Grades for finished nights, Monday first (0-5 entries). */
+  grades: string[];
+  /** Tonight's index, 0-4. */
+  night: number;
+  /** Tonight's card, e.g. "TUESDAY — Bins Night". */
+  card: string;
+  galleryCount: number;
+}
+
 const TITLE_CHAT = [
   'Welcome to Mudwick Online.',
   'Left-click to act. Right-click for options.',
@@ -230,10 +241,32 @@ export function showTitle(
   parent: HTMLElement,
   audio: AudioSynth | undefined,
   onBegin: () => void,
+  week?: WeekView,
+  onFullReset?: () => void,
 ): () => void {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const el = document.createElement('div');
   el.className = 'title-screen';
+
+  const days = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+  const weekStrip = week
+    ? `<div class="title-week" aria-label="School week progress">
+        ${days
+          .map((day, i) => {
+            const grade = week.grades[i];
+            const current = i === week.night && grade === undefined;
+            return `<span class="title-week-day${current ? ' title-week-day--tonight' : ''}${grade ? ' title-week-day--done' : ''}">
+              <span class="title-week-name">${day}</span>
+              <span class="title-week-grade">${grade ?? (current ? '·' : '')}</span>
+            </span>`;
+          })
+          .join('')}
+        <span class="title-week-card">TONIGHT: ${week.card}</span>
+      </div>`
+    : '';
+  const galleryLine = week && week.galleryCount > 0
+    ? ` · ${week.galleryCount} ending${week.galleryCount === 1 ? '' : 's'} collected`
+    : '';
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-labelledby', 'title-screen-heading');
@@ -290,19 +323,34 @@ export function showTitle(
           </blockquote>
         </div>
       </div>
+      ${weekStrip}
       <p class="title-controls">
         <span><span class="key">WASD</span> move</span>
         <span><span class="key">Mouse</span> look</span>
         <span><span class="key">E</span> interact</span>
+        <span><span class="key">F</span> homework.doc</span>
         <span><span class="key">1–4</span> answer Mum</span>
       </p>
       <footer class="title-footer">
         <button type="button" class="title-begin">Begin</button>
-        <p class="title-footer-note">LEGENDARY GOALS · 2,147,483,647 gp · 99 all stats · <kbd>Enter</kbd></p>
+        <p class="title-footer-note">LEGENDARY GOALS · 2,147,483,647 gp · 99 all stats${galleryLine} · <kbd>Enter</kbd></p>
+        ${onFullReset ? '<button type="button" class="title-reset">Full reset (forget the week and the character)</button>' : ''}
       </footer>
     </div>
   `;
   parent.appendChild(el);
+
+  const resetButton = el.querySelector<HTMLButtonElement>('.title-reset');
+  let resetArmed = false;
+  resetButton?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!resetArmed) {
+      resetArmed = true;
+      resetButton.textContent = 'Click again to really forget everything';
+      return;
+    }
+    onFullReset?.();
+  });
 
   const disposers: (() => void)[] = [];
   if (!reducedMotion) disposers.push(startParallax(el));
