@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { ChoreId } from '../director/director';
 import { makeEnvironmentDetails } from './environment-details';
 import { makeBed, makeDeskChair } from './hero-furniture';
+import { makeWovenRug } from './woven-rug';
 
 export type Interactable =
   | { type: 'item'; itemId: string; chore: ChoreId; name: string }
@@ -933,15 +934,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   mkWall('room-wall-south-header', 0.8, 0.55, -0.8, 2.32, 2, Math.PI);
   scene.add(makeEnvironmentDetails());
 
-  // skirting glow strip for warmth
-  const rug = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), lambert(0x9c4a3c));
-  rug.rotation.x = -Math.PI / 2;
-  rug.position.set(0.1, 0.005, 0.4);
-  scene.add(rug);
-  const rugInner = new THREE.Mesh(new THREE.CircleGeometry(0.62, 24), lambert(0xb86a50));
-  rugInner.rotation.x = -Math.PI / 2;
-  rugInner.position.set(0.1, 0.006, 0.4);
-  scene.add(rugInner);
+  scene.add(makeWovenRug());
 
   // ---- door + hallway recess + mum
   // The hall is a shallow dark box behind the door opening. It stays
