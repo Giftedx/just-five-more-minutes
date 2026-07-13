@@ -422,9 +422,8 @@ function makeHallDressing(): THREE.Group {
   const runnerStripe = lambert(0xb28a4e);
   const wood = lambert(0x7a512d);
   const trim = lambert(0xd8c9ad);
-  const frame = lambert(0x8c6a35);
   const paper = lambert(0xd8c9ac);
-  const brass = lambert(0x9d7132);
+  const brass = metal(0x9d7132);
 
   const runner = named(new THREE.Group(), 'mum-hall-runner');
   const runnerBase = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.95), runnerMaterial);
@@ -443,26 +442,64 @@ function makeHallDressing(): THREE.Group {
   skirting.add(box([0.06, 0.09, 0.92], trim, [0.43, 0.045, 0.04]));
   hall.add(skirting);
 
-  const domestic = named(new THREE.Group(), 'mum-hall-domestic-detail');
-  domestic.add(box([0.2, 0.26, 0.018], frame, [-0.29, 1.36, 0.476]));
-  domestic.add(box([0.15, 0.205, 0.009], paper, [-0.29, 1.36, 0.464]));
-  domestic.add(box([0.09, 0.012, 0.006], runnerMaterial, [-0.29, 1.375, 0.456]));
-  domestic.add(box([0.07, 0.012, 0.006], runnerStripe, [-0.29, 1.335, 0.456]));
-  hall.add(domestic);
+  const portrait = named(new THREE.Group(), 'mum-family-portrait');
+  portrait.add(named(new THREE.Group(), 'mum-hall-domestic-detail'));
+  portrait.add(box([0.2, 0.26, 0.018], brass, [-0.29, 1.36, 0.476]));
+  portrait.add(box([0.158, 0.216, 0.009], paper, [-0.29, 1.36, 0.464]));
+  portrait.add(box([0.125, 0.17, 0.006], lambert(0x3b302b), [-0.29, 1.36, 0.456]));
+  const portraitNavy = lambert(0x3f5067);
+  const family = [
+    { x: -0.032, y: 0.035, radius: 0.016, material: runnerMaterial },
+    { x: 0, y: 0.015, radius: 0.014, material: portraitNavy },
+    { x: 0.032, y: 0.03, radius: 0.012, material: wood },
+  ];
+  for (const member of family) {
+    portrait.add(ellipsoid(
+      member.radius,
+      [7, 5],
+      [0.9, 1.05, 0.62],
+      paper,
+      [-0.29 + member.x, 1.36 + member.y, 0.448],
+    ));
+    portrait.add(box(
+      [member.radius * 2.5, member.radius * 1.7, 0.006],
+      member.material,
+      [-0.29 + member.x, 1.325 + member.y, 0.45],
+    ));
+  }
+  hall.add(portrait);
 
   const practical = named(new THREE.Group(), 'mum-hall-practical');
   practical.position.set(0.26, 1.82, 0.445);
-  practical.add(box([0.12, 0.19, 0.025], brass, [0, 0, 0]));
-  practical.add(box([0.025, 0.12, 0.14], brass, [0, -0.03, -0.075]));
-  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.13, 0.14, 10, 1, true), trim);
-  shade.position.set(0, -0.13, -0.14);
+  const backplate = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.022, 12), brass);
+  backplate.rotation.x = Math.PI / 2;
+  practical.add(backplate);
+  practical.add(limbBetween(
+    'mum-sconce-arm',
+    new THREE.Vector3(0, -0.018, -0.018),
+    new THREE.Vector3(0, -0.105, -0.13),
+    0.012,
+    brass,
+  ));
+  const socket = named(
+    new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.022, 0.055, 10), brass),
+    'mum-sconce-socket',
+  );
+  socket.position.set(0, -0.14, -0.14);
+  practical.add(socket);
+  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.132, 0.145, 12, 1, true), paper);
+  shade.position.set(0, -0.22, -0.14);
   practical.add(shade);
+  const rim = named(new THREE.Mesh(new THREE.TorusGeometry(0.132, 0.007, 5, 14), brass), 'mum-sconce-rim');
+  rim.rotation.x = Math.PI / 2;
+  rim.position.set(0, -0.292, -0.14);
+  practical.add(rim);
   const bulb = ellipsoid(
-    0.045,
+    0.038,
     [9, 6],
-    [0.8, 1.08, 0.8],
+    [0.8, 1.05, 0.8],
     new THREE.MeshBasicMaterial({ color: 0xffd5a0 }),
-    [0, -0.225, -0.14],
+    [0, -0.305, -0.14],
   );
   practical.add(bulb);
   hall.add(practical);
