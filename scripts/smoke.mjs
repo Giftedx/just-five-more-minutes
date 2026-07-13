@@ -819,6 +819,7 @@ try {
       const total = document.querySelector('.sc-total-row');
       const restart = document.querySelector('.sc-restart');
       const volume = document.querySelector('.volume-control');
+      const titleStyle = getComputedStyle(title);
       return {
         role: scorecard.getAttribute('role'),
         modal: scorecard.getAttribute('aria-modal'),
@@ -829,6 +830,11 @@ try {
         total: total.textContent,
         initialScrollTop: scorecard.scrollTop,
         titleFocused: document.activeElement === title,
+        titleOutline: {
+          width: titleStyle.outlineWidth,
+          offset: titleStyle.outlineOffset,
+          style: titleStyle.outlineStyle,
+        },
         restartFocused: document.activeElement === restart,
         volumeDisplay: getComputedStyle(volume).display,
         career: document.querySelector('.sc-career')?.textContent ?? '',
@@ -845,6 +851,11 @@ try {
     assert.equal(state.initialScrollTop, 0, 'nightly report skipped its heading on open');
     assert.equal(state.titleFocused, true, 'nightly report heading did not own initial focus');
     assert.equal(state.restartFocused, false, 'nightly report opened on its final action');
+    assert.deepEqual(
+      state.titleOutline,
+      { width: '2px', offset: '3px', style: 'solid' },
+      'report heading retained the browser-default focus treatment',
+    );
     assert.equal(state.volumeDisplay, 'none');
     assert.match(state.career, /RUN\s+\d+/);
     assert.match(state.seed, /RUN SEED\s*·\s*0x0BADC0DE/);

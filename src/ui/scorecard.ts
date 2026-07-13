@@ -65,7 +65,7 @@ export function showScorecard(
     <div class="sc-card">
       <div class="sc-header">
         <div class="sc-stamp">FILED</div>
-        <div class="sc-title" id="incident-report-title">HOUSEHOLD INCIDENT REPORT</div>
+        <div class="sc-title" id="incident-report-title" tabindex="-1">HOUSEHOLD INCIDENT REPORT</div>
         <div class="sc-subtitle">RE: the five minutes before dinner · ${stats.nightCard}</div>
       </div>
       <div class="sc-body">
@@ -96,7 +96,7 @@ export function showScorecard(
   parent.appendChild(el);
   const restartButton = el.querySelector<HTMLButtonElement>('.sc-restart');
   restartButton?.addEventListener('click', () => onRestart());
-  restartButton?.focus();
+  el.querySelector<HTMLElement>('.sc-title')?.focus({ preventScroll: true });
   return el;
 }
 
@@ -125,7 +125,7 @@ export function showWeekVerdict(
     <div class="sc-card">
       <div class="sc-header">
         <div class="sc-stamp">STAPLED</div>
-        <div class="sc-title" id="week-verdict-title">THE WEEK VERDICT</div>
+        <div class="sc-title" id="week-verdict-title" tabindex="-1">THE WEEK VERDICT</div>
         <div class="sc-subtitle">Five evenings. One conclusion.</div>
       </div>
       <div class="sc-body">
@@ -146,7 +146,7 @@ export function showWeekVerdict(
   parent.appendChild(el);
   const button = el.querySelector<HTMLButtonElement>('.sc-restart');
   button?.addEventListener('click', () => onNewWeek());
-  button?.focus();
+  el.querySelector<HTMLElement>('.sc-title')?.focus({ preventScroll: true });
   return el;
 }
 
