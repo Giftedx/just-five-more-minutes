@@ -85,7 +85,7 @@ function batchStaticMeshes(
   const inverseRoot = root.matrixWorld.clone().invert();
   const batches = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
   const meshes: THREE.Mesh[] = [];
-  const removedNames = new Set<string>();
+  const removedNames = new Map<string, THREE.Matrix4>();
   const isProtected = (object: THREE.Object3D): boolean => {
     for (let cursor: THREE.Object3D | null = object; cursor; cursor = cursor.parent) {
       if (protectedRoots.includes(cursor)) return true;
@@ -106,7 +106,7 @@ function batchStaticMeshes(
     }
     batch.geometries.push(object.geometry.clone().applyMatrix4(relative));
     meshes.push(object);
-    if (object.name) removedNames.add(object.name);
+    if (object.name) removedNames.set(object.name, relative.clone());
   });
 
   for (const mesh of meshes) mesh.removeFromParent();
@@ -116,8 +116,11 @@ function batchStaticMeshes(
     if (!geometry) throw new Error(`Could not batch ${batchName}`);
     root.add(named(new THREE.Mesh(geometry, material), `${batchName}-${index++}`));
   }
-  for (const name of removedNames) {
-    if (!root.getObjectByName(name)) root.add(named(new THREE.Group(), name));
+  for (const [name, relative] of removedNames) {
+    if (root.getObjectByName(name)) continue;
+    const marker = named(new THREE.Group(), name);
+    marker.applyMatrix4(relative);
+    root.add(marker);
   }
 }
 
@@ -320,7 +323,7 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   batchStaticMeshes(head, 'mum-head-batch', [expression]);
   batchStaticMeshes(towel, 'mum-towel-batch');
   batchStaticMeshes(character, 'mum-body-batch', [head, towel]);
-  character.position.z = 0.22;
+  character.position.z = 0.43;
   character.rotation.y = Math.PI;
   return { character, head, towel };
 }
@@ -383,7 +386,7 @@ function makeHallDressing(): THREE.Group {
   contact.name = 'mum-contact-cue';
   contact.rotation.x = -Math.PI / 2;
   contact.scale.y = 0.62;
-  contact.position.set(0, 0.013, 0.22);
+  contact.position.set(0, 0.013, 0.43);
   hall.add(contact);
   batchStaticMeshes(hall, 'mum-hall-batch');
   return hall;

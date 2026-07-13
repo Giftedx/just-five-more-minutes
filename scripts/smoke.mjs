@@ -413,6 +413,9 @@ try {
           hallName: hall?.name,
           namedParts: names.map((name) => root?.getObjectByName(name)?.name),
           rootVisible: root?.visible,
+          characterDepth: mum?.position.z,
+          contactDepth: root?.getObjectByName('mum-contact-cue')?.position.z,
+          thresholdDepth: root?.getObjectByName('mum-hall-threshold')?.position.z,
           mum: metrics(mum),
           hall: metrics(hall),
           projected: projectedBounds(mum),
@@ -452,6 +455,9 @@ try {
         'mum-contact-cue',
       ]);
       assert.equal(before.rootVisible, true);
+      assert.ok(before.characterDepth >= 0.4 && before.characterDepth <= 0.46, JSON.stringify(before));
+      assert.ok(before.contactDepth >= 0.4 && before.contactDepth <= 0.46, JSON.stringify(before));
+      assert.ok(before.thresholdDepth >= -0.52 && before.thresholdDepth <= -0.46, JSON.stringify(before));
       assert.ok(before.mum.meshes <= 45 && before.mum.triangles <= 2500, JSON.stringify(before));
       assert.equal(before.mum.textures, 1);
       assert.ok(before.hall.meshes <= 16 && before.hall.triangles <= 900, JSON.stringify(before));
