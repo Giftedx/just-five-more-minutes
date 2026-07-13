@@ -81,7 +81,7 @@ await scenario('bedroom rendering has a bounded material and shadow foundation',
 
 - [ ] **Step 2: Run the focused browser suite and prove RED**
 
-Run: `npm run build && npm run smoke`
+Run: `npm run build && npm run test:browser`
 
 Expected: FAIL in `bedroom rendering has a bounded material and shadow foundation`, with `bedroom still uses NoToneMapping` as the first rendering-contract failure.
 
@@ -178,7 +178,7 @@ Create one wall texture and one floor texture per room. Use white Lambert materi
 
 - [ ] **Step 3: Run build and inspect the generated room**
 
-Run: `npm run build && npm run smoke`
+Run: `npm run build && npm run test:browser`
 
 Expected: the new map assertions pass; the scenario still fails because `room-key-light` and `room-desk` shadow participation have not been added.
 
@@ -225,7 +225,7 @@ Reduce the existing practical point light from intensity 14 to 7 so it becomes f
 
 - [ ] **Step 3: Run the browser contract and prove GREEN**
 
-Run: `npm run build && npm run smoke`
+Run: `npm run build && npm run test:browser`
 
 Expected: all smoke scenarios pass, including one shadow light named `room-key-light`, 1024 by 1024 shadow map, mapped shell, and desk caster assertions.
 
@@ -254,7 +254,7 @@ Reject the calibration if the dialogue text loses contrast, the wall texture rea
 
 - [ ] **Step 2: Calibrate only documented rendering constants**
 
-If necessary, adjust only renderer exposure, texture alpha/repeats, fill/key intensity, spotlight penumbra, and shadow bias. Do not widen into geometry or UI changes. After every calibration edit, rerun `npm run build && npm run smoke`.
+If necessary, adjust only renderer exposure, texture alpha/repeats, fill/key intensity, spotlight penumbra, and shadow bias. Do not widen into geometry or UI changes. After every calibration edit, rerun `npm run build && npm run test:browser`.
 
 - [ ] **Step 3: Run full verification**
 

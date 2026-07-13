@@ -354,6 +354,53 @@ try {
     );
   });
 
+  await scenario(
+    'bedroom rendering has a bounded material and shadow foundation',
+    { viewport: { width: 1000, height: 700 } },
+    async (page) => {
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
+
+      const state = await page.evaluate(() => {
+        const host = window.__game['host'];
+        const scene = host.room.scene;
+        const floor = scene.getObjectByName('room-floor');
+        const wall = scene.getObjectByName('room-wall-north');
+        const desk = scene.getObjectByName('room-desk');
+        const key = scene.getObjectByName('room-key-light');
+        const shadowLights = [];
+        scene.traverse((object) => {
+          if (object.isLight && object.castShadow) shadowLights.push(object.name);
+        });
+        return {
+          toneMapping: host.renderer.toneMapping,
+          outputColorSpace: host.renderer.outputColorSpace,
+          shadowsEnabled: host.renderer.shadowMap.enabled,
+          shadowType: host.renderer.shadowMap.type,
+          floorMapped: Boolean(floor?.material?.map),
+          wallMapped: Boolean(wall?.material?.map),
+          floorReceives: floor?.receiveShadow,
+          deskCasts: desk?.castShadow,
+          keyCasts: key?.castShadow,
+          shadowSize: [key?.shadow?.mapSize?.width, key?.shadow?.mapSize?.height],
+          shadowLights,
+        };
+      });
+
+      assert.notEqual(state.toneMapping, 0, 'bedroom still uses NoToneMapping');
+      assert.equal(state.outputColorSpace, 'srgb');
+      assert.equal(state.shadowsEnabled, true);
+      assert.notEqual(state.shadowType, 0);
+      assert.equal(state.floorMapped, true);
+      assert.equal(state.wallMapped, true);
+      assert.equal(state.floorReceives, true);
+      assert.equal(state.deskCasts, true);
+      assert.equal(state.keyCasts, true);
+      assert.deepEqual(state.shadowSize, [1024, 1024]);
+      assert.deepEqual(state.shadowLights, ['room-key-light']);
+    },
+  );
+
   await scenario('room-mode MMO render cadence is capped', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await gotoOk(page, { skipTitle: 1, seed: 6 });
     await page.waitForFunction(() => {
