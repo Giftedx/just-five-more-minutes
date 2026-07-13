@@ -28,8 +28,8 @@ const lambert = (color: number): THREE.MeshLambertMaterial => new THREE.MeshLamb
 
 const metal = (color: number): THREE.MeshPhongMaterial => new THREE.MeshPhongMaterial({
   color,
-  specular: 0xffd8a0,
-  shininess: 58,
+  specular: 0x6f4c24,
+  shininess: 32,
 });
 
 function named<T extends THREE.Object3D>(object: T, name: string): T {
@@ -301,8 +301,9 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   neckline.rotation.z = Math.PI;
   character.add(neckline);
   const ribbing = named(new THREE.Group(), 'mum-cardigan-ribbing');
-  for (const y of [0.805, 0.815, 0.825]) {
-    ribbing.add(box([0.28, 0.006, 0.01], cardiganDark, [0, y, 0.093]));
+  ribbing.position.set(0, 0.815, 0.093);
+  for (const y of [-0.01, 0, 0.01]) {
+    ribbing.add(box([0.28, 0.006, 0.01], cardiganDark, [0, y, 0]));
   }
   character.add(ribbing);
   for (const y of [1.09, 1.01, 0.93]) {
@@ -340,11 +341,11 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   character.add(ellipsoid(0.019, [7, 5], [0.7, 1.05, 0.7], skinShadow, [-0.086, 0.902, 0.205], 'mum-thumb-right'));
   character.add(box([0.07, 0.035, 0.075], cardiganLight, [0.086, 0.92, 0.145], 'mum-cuff-left'));
   character.add(box([0.07, 0.035, 0.075], cardiganDark, [-0.09, 0.89, 0.168], 'mum-cuff-right'));
-  const necklace = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.004, 4, 12, Math.PI), gold);
-  necklace.position.set(0, 1.12, 0.157);
+  const necklace = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.0025, 4, 12, Math.PI), gold);
+  necklace.position.set(0, 1.115, 0.157);
   necklace.rotation.z = Math.PI;
   character.add(necklace);
-  character.add(ellipsoid(0.012, [7, 5], [0.82, 1, 0.65], gold, [0, 1.065, 0.163], 'mum-locket'));
+  character.add(ellipsoid(0.008, [7, 5], [0.82, 1, 0.65], gold, [0, 1.078, 0.163], 'mum-locket'));
 
   const towel = named(new THREE.Group(), 'mum-tea-towel');
   towel.add(box([0.105, 0.19, 0.022], towelMaterial, [-0.055, 0.79, 0.213]));
@@ -395,10 +396,6 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   const hairPart = box([0.008, 0.07, 0.01], hair, [-0.018, 0.105, 0.108], 'mum-hair-part');
   hairPart.rotation.z = -0.2;
   head.add(hairPart);
-  const hairSweep = new THREE.Mesh(new THREE.TorusGeometry(0.088, 0.006, 4, 12, Math.PI * 0.72), hairLight);
-  hairSweep.position.set(0.006, 0.105, 0.065);
-  hairSweep.rotation.z = 0.22;
-  head.add(hairSweep);
   head.add(ellipsoid(0.058, [10, 7], [1, 1, 0.88], hair, [0, 0.075, -0.125], 'mum-hair-bun'));
   const bunPin = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.085, 6), gold);
   bunPin.position.set(0.035, 0.092, -0.165);
@@ -423,7 +420,7 @@ function makeHallDressing(): THREE.Group {
   const wood = lambert(0x7a512d);
   const trim = lambert(0xd8c9ad);
   const paper = lambert(0xd8c9ac);
-  const brass = metal(0x9d7132);
+  const brass = metal(0x6c4822);
 
   const runner = named(new THREE.Group(), 'mum-hall-runner');
   const runnerBase = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.95), runnerMaterial);
@@ -443,10 +440,11 @@ function makeHallDressing(): THREE.Group {
   hall.add(skirting);
 
   const portrait = named(new THREE.Group(), 'mum-family-portrait');
+  portrait.position.set(-0.29, 1.36, 0.456);
   portrait.add(named(new THREE.Group(), 'mum-hall-domestic-detail'));
-  portrait.add(box([0.2, 0.26, 0.018], brass, [-0.29, 1.36, 0.476]));
-  portrait.add(box([0.158, 0.216, 0.009], paper, [-0.29, 1.36, 0.464]));
-  portrait.add(box([0.125, 0.17, 0.006], lambert(0x3b302b), [-0.29, 1.36, 0.456]));
+  portrait.add(box([0.2, 0.26, 0.018], brass, [0, 0, 0.02]));
+  portrait.add(box([0.158, 0.216, 0.009], paper, [0, 0, 0.008]));
+  portrait.add(box([0.125, 0.17, 0.006], lambert(0x3b302b), [0, 0, 0]));
   const portraitNavy = lambert(0x3f5067);
   const family = [
     { x: -0.032, y: 0.035, radius: 0.016, material: runnerMaterial },
@@ -459,21 +457,19 @@ function makeHallDressing(): THREE.Group {
       [7, 5],
       [0.9, 1.05, 0.62],
       paper,
-      [-0.29 + member.x, 1.36 + member.y, 0.448],
+      [member.x, member.y, -0.008],
     ));
     portrait.add(box(
       [member.radius * 2.5, member.radius * 1.7, 0.006],
       member.material,
-      [-0.29 + member.x, 1.325 + member.y, 0.45],
+      [member.x, member.y - 0.035, -0.006],
     ));
   }
   hall.add(portrait);
 
   const practical = named(new THREE.Group(), 'mum-hall-practical');
   practical.position.set(0.26, 1.82, 0.445);
-  const backplate = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.022, 12), brass);
-  backplate.rotation.x = Math.PI / 2;
-  practical.add(backplate);
+  practical.add(ellipsoid(0.04, [8, 6], [0.7, 1, 0.22], wood, [0, 0, 0]));
   practical.add(limbBetween(
     'mum-sconce-arm',
     new THREE.Vector3(0, -0.018, -0.018),

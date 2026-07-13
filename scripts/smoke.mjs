@@ -371,6 +371,7 @@ try {
           let lights = 0;
           const textures = new Map();
           const materialTypes = new Set();
+          let maxPhongSpecular = 0;
           target?.traverse((object) => {
             if (object.isMesh) {
               meshes++;
@@ -382,6 +383,14 @@ try {
               for (const material of materials) {
                 if (!material) continue;
                 materialTypes.add(material.type);
+                if (material.isMeshPhongMaterial) {
+                  maxPhongSpecular = Math.max(
+                    maxPhongSpecular,
+                    material.specular.r,
+                    material.specular.g,
+                    material.specular.b,
+                  );
+                }
                 if (material.map) {
                   textures.set(material.map.uuid, {
                     width: material.map.image?.width,
@@ -400,6 +409,7 @@ try {
             lights,
             textures: [...textures.values()],
             materialTypes: [...materialTypes],
+            maxPhongSpecular,
           };
         };
         const belongsTo = (object, target) => {
@@ -438,6 +448,14 @@ try {
           };
         };
         host.renderer.render(scene, host.camera);
+        const portraitMarker = root?.getObjectByName('mum-family-portrait');
+        const portraitWorld = portraitMarker
+          ? portraitMarker.localToWorld(portraitMarker.position.clone().set(0, 0, 0)).toArray()
+          : undefined;
+        const domesticAlias = root?.getObjectByName('mum-hall-domestic-detail');
+        const domesticAliasWorld = domesticAlias
+          ? domesticAlias.localToWorld(domesticAlias.position.clone().set(0, 0, 0)).toArray()
+          : undefined;
         return {
           rootName: root?.name,
           mumName: mum?.name,
@@ -447,6 +465,12 @@ try {
           characterDepth: mum?.position.z,
           contactDepth: root?.getObjectByName('mum-contact-cue')?.position.z,
           thresholdDepth: root?.getObjectByName('mum-hall-threshold')?.position.z,
+          markerPositions: {
+            ribbing: root?.getObjectByName('mum-cardigan-ribbing')?.position.toArray(),
+            portrait: portraitMarker?.position.toArray(),
+            portraitWorld,
+            domesticAlias: domesticAliasWorld,
+          },
           mum: metrics(mum),
           hall: metrics(hall),
           projected: projectedBounds(mum),
@@ -502,6 +526,23 @@ try {
       assert.ok(before.characterDepth >= 0.4 && before.characterDepth <= 0.46, JSON.stringify(before));
       assert.ok(before.contactDepth >= 0.4 && before.contactDepth <= 0.46, JSON.stringify(before));
       assert.ok(before.thresholdDepth >= -0.52 && before.thresholdDepth <= -0.46, JSON.stringify(before));
+      assert.ok(
+        before.markerPositions.ribbing[1] >= 0.8
+          && before.markerPositions.ribbing[1] <= 0.83
+          && before.markerPositions.ribbing[2] >= 0.08
+          && before.markerPositions.ribbing[2] <= 0.1,
+        JSON.stringify(before),
+      );
+      assert.ok(
+        before.markerPositions.portrait[0] >= -0.31
+          && before.markerPositions.portrait[0] <= -0.27
+          && before.markerPositions.portrait[1] >= 1.34
+          && before.markerPositions.portrait[1] <= 1.38
+          && before.markerPositions.portrait[2] >= 0.45
+          && before.markerPositions.portrait[2] <= 0.48,
+        JSON.stringify(before),
+      );
+      assert.deepEqual(before.markerPositions.domesticAlias, before.markerPositions.portraitWorld);
       assert.ok(before.mum.meshes <= 45 && before.mum.triangles <= 3400, JSON.stringify(before));
       assert.deepEqual(before.mum.textures, [{ width: 192, height: 192, colorSpace: 'srgb' }]);
       assert.ok(before.hall.meshes <= 16 && before.hall.triangles <= 1200, JSON.stringify(before));
@@ -510,6 +551,7 @@ try {
       const phongCount = [...before.mum.materialTypes, ...before.hall.materialTypes]
         .filter((type) => type === 'MeshPhongMaterial').length;
       assert.ok(phongCount >= 1 && phongCount <= 2, JSON.stringify(before));
+      assert.ok(Math.max(before.mum.maxPhongSpecular, before.hall.maxPhongSpecular) <= 0.7, JSON.stringify(before));
       assert.equal(materialTypes.has('MeshStandardMaterial'), false);
       assert.equal(materialTypes.has('MeshPhysicalMaterial'), false);
       assert.equal(before.mum.casters + before.hall.casters, 0);
