@@ -659,6 +659,108 @@ try {
     },
   );
 
+  await scenario(
+    'bedroom rug stays authored, inert, and bounded',
+    { viewport: { width: 1000, height: 700 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
+
+      const state = await page.evaluate(() => {
+        const host = window.__game['host'];
+        const root = host.room.scene.getObjectByName('room-rug');
+        const surface = root?.getObjectByName('room-rug-surface');
+        const braid = root?.getObjectByName('room-rug-braid');
+        const textures = new Map();
+        let meshCount = 0;
+        let triangles = 0;
+        let lights = 0;
+        let casters = 0;
+        let interactions = 0;
+        root?.traverse((object) => {
+          if (object.isMesh) {
+            meshCount++;
+            const multiplier = object.isInstancedMesh ? object.count : 1;
+            const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
+            triangles += Math.floor(primitives / 3) * multiplier;
+            if (object.castShadow) casters++;
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            for (const material of materials) {
+              if (material?.map) {
+                textures.set(material.map.uuid, {
+                  colorSpace: material.map.colorSpace,
+                  width: material.map.image?.width,
+                  height: material.map.image?.height,
+                });
+              }
+            }
+          }
+          if (object.isLight) lights++;
+          if (object.userData?.interact) interactions++;
+        });
+        const belongsToRoot = (object) => {
+          for (let cursor = object; cursor; cursor = cursor.parent) {
+            if (cursor === root) return true;
+          }
+          return false;
+        };
+        const relief = surface?.geometry.attributes.position
+          ? [...new Set(Array.from(surface.geometry.attributes.position.array)
+            .filter((_, index) => index % 3 === 2)
+            .map((value) => Number(value.toFixed(4))))]
+          : [];
+        host.renderer.render(host.room.scene, host.camera);
+        return {
+          rootName: root?.name,
+          children: [
+            root?.getObjectByName('room-rug-surface')?.name,
+            root?.getObjectByName('room-rug-braid')?.name,
+          ],
+          position: root ? root.position.toArray() : null,
+          meshCount,
+          triangles,
+          textures: [...textures.values()],
+          surfaceHasUvs: Boolean(surface?.geometry.attributes.uv),
+          relief,
+          braidVertexColors: braid?.material.vertexColors,
+          lights,
+          casters,
+          interactions,
+          interactableMembers: root ? host.room.interactables.filter(belongsToRoot).length : 0,
+          shadowsEnabled: host.renderer.shadowMap.enabled,
+          roomCalls: host.renderer.info.render.calls,
+          rendererTextures: host.renderer.info.memory.textures,
+        };
+      });
+
+      assert.equal(state.rootName, 'room-rug');
+      assert.deepEqual(state.children, ['room-rug-surface', 'room-rug-braid']);
+      assert.deepEqual(state.position, [0.1, 0, 0.4]);
+      assert.equal(state.meshCount, 2);
+      assert.ok(state.triangles <= 500, `rug triangle budget exceeded: ${state.triangles}`);
+      assert.deepEqual(state.textures, [{ colorSpace: 'srgb', width: 256, height: 192 }]);
+      assert.equal(state.surfaceHasUvs, true);
+      assert.ok(state.relief.length >= 3, `rug surface is mathematically flat: ${state.relief}`);
+      assert.ok(Math.max(...state.relief.map(Math.abs)) <= 0.003, `rug relief hides props: ${state.relief}`);
+      assert.equal(state.braidVertexColors, true);
+      assert.equal(state.lights, 0);
+      assert.equal(state.casters, 0);
+      assert.equal(state.interactions, 0);
+      assert.equal(state.interactableMembers, 0);
+      assert.equal(state.shadowsEnabled, false);
+      assert.ok(state.roomCalls <= 128, `room draw-call budget exceeded: ${state.roomCalls}`);
+      assert.ok(state.rendererTextures <= 12, `room texture budget exceeded: ${state.rendererTextures}`);
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
   await scenario('room-mode MMO render cadence is capped', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await gotoOk(page, { skipTitle: 1, seed: 6 });
     await page.waitForFunction(() => {
