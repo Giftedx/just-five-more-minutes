@@ -553,6 +553,7 @@ export class Game {
       wrap.style.setProperty('--volume-level', `${percentage}%`);
       wrap.dataset.muted = String(percentage === 0);
       level.value = percentage === 0 ? 'OFF' : `${percentage}%`;
+      level.style.color = wrap.dataset.muted === 'true' ? '#9d9279' : '';
     };
 
     let initial = this.audio.getVolume();

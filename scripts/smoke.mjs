@@ -272,16 +272,17 @@ try {
       assert.equal(await label.getAttribute('for'), 'j5mm-volume-slider');
       assert.equal(await slider.getAttribute('aria-label'), 'Volume');
       assert.equal(await level.textContent(), '60%');
+      assert.equal(await level.getAttribute('aria-hidden'), 'true');
       const initialState = await control.evaluate((element) => ({
           fill: element.style.getPropertyValue('--volume-level'),
           muted: element.dataset.muted,
-          height: element.getBoundingClientRect().height,
       }));
       assert.deepEqual(
         { fill: initialState.fill, muted: initialState.muted },
         { fill: '60%', muted: 'false' },
       );
-      assert.ok(initialState.height >= 32, `volume pointer target was ${initialState.height}px high`);
+      const sliderHeight = await slider.evaluate((element) => element.getBoundingClientRect().height);
+      assert.ok(sliderHeight >= 32, `volume pointer target was ${sliderHeight}px high`);
       assert.equal(await slider.evaluate((element) => getComputedStyle(element).appearance), 'none');
 
       await slider.focus();
@@ -291,7 +292,7 @@ try {
       assert.equal(await page.evaluate(() => localStorage.getItem('j5mm-volume')), '0.65');
       assert.equal(await page.evaluate(() => window.__game.audio.getVolume()), 0.65);
       assert.deepEqual(
-        await slider.evaluate((element) => {
+        await control.evaluate((element) => {
           const style = getComputedStyle(element);
           return { width: style.outlineWidth, style: style.outlineStyle, color: style.outlineColor };
         }),
@@ -307,8 +308,22 @@ try {
         await control.evaluate((element) => ({
           fill: element.style.getPropertyValue('--volume-level'),
           muted: element.dataset.muted,
+          levelColor: getComputedStyle(element.querySelector('.volume-control-level')).color,
         })),
-        { fill: '0%', muted: 'true' },
+        { fill: '0%', muted: 'true', levelColor: 'rgb(157, 146, 121)' },
+      );
+
+      await slider.evaluate((element) => {
+        element.value = '1';
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      assert.equal(await level.textContent(), '100%');
+      assert.deepEqual(
+        await control.evaluate((element) => ({
+          fill: element.style.getPropertyValue('--volume-level'),
+          muted: element.dataset.muted,
+        })),
+        { fill: '100%', muted: 'false' },
       );
 
       await page.setViewportSize({ width: 900, height: 400 });

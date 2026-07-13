@@ -2269,18 +2269,17 @@ body {
   --volume-level: 60%;
   position: absolute;
   right: 16px;
-  bottom: 14px;
+  bottom: 12px;
   z-index: 35;
   box-sizing: border-box;
   width: 166px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
+  padding: 0 8px;
   border: 1px solid #d8a85557;
   border-radius: 6px;
-  background: linear-gradient(155deg, #1f1911f5, #0c0a07f5);
-  box-shadow: 0 8px 22px #0000007a;
+  background: #17130d;
   font: 700 9px 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -2289,7 +2288,6 @@ body {
   flex: 0 0 38px;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
 }
 
 .volume-control label {
@@ -2299,13 +2297,13 @@ body {
 
 .volume-control-level {
   color: #e8c33f;
-  font: 700 10px ui-monospace, monospace;
+  font: 700 10px monospace;
 }
 
 .volume-control input {
   appearance: none;
   width: 104px;
-  height: 22px;
+  height: 32px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -2318,9 +2316,8 @@ body {
   border: 1px solid #d8a8554d;
   border-radius: 2px;
   background:
-    repeating-linear-gradient(90deg, transparent 0 10px, #fff4d221 10px 11px),
-    linear-gradient(90deg, #e8c33f 0 var(--volume-level), #211b12 var(--volume-level) 100%);
-  box-shadow: inset 0 1px 2px #000000e6;
+    repeating-linear-gradient(90deg, #0000 0 10px, #fff4d221 10px 11px),
+    linear-gradient(90deg, #e8c33f var(--volume-level), #211b12 0);
 }
 
 .volume-control input::-webkit-slider-thumb {
@@ -2330,8 +2327,7 @@ body {
   margin-top: -6px;
   border: 1px solid #7a6225;
   border-radius: 2px;
-  background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
-  box-shadow: 0 2px 4px #000000bf;
+  background: linear-gradient(#ffe078 24%, #d1a62d 25% 72%, #705719 73%);
 }
 
 .volume-control input::-moz-range-track {
@@ -2339,7 +2335,6 @@ body {
   border: 1px solid #d8a8554d;
   border-radius: 2px;
   background: #211b12;
-  box-shadow: inset 0 1px 2px #000000e6;
 }
 
 .volume-control input::-moz-range-progress {
@@ -2353,13 +2348,12 @@ body {
   height: 16px;
   border: 1px solid #7a6225;
   border-radius: 2px;
-  background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
-  box-shadow: 0 2px 4px #000000bf;
+  background: linear-gradient(#ffe078 24%, #d1a62d 25% 72%, #705719 73%);
 }
 
-.volume-control input:focus-visible {
+.volume-control:focus-within {
   outline: 2px solid #e8c33f;
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 /* ---- Mum status ticket (household pressure, not debug telemetry) ---- */

@@ -48,16 +48,17 @@ Insert this scenario between the pointer-lock and dialogue-staging scenarios:
       assert.equal(await label.getAttribute('for'), 'j5mm-volume-slider');
       assert.equal(await slider.getAttribute('aria-label'), 'Volume');
       assert.equal(await level.textContent(), '60%');
+      assert.equal(await level.getAttribute('aria-hidden'), 'true');
       const initialState = await control.evaluate((element) => ({
           fill: element.style.getPropertyValue('--volume-level'),
           muted: element.dataset.muted,
-          height: element.getBoundingClientRect().height,
       }));
       assert.deepEqual(
         { fill: initialState.fill, muted: initialState.muted },
         { fill: '60%', muted: 'false' },
       );
-      assert.ok(initialState.height >= 32, `volume pointer target was ${initialState.height}px high`);
+      const sliderHeight = await slider.evaluate((element) => element.getBoundingClientRect().height);
+      assert.ok(sliderHeight >= 32, `volume pointer target was ${sliderHeight}px high`);
       assert.equal(await slider.evaluate((element) => getComputedStyle(element).appearance), 'none');
 
       await slider.focus();
@@ -67,7 +68,7 @@ Insert this scenario between the pointer-lock and dialogue-staging scenarios:
       assert.equal(await page.evaluate(() => localStorage.getItem('j5mm-volume')), '0.65');
       assert.equal(await page.evaluate(() => window.__game.audio.getVolume()), 0.65);
       assert.deepEqual(
-        await slider.evaluate((element) => {
+        await control.evaluate((element) => {
           const style = getComputedStyle(element);
           return { width: style.outlineWidth, style: style.outlineStyle, color: style.outlineColor };
         }),
@@ -83,8 +84,22 @@ Insert this scenario between the pointer-lock and dialogue-staging scenarios:
         await control.evaluate((element) => ({
           fill: element.style.getPropertyValue('--volume-level'),
           muted: element.dataset.muted,
+          levelColor: getComputedStyle(element.querySelector('.volume-control-level')).color,
         })),
-        { fill: '0%', muted: 'true' },
+        { fill: '0%', muted: 'true', levelColor: 'rgb(157, 146, 121)' },
+      );
+
+      await slider.evaluate((element) => {
+        element.value = '1';
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      assert.equal(await level.textContent(), '100%');
+      assert.deepEqual(
+        await control.evaluate((element) => ({
+          fill: element.style.getPropertyValue('--volume-level'),
+          muted: element.dataset.muted,
+        })),
+        { fill: '100%', muted: 'false' },
       );
 
       await page.setViewportSize({ width: 900, height: 400 });
@@ -160,6 +175,7 @@ Change `buildVolumeControl()` so its construction and synchronization follow thi
       wrap.style.setProperty('--volume-level', `${percentage}%`);
       wrap.dataset.muted = String(percentage === 0);
       level.value = percentage === 0 ? 'OFF' : `${percentage}%`;
+      level.style.color = wrap.dataset.muted === 'true' ? '#9d9279' : '';
     };
 ```
 
@@ -174,18 +190,17 @@ Replace the volume CSS block with:
   --volume-level: 60%;
   position: absolute;
   right: 16px;
-  bottom: 14px;
+  bottom: 12px;
   z-index: 35;
   box-sizing: border-box;
   width: 166px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
+  padding: 0 8px;
   border: 1px solid #d8a85557;
   border-radius: 6px;
-  background: linear-gradient(155deg, #1f1911f5, #0c0a07f5);
-  box-shadow: 0 8px 22px #0000007a;
+  background: #17130d;
   font: 700 9px 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -194,7 +209,6 @@ Replace the volume CSS block with:
   flex: 0 0 38px;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
 }
 
 .volume-control label {
@@ -204,13 +218,13 @@ Replace the volume CSS block with:
 
 .volume-control-level {
   color: #e8c33f;
-  font: 700 10px ui-monospace, monospace;
+  font: 700 10px monospace;
 }
 
 .volume-control input {
   appearance: none;
   width: 104px;
-  height: 22px;
+  height: 32px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -223,9 +237,8 @@ Replace the volume CSS block with:
   border: 1px solid #d8a8554d;
   border-radius: 2px;
   background:
-    repeating-linear-gradient(90deg, transparent 0 10px, #fff4d221 10px 11px),
-    linear-gradient(90deg, #e8c33f 0 var(--volume-level), #211b12 var(--volume-level) 100%);
-  box-shadow: inset 0 1px 2px #000000e6;
+    repeating-linear-gradient(90deg, #0000 0 10px, #fff4d221 10px 11px),
+    linear-gradient(90deg, #e8c33f var(--volume-level), #211b12 0);
 }
 
 .volume-control input::-webkit-slider-thumb {
@@ -235,8 +248,7 @@ Replace the volume CSS block with:
   margin-top: -6px;
   border: 1px solid #7a6225;
   border-radius: 2px;
-  background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
-  box-shadow: 0 2px 4px #000000bf;
+  background: linear-gradient(#ffe078 24%, #d1a62d 25% 72%, #705719 73%);
 }
 
 .volume-control input::-moz-range-track {
@@ -244,7 +256,6 @@ Replace the volume CSS block with:
   border: 1px solid #d8a8554d;
   border-radius: 2px;
   background: #211b12;
-  box-shadow: inset 0 1px 2px #000000e6;
 }
 
 .volume-control input::-moz-range-progress {
@@ -258,13 +269,12 @@ Replace the volume CSS block with:
   height: 16px;
   border: 1px solid #7a6225;
   border-radius: 2px;
-  background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
-  box-shadow: 0 2px 4px #000000bf;
+  background: linear-gradient(#ffe078 24%, #d1a62d 25% 72%, #705719 73%);
 }
 
-.volume-control input:focus-visible {
+.volume-control:focus-within {
   outline: 2px solid #e8c33f;
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 ```
