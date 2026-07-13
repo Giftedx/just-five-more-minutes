@@ -6,3 +6,4 @@ dist/
 .review-notes.md
 shots/
 preview.log
+.worktrees/
