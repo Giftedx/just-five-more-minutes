@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ChoreId } from '../director/director';
 import { makeEnvironmentDetails } from './environment-details';
+import { makeBed, makeDeskChair } from './hero-furniture';
 
 export type Interactable =
   | { type: 'item'; itemId: string; chore: ChoreId; name: string }
@@ -1162,11 +1163,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   scene.add(mouse);
 
   // chair
-  const chair = new THREE.Group();
-  chair.add(box(0.42, 0.06, 0.42, lambert(0x4a4a56), 0, 0.46, 0));
-  chair.add(box(0.42, 0.55, 0.06, lambert(0x4a4a56), 0, 0.78, 0.2));
-  chair.add(box(0.06, 0.46, 0.06, lambert(0x2e2e36), 0, 0.23, 0));
-  chair.add(box(0.4, 0.04, 0.4, lambert(0x2e2e36), 0, 0.02, 0));
+  const chair = makeDeskChair();
   chair.position.set(0.9, 0, -0.95);
   scene.add(chair);
   tagInteract(chair, { type: 'pc' });
@@ -1174,11 +1171,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   colliders.push(colliderAt(0.9, -0.95, 0.5, 0.5, 0.9));
 
   // ---- bed (west wall)
-  const bed = new THREE.Group();
-  bed.add(box(0.95, 0.22, 2.0, lambert(WOOD_DARK), 0, 0.11, 0));
-  bed.add(box(0.9, 0.16, 1.95, lambert(0xcab694), 0, 0.3, 0));
-  bed.add(box(0.8, 0.1, 0.4, lambert(0xe8e2d4), 0, 0.42, -0.7)); // pillow
-  bed.add(box(0.92, 0.08, 1.1, lambert(0x6e4a8c), 0, 0.4, 0.35)); // blanket
+  const bed = makeBed();
   bed.position.set(-1.95, 0, -0.4);
   scene.add(bed);
   colliders.push(colliderAt(-1.95, -0.4, 1.05, 2.1, 0.6));
@@ -1407,9 +1400,8 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   calRing.position.set(1.66, 1.578, -1.994);
   scene.add(calRing);
 
-  // headboard + slippers by the bed (kicked off at slightly drunk angles,
+  // Slippers by the bed, kicked off at slightly drunk angles,
   // as worn slippers always are)
-  scene.add(box(0.95, 0.55, 0.05, lambert(WOOD_DARK), -1.95, 0.45, -1.43));
   for (const [sx, sz, ry] of [
     [-1.36, 0.78, 0.25],
     [-1.32, 0.97, -0.45],
