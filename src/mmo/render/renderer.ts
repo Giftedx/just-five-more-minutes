@@ -30,16 +30,6 @@ export type TradeAction =
   | { kind: 'bread' }
   | { kind: 'done' };
 
-/** Hobgoblins: like goblins, but with ambition. Rust skin, meaner eyes. */
-const HOB_SPRITE: Sprite = {
-  ...GOBLIN_SPRITE,
-  palette: { ...GOBLIN_SPRITE.palette, g: '#a8703c', e: '#7a4e26', r: '#5a3a7a' },
-};
-const HOB_ANGRY_SPRITE: Sprite = {
-  ...HOB_SPRITE,
-  palette: { ...HOB_SPRITE.palette, y: '#ff6040' },
-};
-
 export const MILESTONE_LABELS: Readonly<Record<MilestoneId, string>> = {
   firstBlood: 'First blood!',
   pocketMoney: 'Pocket money: 25gp earned tonight.',
@@ -57,6 +47,10 @@ import {
   drawSprite,
   GOBLIN_ANGRY_SPRITE,
   GOBLIN_SPRITE,
+  HOB_ANGRY_SPRITE,
+  HOB_SPRITE,
+  HP_EMPTY_SPRITE,
+  HP_FULL_SPRITE,
   PLAYER_ATTACK_SPRITE,
   PLAYER_SPRITE,
   TRADER_SPRITE,
@@ -1455,19 +1449,7 @@ export class MmoRenderer {
     for (let i = 0; i < PLAYER_MAX_HP; i++) {
       const ox = hpX + (i % 5) * hpPitch;
       const oy = i < 5 ? PL.hpR1 : PL.hpR2;
-      ctx.fillStyle = i < hp ? '#c03030' : '#705848';
-      ctx.beginPath();
-      ctx.arc(ox, oy, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#4a3a26';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(ox, oy, 4.5, 0, Math.PI * 2);
-      ctx.stroke();
-      if (i < hp) {
-        ctx.fillStyle = '#e87a7a';
-        ctx.fillRect(ox - 2, oy - 2, 2, 2);
-      }
+      drawSprite(ctx, i < hp ? HP_FULL_SPRITE : HP_EMPTY_SPRITE, ox - 3, oy - 3);
     }
 
     // inventory 4×7

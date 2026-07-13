@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GOBLIN_SPRITE,
+  HOB_ANGRY_SPRITE,
+  HOB_SPRITE,
+  HP_EMPTY_SPRITE,
+  HP_FULL_SPRITE,
   PLAYER_ATTACK_SPRITE,
   PLAYER_SPRITE,
   TRADER_SPRITE,
@@ -35,5 +40,29 @@ describe('Mudwick sprite finish contracts', () => {
     expect(attack.match(/g/g)).toHaveLength(1);
     expect(idle).not.toMatch(/[wg]/);
     expectPaletteComplete(PLAYER_ATTACK_SPRITE);
+  });
+
+  it('gives hobgoblins a structural silhouette beyond recolouring', () => {
+    expect(HOB_SPRITE.rows).toHaveLength(14);
+    expect(new Set(HOB_SPRITE.rows.map((row) => row.length))).toEqual(new Set([12]));
+    expect(HOB_SPRITE.rows).not.toEqual(GOBLIN_SPRITE.rows);
+    expect(HOB_SPRITE.rows.join('')).toContain('t');
+    expect(HOB_SPRITE.rows.join('')).toContain('a');
+    expect(HOB_ANGRY_SPRITE.rows).toEqual(HOB_SPRITE.rows);
+    expect(HOB_ANGRY_SPRITE.palette.y).not.toBe(HOB_SPRITE.palette.y);
+    expectPaletteComplete(HOB_SPRITE);
+    expectPaletteComplete(HOB_ANGRY_SPRITE);
+  });
+
+  it('uses matching seven-pixel topology for full and empty hearts', () => {
+    const topology = (sprite: Sprite): string[] => sprite.rows.map((row) =>
+      [...row].map((key) => key === '.' ? '.' : '#').join(''));
+    for (const sprite of [HP_FULL_SPRITE, HP_EMPTY_SPRITE]) {
+      expect(sprite.rows).toHaveLength(7);
+      expect(new Set(sprite.rows.map((row) => row.length))).toEqual(new Set([7]));
+      expectPaletteComplete(sprite);
+    }
+    expect(topology(HP_FULL_SPRITE)).toEqual(topology(HP_EMPTY_SPRITE));
+    expect(HP_FULL_SPRITE.rows).not.toEqual(HP_EMPTY_SPRITE.rows);
   });
 });

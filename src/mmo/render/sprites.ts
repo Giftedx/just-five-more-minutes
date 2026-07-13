@@ -114,6 +114,65 @@ export const GOBLIN_ANGRY_SPRITE: Sprite = {
   palette: { ...GOBLIN_SPRITE.palette, y: '#ff6040' },
 };
 
+export const HOB_SPRITE: Sprite = {
+  palette: {
+    g: '#a8703c',
+    e: '#7a4e26',
+    r: '#5a3a7a',
+    y: '#e8d44f',
+    k: '#2a2018',
+    a: '#5b5360',
+    t: '#e6d9b8',
+  },
+  rows: [
+    '.a........a.',
+    'aa.gggggg.aa',
+    '.agggggggga.',
+    '..gygggygg..',
+    '..gtgggtgg..',
+    '..gggkkggg..',
+    '..aaggggaa..',
+    '.aaaggggaaa.',
+    '..a.rrrr.a..',
+    '....rrrr....',
+    '....g..g....',
+    '...gg..gg...',
+    '...aa..aa...',
+    '............',
+  ],
+};
+
+export const HOB_ANGRY_SPRITE: Sprite = {
+  ...HOB_SPRITE,
+  palette: { ...HOB_SPRITE.palette, y: '#ff6040' },
+};
+
+export const HP_FULL_SPRITE: Sprite = {
+  palette: { r: '#c03030', l: '#e87a7a', d: '#7a2020' },
+  rows: [
+    '.rr.rr.',
+    'lrrrrrr',
+    'rrrrrrr',
+    '.rrrrr.',
+    '..rrr..',
+    '...r...',
+    '...d...',
+  ],
+};
+
+export const HP_EMPTY_SPRITE: Sprite = {
+  palette: { e: '#705848', d: '#4a3a26' },
+  rows: [
+    '.ee.ee.',
+    'eeeeeee',
+    'eeeeeee',
+    '.eeeee.',
+    '..eee..',
+    '...e...',
+    '...d...',
+  ],
+};
+
 export const TRADER_SPRITE: Sprite = {
   palette: {
     h: '#d8d8d8', // hood
