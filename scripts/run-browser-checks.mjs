@@ -1,16 +1,18 @@
 /** Own a strict, short-lived preview and run browser checks against its build. */
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { findAvailableLoopbackPort } from './available-port.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const viteBin = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url));
 const smokeScript = fileURLToPath(new URL('./smoke.mjs', import.meta.url));
 const e2eScript = fileURLToPath(new URL('./e2e-full.mjs', import.meta.url));
-const previewUrl = 'http://127.0.0.1:4173/';
+const previewPort = await findAvailableLoopbackPort(4173);
+const previewUrl = `http://127.0.0.1:${previewPort}/`;
 
 const preview = spawn(
   process.execPath,
-  [viteBin, 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'],
+  [viteBin, 'preview', '--host', '127.0.0.1', '--port', String(previewPort), '--strictPort'],
   { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] },
 );
 
@@ -54,7 +56,7 @@ async function waitForPreview() {
     // Requiring Vite's own listening banner prevents a successful fetch from
     // being mistaken for ownership when a stale process already has the port.
     const plainOutput = previewOutput.replace(/\u001b\[[0-9;]*m/g, '');
-    const ownListeningBanner = plainOutput.includes('http://127.0.0.1:4173/');
+    const ownListeningBanner = plainOutput.includes(previewUrl);
     if (ownListeningBanner) {
       try {
         const response = await fetch(previewUrl, {
