@@ -257,6 +257,68 @@ try {
     assert.equal(await hint.textContent(), 'Resume looking');
   });
 
+  await scenario(
+    'volume control is an authored keyboard-safe fader',
+    { viewport: { width: 1280, height: 720 }, reducedMotion: 'reduce' },
+    async (page) => {
+      await page.addInitScript(() => localStorage.setItem('j5mm-volume', '0.6'));
+      await gotoOk(page, { skipTitle: 1, seed: 23 });
+      const control = page.locator('.volume-control');
+      const slider = page.locator('#j5mm-volume-slider');
+      const label = control.locator('label');
+      const level = control.locator('.volume-control-level');
+
+      assert.equal(await label.textContent(), 'AUDIO');
+      assert.equal(await label.getAttribute('for'), 'j5mm-volume-slider');
+      assert.equal(await slider.getAttribute('aria-label'), 'Volume');
+      assert.equal(await level.textContent(), '60%');
+      assert.deepEqual(
+        await control.evaluate((element) => ({
+          fill: element.style.getPropertyValue('--volume-level'),
+          muted: element.dataset.muted,
+          height: element.getBoundingClientRect().height,
+        })),
+        { fill: '60%', muted: 'false', height: 48 },
+      );
+      assert.equal(await slider.evaluate((element) => getComputedStyle(element).appearance), 'none');
+
+      await slider.focus();
+      await page.keyboard.press('ArrowRight');
+      assert.equal(await slider.inputValue(), '0.65');
+      assert.equal(await level.textContent(), '65%');
+      assert.equal(await page.evaluate(() => localStorage.getItem('j5mm-volume')), '0.65');
+      assert.equal(await page.evaluate(() => window.__game.audio.getVolume()), 0.65);
+      assert.deepEqual(
+        await slider.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return { width: style.outlineWidth, style: style.outlineStyle, color: style.outlineColor };
+        }),
+        { width: '2px', style: 'solid', color: 'rgb(232, 195, 63)' },
+      );
+
+      await slider.evaluate((element) => {
+        element.value = '0';
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      assert.equal(await level.textContent(), 'OFF');
+      assert.deepEqual(
+        await control.evaluate((element) => ({
+          fill: element.style.getPropertyValue('--volume-level'),
+          muted: element.dataset.muted,
+        })),
+        { fill: '0%', muted: 'true' },
+      );
+
+      await page.setViewportSize({ width: 900, height: 400 });
+      const bounds = await control.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+      });
+      assert.ok(bounds.left >= 8 && bounds.top >= 8, JSON.stringify(bounds));
+      assert.ok(bounds.right <= 892 && bounds.bottom <= 392, JSON.stringify(bounds));
+    },
+  );
+
   await scenario('dialogue staging keeps Mum visible and controls separated', { viewport: { width: 900, height: 600 } }, async (page) => {
     await gotoOk(page, { speed: 1, t: 37, skipTitle: 1, seed: 3 });
     await page.waitForFunction(() => {
