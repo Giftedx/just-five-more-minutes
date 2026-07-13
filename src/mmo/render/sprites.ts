@@ -53,34 +53,44 @@ export const PLAYER_SPRITE: Sprite = {
   ],
 };
 
-export const PLAYER_ATTACK_SPRITE: Sprite = {
-  palette: {
-    h: '#8a5a2b',
-    s: '#e0b088',
-    e: '#2e2218',
-    b: '#3a5a9c',
-    d: '#2c4377',
-    l: '#5a4632',
-    k: '#2e2218',
-    w: '#d5d0c2',
-    g: '#7a4d28',
-  },
-  rows: [
-    '....hhhh........',
-    '...hhhhhh.......',
-    '...hssssh.......',
-    '...sesse........',
-    '....ssss......w.',
-    '...bbbbbb....w..',
-    '..bbbbbbbb..w...',
-    '..sbbddbbs.w....',
-    '..sbbddbbsg.....',
-    '...bbbbbb.......',
-    '...llllll.......',
-    '...ll..ll.......',
-    '...kk..kk.......',
-    '...kk..kk.......',
-  ],
+export type AttackDirection = 'north' | 'east' | 'south' | 'west';
+
+export function attackDirectionForDelta(dx: number, dy: number): AttackDirection | null {
+  if (dx === 0 && dy === 0) return null;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? 'west' : 'east';
+  return dy < 0 ? 'north' : 'south';
+}
+
+const PLAYER_ATTACK_PALETTE: Sprite['palette'] = {
+  ...PLAYER_SPRITE.palette,
+  w: '#d5d0c2',
+  g: '#7a4d28',
+};
+
+type WeaponPixel = readonly [x: number, y: number, key: 'w' | 'g'];
+
+const ATTACK_WEAPON_PIXELS: Readonly<Record<AttackDirection, readonly WeaponPixel[]>> = {
+  north: [[12, 3, 'w'], [12, 4, 'w'], [12, 5, 'w'], [12, 6, 'w'], [12, 7, 'g']],
+  east: [[15, 4, 'w'], [14, 5, 'w'], [13, 6, 'w'], [12, 7, 'w'], [12, 8, 'g']],
+  south: [[12, 8, 'g'], [12, 9, 'w'], [12, 10, 'w'], [12, 11, 'w'], [12, 12, 'w']],
+  west: [[0, 4, 'w'], [1, 5, 'w'], [2, 6, 'w'], [3, 7, 'w'], [3, 8, 'g']],
+};
+
+function makePlayerAttackSprite(weapon: readonly WeaponPixel[]): Sprite {
+  const rows = PLAYER_SPRITE.rows.map((row) => [...`..${row}..`]);
+  for (const [x, y, key] of weapon) {
+    const row = rows[y];
+    if (!row || row[x] !== '.') throw new Error(`attack weapon overlaps body at ${x},${y}`);
+    row[x] = key;
+  }
+  return { palette: PLAYER_ATTACK_PALETTE, rows: rows.map((row) => row.join('')) };
+}
+
+export const PLAYER_ATTACK_SPRITES: Readonly<Record<AttackDirection, Sprite>> = {
+  north: makePlayerAttackSprite(ATTACK_WEAPON_PIXELS.north),
+  east: makePlayerAttackSprite(ATTACK_WEAPON_PIXELS.east),
+  south: makePlayerAttackSprite(ATTACK_WEAPON_PIXELS.south),
+  west: makePlayerAttackSprite(ATTACK_WEAPON_PIXELS.west),
 };
 
 export const GOBLIN_SPRITE: Sprite = {

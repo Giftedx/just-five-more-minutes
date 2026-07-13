@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  attackDirectionForDelta,
   GOBLIN_SPRITE,
   HOB_ANGRY_SPRITE,
   HOB_SPRITE,
   HP_EMPTY_SPRITE,
   HP_FULL_SPRITE,
-  PLAYER_ATTACK_SPRITE,
+  PLAYER_ATTACK_SPRITES,
   PLAYER_SPRITE,
   TRADER_SPRITE,
+  type AttackDirection,
   type Sprite,
 } from './sprites';
 
@@ -31,15 +33,39 @@ describe('Mudwick sprite finish contracts', () => {
     expectPaletteComplete(TRADER_SPRITE);
   });
 
-  it('renders a bounded attack weapon that never appears in idle', () => {
-    const attack = PLAYER_ATTACK_SPRITE.rows.join('');
-    const idle = PLAYER_SPRITE.rows.join('');
-    expect(PLAYER_ATTACK_SPRITE.rows).toHaveLength(14);
-    expect(new Set(PLAYER_ATTACK_SPRITE.rows.map((row) => row.length))).toEqual(new Set([16]));
-    expect(attack.match(/w/g)).toHaveLength(4);
-    expect(attack.match(/g/g)).toHaveLength(1);
-    expect(idle).not.toMatch(/[wg]/);
-    expectPaletteComplete(PLAYER_ATTACK_SPRITE);
+  it('resolves cardinal and diagonal target deltas without inventing zero-delta movement', () => {
+    expect(attackDirectionForDelta(0, -1)).toBe('north');
+    expect(attackDirectionForDelta(1, 0)).toBe('east');
+    expect(attackDirectionForDelta(0, 1)).toBe('south');
+    expect(attackDirectionForDelta(-1, 0)).toBe('west');
+    expect(attackDirectionForDelta(1, -1)).toBe('east');
+    expect(attackDirectionForDelta(-1, 1)).toBe('west');
+    expect(attackDirectionForDelta(0, 0)).toBeNull();
+  });
+
+  it('keeps one registered body while placing five weapon pixels in each direction', () => {
+    const embeddedIdle = PLAYER_SPRITE.rows.map((row) => `..${row}..`);
+    const entries = Object.entries(PLAYER_ATTACK_SPRITES) as [AttackDirection, Sprite][];
+    expect(entries.map(([direction]) => direction)).toEqual(['north', 'east', 'south', 'west']);
+
+    for (const [, sprite] of entries) {
+      const flattened = sprite.rows.join('');
+      expect(sprite.rows).toHaveLength(14);
+      expect(new Set(sprite.rows.map((row) => row.length))).toEqual(new Set([16]));
+      expect(flattened.match(/w/g)).toHaveLength(4);
+      expect(flattened.match(/g/g)).toHaveLength(1);
+      expect(sprite.rows.map((row) => row.replaceAll(/[wg]/g, '.'))).toEqual(embeddedIdle);
+      expectPaletteComplete(sprite);
+    }
+
+    const weaponPixels = (direction: AttackDirection): { x: number; y: number }[] =>
+      PLAYER_ATTACK_SPRITES[direction].rows.flatMap((row, y) =>
+        [...row].flatMap((key, x) => key === 'w' || key === 'g' ? [{ x, y }] : []));
+    expect(weaponPixels('east').every(({ x }) => x >= 12)).toBe(true);
+    expect(weaponPixels('west').every(({ x }) => x <= 3)).toBe(true);
+    expect(weaponPixels('north').every(({ y }) => y <= 7)).toBe(true);
+    expect(weaponPixels('south').every(({ y }) => y >= 8)).toBe(true);
+    expect(PLAYER_SPRITE.rows.join('')).not.toMatch(/[wg]/);
   });
 
   it('gives hobgoblins a structural silhouette beyond recolouring', () => {
