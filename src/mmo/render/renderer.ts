@@ -44,6 +44,7 @@ export const MILESTONE_LABELS: Readonly<Record<MilestoneId, string>> = {
   chefActually: 'A chef, actually: shrimp cooked.',
 };
 import {
+  attackDirectionForDelta,
   drawSprite,
   GOBLIN_ANGRY_SPRITE,
   GOBLIN_SPRITE,
@@ -51,9 +52,10 @@ import {
   HOB_SPRITE,
   HP_EMPTY_SPRITE,
   HP_FULL_SPRITE,
-  PLAYER_ATTACK_SPRITE,
+  PLAYER_ATTACK_SPRITES,
   PLAYER_SPRITE,
   TRADER_SPRITE,
+  type AttackDirection,
   type Sprite,
 } from './sprites';
 
@@ -194,6 +196,7 @@ export class MmoRenderer {
   private ghosts: Ghost[] = [];
   private objectiveFlash = 0;
   private swingUntil = 0;
+  private swingDirection: AttackDirection = 'east';
   private welcomed = false;
   menu: MenuState | null = null;
   tradeOpen = false;
@@ -348,6 +351,11 @@ export class MmoRenderer {
         case 'playerSwing': {
           const g = this.sim.goblinById(ev.goblinId);
           if (g) {
+            const direction = attackDirectionForDelta(
+              g.pos.x - this.sim.player.pos.x,
+              g.pos.y - this.sim.player.pos.y,
+            );
+            if (direction) this.swingDirection = direction;
             const d = this.disp.get(ev.goblinId) ?? { x: g.pos.x * TILE, y: g.pos.y * TILE };
             this.hitsplats.push({ x: d.x + 8, y: d.y + 8, dmg: ev.damage, until: now + 700 });
           }
@@ -777,10 +785,11 @@ export class MmoRenderer {
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.fillRect(Math.round(pd.x) + 3, Math.round(pd.y) + 14, 10, 2);
     const swinging = now < this.swingUntil;
+    const playerSprite = swinging ? PLAYER_ATTACK_SPRITES[this.swingDirection] : PLAYER_SPRITE;
     drawSprite(
       ctx,
-      swinging ? PLAYER_ATTACK_SPRITE : PLAYER_SPRITE,
-      Math.round(pd.x) + 2 + (swinging ? 1 : 0),
+      playerSprite,
+      Math.round(pd.x) + (swinging ? 0 : 2),
       Math.round(pd.y) + 1 - pBob,
     );
 
