@@ -70,9 +70,14 @@ Insert this scenario between the pointer-lock and dialogue-staging scenarios:
       assert.deepEqual(
         await control.evaluate((element) => {
           const style = getComputedStyle(element);
-          return { width: style.outlineWidth, style: style.outlineStyle, color: style.outlineColor };
+          return {
+            width: style.outlineWidth,
+            style: style.outlineStyle,
+            color: style.outlineColor,
+            inputWidth: getComputedStyle(element.querySelector('input')).outlineWidth,
+          };
         }),
-        { width: '2px', style: 'solid', color: 'rgb(232, 195, 63)' },
+        { width: '2px', style: 'solid', color: 'rgb(232, 195, 63)', inputWidth: '0px' },
       );
 
       await slider.evaluate((element) => {
@@ -228,6 +233,7 @@ Replace the volume CSS block with:
   margin: 0;
   padding: 0;
   border: 0;
+  outline: 0;
   background: transparent;
   cursor: pointer;
 }

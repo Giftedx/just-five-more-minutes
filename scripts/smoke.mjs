@@ -294,9 +294,14 @@ try {
       assert.deepEqual(
         await control.evaluate((element) => {
           const style = getComputedStyle(element);
-          return { width: style.outlineWidth, style: style.outlineStyle, color: style.outlineColor };
+          return {
+            width: style.outlineWidth,
+            style: style.outlineStyle,
+            color: style.outlineColor,
+            inputWidth: getComputedStyle(element.querySelector('input')).outlineWidth,
+          };
         }),
-        { width: '2px', style: 'solid', color: 'rgb(232, 195, 63)' },
+        { width: '2px', style: 'solid', color: 'rgb(232, 195, 63)', inputWidth: '0px' },
       );
 
       await slider.evaluate((element) => {
