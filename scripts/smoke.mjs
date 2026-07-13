@@ -301,6 +301,189 @@ try {
   });
 
   await scenario(
+    'Mum doorway vignette stays authored, animated, inert, and bounded',
+    { viewport: { width: 900, height: 600 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          const text = message.text();
+          if (!text.includes('requestPointerLock')) consoleProblems.push(`${message.type()}: ${text}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
+      const colliderCount = await page.evaluate(() => window.__game['host'].room.colliders.length);
+      await page.evaluate(() => {
+        const host = window.__game['host'];
+        host.player.yaw = Math.PI;
+        host.player.pitch = 0;
+        host.player['apply']();
+        host.room.npcSilhouette.visible = true;
+        host.room.setHallLight(true);
+      });
+      await page.waitForTimeout(350);
+
+      const measure = () => page.evaluate(() => {
+        const host = window.__game['host'];
+        const scene = host.room.scene;
+        const root = scene.getObjectByName('room-mum-doorway');
+        const mum = scene.getObjectByName('mum-character');
+        const hall = scene.getObjectByName('mum-hall-dressing');
+        const names = [
+          'mum-head',
+          'mum-torso',
+          'mum-upper-arm-left',
+          'mum-upper-arm-right',
+          'mum-forearm-left',
+          'mum-forearm-right',
+          'mum-hand-left',
+          'mum-hand-right',
+          'mum-tea-towel',
+          'mum-skirt',
+          'mum-footwear',
+          'mum-hall-practical',
+          'mum-hall-runner',
+          'mum-hall-threshold',
+          'mum-hall-skirting',
+          'mum-hall-domestic-detail',
+          'mum-contact-cue',
+        ];
+        const metrics = (target) => {
+          let meshes = 0;
+          let triangles = 0;
+          let casters = 0;
+          let lights = 0;
+          const textures = new Set();
+          target?.traverse((object) => {
+            if (object.isMesh) {
+              meshes++;
+              const multiplier = object.isInstancedMesh ? object.count : 1;
+              const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
+              triangles += Math.floor(primitives / 3) * multiplier;
+              if (object.castShadow) casters++;
+              const materials = Array.isArray(object.material) ? object.material : [object.material];
+              for (const material of materials) if (material?.map) textures.add(material.map.uuid);
+            }
+            if (object.isLight) lights++;
+          });
+          return { meshes, triangles, casters, lights, textures: textures.size };
+        };
+        const belongsTo = (object, target) => {
+          for (let cursor = object; cursor; cursor = cursor.parent) {
+            if (cursor === target) return true;
+          }
+          return false;
+        };
+        const points = [];
+        mum?.updateWorldMatrix(true, true);
+        mum?.traverse((object) => {
+          if (!object.isMesh || !object.geometry) return;
+          object.geometry.computeBoundingBox();
+          const box = object.geometry.boundingBox;
+          if (!box) return;
+          for (const x of [box.min.x, box.max.x]) {
+            for (const y of [box.min.y, box.max.y]) {
+              for (const z of [box.min.z, box.max.z]) {
+                const point = box.min.clone().set(x, y, z);
+                object.localToWorld(point);
+                point.project(host.camera);
+                points.push({
+                  x: (point.x * 0.5 + 0.5) * innerWidth,
+                  y: (-point.y * 0.5 + 0.5) * innerHeight,
+                });
+              }
+            }
+          }
+        });
+        host.renderer.render(scene, host.camera);
+        return {
+          rootName: root?.name,
+          mumName: mum?.name,
+          hallName: hall?.name,
+          namedParts: names.map((name) => root?.getObjectByName(name)?.name),
+          rootVisible: root?.visible,
+          mum: metrics(mum),
+          hall: metrics(hall),
+          projected: {
+            left: Math.min(...points.map((point) => point.x)),
+            right: Math.max(...points.map((point) => point.x)),
+            top: Math.min(...points.map((point) => point.y)),
+            bottom: Math.max(...points.map((point) => point.y)),
+          },
+          interactions: root ? host.room.interactables.filter((object) => belongsTo(object, root)).length : 0,
+          colliders: host.room.colliders.length,
+          calls: host.renderer.info.render.calls,
+          triangles: host.renderer.info.render.triangles,
+          rendererTextures: host.renderer.info.memory.textures,
+          shadowsEnabled: host.renderer.shadowMap.enabled,
+          viewportWidth: innerWidth,
+          viewportHeight: innerHeight,
+        };
+      });
+
+      const before = await measure();
+      assert.equal(before.rootName, 'room-mum-doorway');
+      assert.equal(before.mumName, 'mum-character');
+      assert.equal(before.hallName, 'mum-hall-dressing');
+      assert.deepEqual(before.namedParts, [
+        'mum-head',
+        'mum-torso',
+        'mum-upper-arm-left',
+        'mum-upper-arm-right',
+        'mum-forearm-left',
+        'mum-forearm-right',
+        'mum-hand-left',
+        'mum-hand-right',
+        'mum-tea-towel',
+        'mum-skirt',
+        'mum-footwear',
+        'mum-hall-practical',
+        'mum-hall-runner',
+        'mum-hall-threshold',
+        'mum-hall-skirting',
+        'mum-hall-domestic-detail',
+        'mum-contact-cue',
+      ]);
+      assert.equal(before.rootVisible, true);
+      assert.ok(before.mum.meshes <= 45 && before.mum.triangles <= 2500, JSON.stringify(before));
+      assert.equal(before.mum.textures, 1);
+      assert.ok(before.hall.meshes <= 16 && before.hall.triangles <= 900, JSON.stringify(before));
+      assert.ok(before.hall.textures <= 1);
+      assert.equal(before.mum.casters + before.hall.casters, 0);
+      assert.equal(before.interactions, 0);
+      assert.equal(before.colliders, colliderCount);
+      assert.equal(before.shadowsEnabled, false);
+      assert.ok(
+        before.projected.left >= before.viewportWidth * 0.39
+          && before.projected.right <= before.viewportWidth * 0.61,
+        JSON.stringify(before),
+      );
+      assert.ok(before.projected.top >= 110 && before.projected.bottom <= before.viewportHeight + 8, JSON.stringify(before));
+      assert.ok(before.calls <= 55 && before.triangles <= 4000 && before.rendererTextures <= 14, JSON.stringify(before));
+
+      const poseA = await page.evaluate(() => ({
+        body: window.__game['host'].room.npcSilhouette.rotation.z,
+        head: window.__game['host'].room.scene.getObjectByName('mum-head').rotation.z,
+      }));
+      await page.evaluate(() => window.__game['host'].room.npcTick(performance.now() + 900));
+      const poseB = await page.evaluate(() => ({
+        body: window.__game['host'].room.npcSilhouette.rotation.z,
+        head: window.__game['host'].room.scene.getObjectByName('mum-head').rotation.z,
+      }));
+      assert.notDeepEqual(poseA, poseB);
+      assert.ok(Math.abs(poseB.body) <= 0.018 && Math.abs(poseB.head) <= 0.06, JSON.stringify({ poseA, poseB }));
+      await page.evaluate(() => window.__game['host'].room.setHallLight(false));
+      assert.equal(
+        await page.evaluate(() => window.__game['host'].room.scene.getObjectByName('room-mum-doorway').visible),
+        false,
+      );
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
+  await scenario(
     'reduced motion is static but still painted',
     { viewport: { width: 1000, height: 700 }, reducedMotion: 'reduce' },
     async (page) => {
