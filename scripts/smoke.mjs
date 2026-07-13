@@ -417,6 +417,78 @@ try {
   });
 
   await scenario(
+    'household pressure stack stays readable at maximum short-screen pressure',
+    { viewport: { width: 900, height: 400 }, reducedMotion: 'reduce' },
+    async (page) => {
+      await gotoOk(page, { speed: 1, t: 179, night: 3, skipTitle: 1, seed: 313 });
+      await page.locator('.hud-chore').first().waitFor({ state: 'visible' });
+      await page.evaluate(() => { window.__game['mum'].suspicion = 9; });
+      await page.locator('.hud-prompt').waitFor({ state: 'visible' });
+
+      const pressure = await page.evaluate(() => {
+        const rect = (element) => {
+          const value = element.getBoundingClientRect();
+          return { left: value.left, top: value.top, right: value.right, bottom: value.bottom };
+        };
+        const chores = [...document.querySelectorAll('.hud-chore')];
+        const mum = document.querySelector('.hud-mum');
+        const prompt = document.querySelector('.hud-prompt');
+        const taskStack = document.querySelector('.hud-task-stack');
+        const clock = document.querySelector('.hud-clock');
+        const taskRects = [...chores.map(rect), rect(mum)];
+        const lowestTaskBottom = Math.max(...taskRects.map((value) => value.bottom));
+        const promptRect = rect(prompt);
+        return {
+          choreTexts: chores.map((chore) => chore.textContent),
+          choreRects: chores.map(rect),
+          tier: mum.dataset.tier,
+          state: mum.querySelector('.hud-mum-state')?.textContent ?? '',
+          steps: mum.querySelectorAll('.hud-mum-step').length,
+          role: mum.getAttribute('role'),
+          live: mum.getAttribute('aria-live'),
+          atomic: mum.getAttribute('aria-atomic'),
+          label: mum.getAttribute('aria-label'),
+          animation: getComputedStyle(mum).animationName,
+          taskDisplay: getComputedStyle(taskStack).display,
+          choreDirection: getComputedStyle(document.querySelector('.hud-chores')).flexDirection,
+          taskRect: rect(taskStack),
+          clockRect: rect(clock),
+          promptRect,
+          promptGap: promptRect.top - lowestTaskBottom,
+          viewport: { width: innerWidth, height: innerHeight },
+        };
+      });
+
+      assert.deepEqual(pressure.choreTexts, ['Wrappers 0/4', 'Curtains 0/2', 'Laundry 0/3']);
+      assert.equal(pressure.tier, '3');
+      assert.equal(pressure.state, 'AT THE DOOR');
+      assert.equal(pressure.steps, 4);
+      assert.equal(pressure.role, 'status');
+      assert.equal(pressure.live, 'polite');
+      assert.equal(pressure.atomic, 'true');
+      assert.equal(pressure.label, 'Mum: at the door');
+      assert.equal(pressure.animation, 'none');
+      assert.equal(pressure.taskDisplay, 'grid');
+      assert.equal(pressure.choreDirection, 'row');
+      assert.ok(pressure.taskRect.left >= 0 && pressure.taskRect.top >= 0, JSON.stringify(pressure));
+      assert.ok(pressure.taskRect.right <= pressure.viewport.width, JSON.stringify(pressure));
+      assert.ok(pressure.choreRects.every((value) => value.bottom <= pressure.viewport.height), JSON.stringify(pressure));
+      assert.ok(pressure.taskRect.right <= pressure.clockRect.left - 8, JSON.stringify(pressure));
+      assert.ok(pressure.promptGap >= 8, JSON.stringify(pressure));
+
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await page.waitForTimeout(100);
+      assert.deepEqual(
+        await page.evaluate(() => ({
+          taskDisplay: getComputedStyle(document.querySelector('.hud-task-stack')).display,
+          choreDirection: getComputedStyle(document.querySelector('.hud-chores')).flexDirection,
+        })),
+        { taskDisplay: 'flex', choreDirection: 'column' },
+      );
+    },
+  );
+
+  await scenario(
     'Mum doorway vignette stays authored, animated, inert, and bounded',
     { viewport: { width: 900, height: 600 } },
     async (page) => {

@@ -84,7 +84,7 @@ Add this scenario after the existing dialogue-staging scenario:
         };
       });
 
-      assert.deepEqual(pressure.choreTexts, ['Mugs 0/3', 'Wrappers 0/4', 'Laundry 0/3']);
+      assert.deepEqual(pressure.choreTexts, ['Wrappers 0/4', 'Curtains 0/2', 'Laundry 0/3']);
       assert.equal(pressure.tier, '3');
       assert.equal(pressure.state, 'AT THE DOOR');
       assert.equal(pressure.steps, 4);
