@@ -141,7 +141,7 @@ try {
     assert.ok(after - before < 0.05, `director advanced ${(after - before).toFixed(3)}s while first lock failed`);
   });
 
-  await scenario('dialogue stack preserves a readable gap', { viewport: { width: 900, height: 600 } }, async (page) => {
+  await scenario('dialogue staging keeps Mum visible and controls separated', { viewport: { width: 900, height: 600 } }, async (page) => {
     await gotoOk(page, { speed: 1, t: 37, skipTitle: 1, seed: 3 });
     await page.waitForFunction(() => {
       const prompt = document.querySelector('.hud-prompt');
@@ -152,24 +152,99 @@ try {
         && getComputedStyle(subtitle).display !== 'none';
     });
     await page.locator('.hud-chore').first().waitFor({ state: 'visible' });
-    const geometry = await page.evaluate(() => {
-      const prompt = document.querySelector('.hud-prompt').getBoundingClientRect();
-      const subtitle = document.querySelector('.hud-subtitle').getBoundingClientRect();
+    await page.evaluate(() => {
+      const game = window.__game;
+      const player = game['host'].player;
+      player.yaw = Math.PI;
+      player.pitch = 0;
+      player['apply']();
+      game['host'].room.npcSilhouette.visible = true;
+      game['host'].room.setHallLight(true);
+      game['silhouetteHideAt'] = performance.now() + 60_000;
+    });
+    await page.waitForTimeout(300);
+
+    const measureDialogueGeometry = () => page.evaluate(() => {
+      const rect = (selector) => {
+        const value = document.querySelector(selector).getBoundingClientRect();
+        return { left: value.left, right: value.right, top: value.top, bottom: value.bottom };
+      };
+      const prompt = rect('.hud-prompt');
+      const subtitle = rect('.hud-subtitle');
+      const volume = rect('.volume-control');
       const objective = document.querySelector('.hud-objective').getBoundingClientRect();
       const chore = document.querySelector('.hud-chore').getBoundingClientRect();
+      const host = window.__game['host'];
+      const root = host.room.npcSilhouette;
+      const points = [];
+      root.updateWorldMatrix(true, true);
+      root.traverse((object) => {
+        if (!object.isMesh || !object.geometry) return;
+        object.geometry.computeBoundingBox();
+        const box = object.geometry.boundingBox;
+        if (!box) return;
+        for (const x of [box.min.x, box.max.x]) {
+          for (const y of [box.min.y, box.max.y]) {
+            for (const z of [box.min.z, box.max.z]) {
+              const point = box.min.clone().set(x, y, z);
+              object.localToWorld(point);
+              point.project(host.camera);
+              points.push({
+                x: (point.x * 0.5 + 0.5) * innerWidth,
+                y: (-point.y * 0.5 + 0.5) * innerHeight,
+              });
+            }
+          }
+        }
+      });
+      const mum = {
+        left: Math.min(...points.map((point) => point.x)),
+        right: Math.max(...points.map((point) => point.x)),
+        top: Math.min(...points.map((point) => point.y)),
+        bottom: Math.max(...points.map((point) => point.y)),
+      };
+      const upperBody = { ...mum, bottom: mum.top + (mum.bottom - mum.top) * 0.68 };
+      const overlapArea = (a, b) => (
+        Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+        * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+      );
       return {
-        dialogueGap: subtitle.top - prompt.bottom,
+        prompt,
+        subtitle,
+        volume,
+        mum: upperBody,
+        promptSubtitleOverlap: overlapArea(prompt, subtitle),
+        promptMumOverlap: overlapArea(prompt, upperBody),
+        subtitleMumOverlap: overlapArea(subtitle, upperBody),
+        subtitleVolumeOverlap: overlapArea(subtitle, volume),
+        subtitleVolumeGap: volume.top - subtitle.bottom,
         taskGap: chore.top - objective.bottom,
+        viewportWidth: innerWidth,
       };
     });
+
+    const assertDialogueGeometry = (geometry) => {
+      assert.ok(geometry.prompt.right <= geometry.viewportWidth * 0.48, JSON.stringify(geometry));
+      assert.ok(geometry.subtitle.left >= geometry.viewportWidth * 0.38, JSON.stringify(geometry));
+      assert.equal(geometry.promptSubtitleOverlap, 0, JSON.stringify(geometry));
+      assert.equal(geometry.promptMumOverlap, 0, JSON.stringify(geometry));
+      assert.equal(geometry.subtitleMumOverlap, 0, JSON.stringify(geometry));
+      assert.equal(geometry.subtitleVolumeOverlap, 0, JSON.stringify(geometry));
+      assert.ok(geometry.subtitleVolumeGap >= 8, JSON.stringify(geometry));
+    };
+
+    const compactGeometry = await measureDialogueGeometry();
+    assertDialogueGeometry(compactGeometry);
     assert.ok(
-      geometry.dialogueGap >= 11.5,
-      `dialogue gap was ${geometry.dialogueGap.toFixed(2)}px, expected at least 11.5px`,
+      compactGeometry.taskGap >= 17.5,
+      `objective/chore gap was ${compactGeometry.taskGap.toFixed(2)}px, expected at least 17.5px`,
     );
-    assert.ok(
-      geometry.taskGap >= 17.5,
-      `objective/chore gap was ${geometry.taskGap.toFixed(2)}px, expected at least 17.5px`,
-    );
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.waitForTimeout(100);
+    const desktopGeometry = await measureDialogueGeometry();
+    assertDialogueGeometry(desktopGeometry);
+
     const firstPromptOption = page.locator('.hud-prompt-option').first();
     await firstPromptOption.focus();
     assert.deepEqual(

@@ -743,23 +743,30 @@ body {
   50% { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 90, 40, 0.35); }
 }
 
-/* One collision-proof lane for Mum's line and the player's response. */
+/* Mum owns the centre stage; choices and captions frame the doorway. */
 .hud-dialogue-stack {
   position: fixed;
-  left: 50%;
-  bottom: clamp(24px, 6vh, 64px);
-  transform: translateX(-50%);
-  width: min(680px, calc(100vw - 32px));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
+  left: 18px;
+  right: 18px;
+  bottom: clamp(54px, 8vh, 72px);
+  width: auto;
+  display: grid;
+  grid-template-columns: minmax(300px, 340px) minmax(320px, 360px);
+  grid-template-areas:
+    'toast toast'
+    'prompt subtitle';
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px 24px;
   pointer-events: none;
 }
 
 /* subtitles: mum's voice, bottom center */
 .hud-subtitle {
-  max-width: min(680px, 80vw);
+  grid-area: subtitle;
+  width: 100%;
+  max-width: none;
+  justify-self: stretch;
   background: linear-gradient(165deg, rgba(30, 22, 13, 0.92), rgba(14, 10, 6, 0.92));
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255, 218, 150, 0.22);
@@ -783,7 +790,8 @@ body {
 }
 
 .hud-toast {
-  order: -1;
+  grid-area: toast;
+  justify-self: center;
   max-width: min(620px, calc(100vw - 48px));
   background: linear-gradient(165deg, rgba(38, 33, 25, 0.94), rgba(18, 16, 12, 0.94));
   backdrop-filter: blur(5px);
@@ -827,10 +835,12 @@ body {
 
 /* the 1-4 response card */
 .hud-prompt {
+  grid-area: prompt;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 300px;
+  width: 100%;
+  min-width: 0;
   background: linear-gradient(168deg, rgba(32, 23, 13, 0.94), rgba(14, 10, 6, 0.94));
   backdrop-filter: blur(6px);
   border: 1px solid rgba(232, 195, 63, 0.4);
@@ -839,6 +849,17 @@ body {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
   pointer-events: auto;
   animation: promptin 0.25s ease-out;
+}
+
+@media (max-width: 1000px) {
+  .hud-dialogue-stack {
+    grid-template-columns: 300px 300px;
+  }
+
+  .hud-subtitle {
+    padding-inline: 16px;
+    font-size: 15px;
+  }
 }
 
 @keyframes promptin {
