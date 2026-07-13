@@ -429,6 +429,78 @@ try {
     },
   );
 
+  await scenario(
+    'bedroom environment details stay authored and bounded',
+    { viewport: { width: 1000, height: 700 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
+
+      const state = await page.evaluate(() => {
+        const host = window.__game['host'];
+        const scene = host.room.scene;
+        const root = scene.getObjectByName('room-environment-details');
+        const clusters = [
+          'room-story-board',
+          'room-desk-drawers',
+          'room-radiator',
+          'room-coving',
+        ].map((name) => root?.getObjectByName(name)?.name);
+        const textures = new Map();
+        let meshCount = 0;
+        let lights = 0;
+        let casters = 0;
+        let interactions = 0;
+        root?.traverse((object) => {
+          if (object.isMesh) {
+            meshCount++;
+            if (object.castShadow) casters++;
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            for (const material of materials) {
+              if (material?.map) textures.set(material.map.uuid, material.map.colorSpace);
+            }
+          }
+          if (object.isLight) lights++;
+          if (object.userData?.interact) interactions++;
+        });
+        return {
+          rootName: root?.name,
+          clusters,
+          meshCount,
+          textureSpaces: [...textures.values()],
+          covingRails: root?.getObjectByName('room-coving')?.children.length,
+          lights,
+          casters,
+          interactions,
+          shadowsEnabled: host.renderer.shadowMap.enabled,
+        };
+      });
+
+      assert.equal(state.rootName, 'room-environment-details');
+      assert.deepEqual(state.clusters, [
+        'room-story-board',
+        'room-desk-drawers',
+        'room-radiator',
+        'room-coving',
+      ]);
+      assert.ok(state.meshCount >= 10 && state.meshCount <= 18, `detail mesh budget exceeded: ${state.meshCount}`);
+      assert.deepEqual(state.textureSpaces, ['srgb']);
+      assert.equal(state.covingRails, 4);
+      assert.equal(state.lights, 0);
+      assert.equal(state.casters, 0);
+      assert.equal(state.interactions, 0);
+      assert.equal(state.shadowsEnabled, false);
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
   await scenario('room-mode MMO render cadence is capped', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await gotoOk(page, { skipTitle: 1, seed: 6 });
     await page.waitForFunction(() => {
