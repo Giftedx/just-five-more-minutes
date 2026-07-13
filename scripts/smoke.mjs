@@ -358,6 +358,13 @@ try {
     'bedroom rendering has a bounded material and shadow foundation',
     { viewport: { width: 1000, height: 700 } },
     async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
       await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
       await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
 
@@ -390,7 +397,7 @@ try {
       assert.notEqual(state.toneMapping, 0, 'bedroom still uses NoToneMapping');
       assert.equal(state.outputColorSpace, 'srgb');
       assert.equal(state.shadowsEnabled, true);
-      assert.notEqual(state.shadowType, 0);
+      assert.equal(state.shadowType, 1, 'bedroom must use supported PCFShadowMap');
       assert.equal(state.floorMapped, true);
       assert.equal(state.wallMapped, true);
       assert.equal(state.floorReceives, true);
@@ -398,6 +405,7 @@ try {
       assert.equal(state.keyCasts, true);
       assert.deepEqual(state.shadowSize, [1024, 1024]);
       assert.deepEqual(state.shadowLights, ['room-key-light']);
+      assert.deepEqual(consoleProblems, []);
     },
   );
 

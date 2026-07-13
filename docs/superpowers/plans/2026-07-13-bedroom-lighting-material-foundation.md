@@ -36,6 +36,13 @@ Insert a scenario before the existing room-mode MMO cadence test:
 
 ```js
 await scenario('bedroom rendering has a bounded material and shadow foundation', { viewport: { width: 1000, height: 700 } }, async (page) => {
+  const consoleProblems = [];
+  page.on('console', (message) => {
+    if (message.type() === 'warning' || message.type() === 'error') {
+      consoleProblems.push(`${message.type()}: ${message.text()}`);
+    }
+  });
+  page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
   await page.goto(`${baseUrl}/?skipTitle=1&seed=0xC0FFEE`);
   await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
 
@@ -68,7 +75,7 @@ await scenario('bedroom rendering has a bounded material and shadow foundation',
   assert.notEqual(state.toneMapping, 0, 'bedroom still uses NoToneMapping');
   assert.equal(state.outputColorSpace, 'srgb');
   assert.equal(state.shadowsEnabled, true);
-  assert.notEqual(state.shadowType, 0);
+  assert.equal(state.shadowType, 1, 'bedroom must use supported PCFShadowMap');
   assert.equal(state.floorMapped, true);
   assert.equal(state.wallMapped, true);
   assert.equal(state.floorReceives, true);
@@ -76,6 +83,7 @@ await scenario('bedroom rendering has a bounded material and shadow foundation',
   assert.equal(state.keyCasts, true);
   assert.deepEqual(state.shadowSize, [1024, 1024]);
   assert.deepEqual(state.shadowLights, ['room-key-light']);
+  assert.deepEqual(consoleProblems, []);
 });
 ```
 
@@ -99,7 +107,7 @@ git commit -m "test: define bedroom rendering contract"
 - Test: `scripts/smoke.mjs`
 
 **Interfaces:**
-- Consumes: Three.js `ACESFilmicToneMapping` and `PCFSoftShadowMap` constants.
+- Consumes: Three.js `ACESFilmicToneMapping` and supported `PCFShadowMap` constants.
 - Produces: `HostApp.renderer` configured with filmic tone mapping, calibrated exposure, and enabled soft shadows before the room is built.
 
 - [ ] **Step 1: Configure renderer response and shadow support**
@@ -110,7 +118,7 @@ Immediately after renderer construction, add:
 this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 this.renderer.toneMappingExposure = 1.05;
 this.renderer.shadowMap.enabled = true;
-this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+this.renderer.shadowMap.type = THREE.PCFShadowMap;
 ```
 
 Do not assign `outputColorSpace`; Three.js already defaults to `SRGBColorSpace`, and the browser test pins that engine contract.

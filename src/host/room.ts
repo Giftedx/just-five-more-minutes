@@ -73,23 +73,22 @@ function makePaintTexture(): THREE.CanvasTexture {
 
   ctx.fillStyle = '#8a7560';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  for (let y = 0; y < canvas.height; y += 4) {
-    const alpha = 0.012 + ((y * 17) % 5) * 0.002;
-    ctx.fillStyle = `rgba(255,238,216,${alpha})`;
-    ctx.fillRect(0, y, canvas.width, 2);
-  }
-  for (let i = 0; i < 96; i++) {
+  for (let i = 0; i < 72; i++) {
     const x = (i * 47) % canvas.width;
     const y = (i * 73) % canvas.height;
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,242,220,0.018)' : 'rgba(40,27,21,0.018)';
-    ctx.fillRect(x, y, 2, 2);
+    const radiusX = 2 + ((i * 11) % 6);
+    const radiusY = 1 + ((i * 7) % 3);
+    ctx.beginPath();
+    ctx.ellipse(x, y, radiusX, radiusY, (i % 5) * 0.18, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,242,220,0.016)' : 'rgba(40,27,21,0.014)';
+    ctx.fill();
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(2.5, 2);
+  texture.repeat.set(1.75, 1.4);
   return texture;
 }
 
@@ -1437,8 +1436,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   scene.add(keyLight, keyLight.target);
   // visible lamp fixture — open cone needs DoubleSide or the inside face
   // is culled and the shade vanishes when seen from below
-  const shadeMat = lambert(0xe8c878, { emissive: 0xffb868, emissiveIntensity: 0.32 });
-  shadeMat.side = THREE.DoubleSide;
+  const shadeMat = new THREE.MeshBasicMaterial({ color: 0xc9964a, side: THREE.DoubleSide });
   const shade = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.16, 24, 1, true), shadeMat);
   shade.position.set(-0.4, 2.38, -0.2);
   scene.add(shade);
@@ -1453,7 +1451,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   scene.add(rim);
   const bulb = new THREE.Mesh(
     new THREE.SphereGeometry(0.035, 10, 8),
-    new THREE.MeshBasicMaterial({ color: 0xfff2cc }),
+    new THREE.MeshBasicMaterial({ color: 0xffd6a0 }),
   );
   bulb.position.set(-0.4, 2.33, -0.2);
   scene.add(bulb);
