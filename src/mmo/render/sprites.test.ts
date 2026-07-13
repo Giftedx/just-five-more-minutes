@@ -48,6 +48,7 @@ describe('Mudwick sprite finish contracts', () => {
     expect(HOB_SPRITE.rows).not.toEqual(GOBLIN_SPRITE.rows);
     expect(HOB_SPRITE.rows.join('')).toContain('t');
     expect(HOB_SPRITE.rows.join('')).toContain('a');
+    expect(HOB_SPRITE.rows.join('')).toContain('e');
     expect(HOB_ANGRY_SPRITE.rows).toEqual(HOB_SPRITE.rows);
     expect(HOB_ANGRY_SPRITE.palette.y).not.toBe(HOB_SPRITE.palette.y);
     expectPaletteComplete(HOB_SPRITE);

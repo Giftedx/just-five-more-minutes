@@ -127,7 +127,7 @@ export const HOB_SPRITE: Sprite = {
   rows: [
     '.a........a.',
     'aa.gggggg.aa',
-    '.agggggggga.',
+    '.aeggggggea.',
     '..gygggygg..',
     '..gtgggtgg..',
     '..gggkkggg..',
