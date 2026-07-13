@@ -355,7 +355,7 @@ try {
   });
 
   await scenario(
-    'bedroom rendering has a bounded material and shadow foundation',
+    'bedroom rendering has a bounded material and grounding foundation',
     { viewport: { width: 1000, height: 700 } },
     async (page) => {
       const consoleProblems = [];
@@ -375,36 +375,56 @@ try {
         const wall = scene.getObjectByName('room-wall-north');
         const desk = scene.getObjectByName('room-desk');
         const key = scene.getObjectByName('room-key-light');
+        const contactShadows = scene.getObjectByName('room-contact-shadows');
+        const facesUp = (mesh) => {
+          const position = mesh?.geometry?.attributes?.position;
+          const index = mesh?.geometry?.index;
+          if (!position || !index || index.count < 3) return false;
+          const i0 = index.getX(0);
+          const i1 = index.getX(1);
+          const i2 = index.getX(2);
+          const ax = position.getX(i1) - position.getX(i0);
+          const az = position.getZ(i1) - position.getZ(i0);
+          const bx = position.getX(i2) - position.getX(i0);
+          const bz = position.getZ(i2) - position.getZ(i0);
+          return az * bx - ax * bz > 0;
+        };
         const shadowLights = [];
+        let shadowCasters = 0;
         scene.traverse((object) => {
           if (object.isLight && object.castShadow) shadowLights.push(object.name);
+          if (object.isMesh && object.castShadow) shadowCasters++;
         });
         return {
           toneMapping: host.renderer.toneMapping,
           outputColorSpace: host.renderer.outputColorSpace,
           shadowsEnabled: host.renderer.shadowMap.enabled,
-          shadowType: host.renderer.shadowMap.type,
-          floorMapped: Boolean(floor?.material?.map),
-          wallMapped: Boolean(wall?.material?.map),
-          floorReceives: floor?.receiveShadow,
-          deskCasts: desk?.castShadow,
+          floorVertexColors: Boolean(floor?.material?.vertexColors && floor?.geometry?.attributes?.color),
+          wallVertexColors: Boolean(wall?.material?.vertexColors && wall?.geometry?.attributes?.color),
+          contactShadowsMapped: Boolean(contactShadows?.material?.map),
+          contactShadowsDepthWrite: contactShadows?.material?.depthWrite,
+          floorFacesUp: facesUp(floor),
+          contactShadowsFaceUp: facesUp(contactShadows),
+          deskNamed: desk?.name,
           keyCasts: key?.castShadow,
-          shadowSize: [key?.shadow?.mapSize?.width, key?.shadow?.mapSize?.height],
           shadowLights,
+          shadowCasters,
         };
       });
 
       assert.notEqual(state.toneMapping, 0, 'bedroom still uses NoToneMapping');
       assert.equal(state.outputColorSpace, 'srgb');
-      assert.equal(state.shadowsEnabled, true);
-      assert.equal(state.shadowType, 1, 'bedroom must use supported PCFShadowMap');
-      assert.equal(state.floorMapped, true);
-      assert.equal(state.wallMapped, true);
-      assert.equal(state.floorReceives, true);
-      assert.equal(state.deskCasts, true);
-      assert.equal(state.keyCasts, true);
-      assert.deepEqual(state.shadowSize, [1024, 1024]);
-      assert.deepEqual(state.shadowLights, ['room-key-light']);
+      assert.equal(state.shadowsEnabled, false);
+      assert.equal(state.floorVertexColors, true);
+      assert.equal(state.wallVertexColors, true);
+      assert.equal(state.contactShadowsMapped, true);
+      assert.equal(state.contactShadowsDepthWrite, false);
+      assert.equal(state.floorFacesUp, true);
+      assert.equal(state.contactShadowsFaceUp, true);
+      assert.equal(state.deskNamed, 'room-desk');
+      assert.equal(state.keyCasts, false);
+      assert.deepEqual(state.shadowLights, []);
+      assert.equal(state.shadowCasters, 0);
       assert.deepEqual(consoleProblems, []);
     },
   );

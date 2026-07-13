@@ -2,96 +2,63 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the first-person bedroom from a flat lit blockout into a grounded, intentionally rendered stylized environment without changing gameplay or adding external assets.
+**Goal:** Turn the first-person bedroom from a flat lit blockout into a grounded, intentionally rendered stylized environment without changing gameplay or imposing an unacceptable browser performance cost.
 
-**Architecture:** Preserve the room's existing `MeshLambertMaterial` contract and enhance it at three seams: renderer configuration in `src/host/app.ts`, deterministic architectural textures and selective shadow participation in `src/host/room.ts`, and a browser-level rendering contract in `scripts/smoke.mjs`. Exactly one warm spotlight casts bounded soft shadows; existing lights remain non-shadowing fill.
+**Architecture:** Preserve the room's `MeshLambertMaterial` interaction contract. Configure filmic renderer response in `src/host/app.ts`; generate deterministic vertex-coloured wall/floor geometry plus one batched contact-shadow mesh in `src/host/room.ts`; pin colour, geometry winding, grounding, and zero real-time shadow maps in `scripts/smoke.mjs`. Real-time PCF shadows are explicitly rejected by measured same-process A/B evidence.
 
-**Tech Stack:** TypeScript, Three.js, HTML Canvas textures, Node.js browser smoke runner, Vite, Vitest
+**Tech Stack:** TypeScript, Three.js, Canvas 2D, Node.js browser smoke runner, Playwright, Vite, Vitest
 
 ## Global Constraints
 
 - Keep the low-poly procedural-art identity; add no external raster assets.
 - Do not convert the room wholesale away from `MeshLambertMaterial`.
 - Use no post-processing stack, bloom, SSAO, or new runtime dependency.
-- Exactly one room light may cast shadows.
-- Cap the key shadow map at 1024 by 1024.
+- Keep runtime shadow maps disabled and batch contact grounding into one mesh.
 - Keep browser output in the sRGB colour space.
 - Preserve gameplay, interaction, dialogue, and dusk-transition behaviour.
+- Reject any approach that reproduces the measured 13 fps headless result of PCF shadow sampling.
 
 ---
 
 ### Task 1: Lock the Rendering Contract in a Failing Browser Test
 
 **Files:**
-- Modify: `scripts/smoke.mjs:357-389`
+- Modify: `scripts/smoke.mjs`
 - Test: `scripts/smoke.mjs`
 
 **Interfaces:**
-- Consumes: the existing `window.__game.host` diagnostics surface and `scenario(name, options, callback)` browser helper.
-- Produces: a smoke scenario that inspects named `room-floor`, `room-wall-north`, `room-desk`, and `room-key-light` objects plus renderer settings.
+- Consumes: `window.__game.host`, `scenario(name, options, callback)`, and stable room object names.
+- Produces: a browser scenario covering filmic/sRGB response, vertex-coloured architecture, upward-facing indexed geometry, one mapped depth-safe contact mesh, no casters, and no warning/error events.
 
-- [ ] **Step 1: Add the failing room-rendering scenario**
+- [ ] **Step 1: Add the rendering scenario**
 
-Insert a scenario before the existing room-mode MMO cadence test:
+The scenario must navigate with `{ skipTitle: 1, seed: '0xC0FFEE' }`, collect `console` warnings/errors and `pageerror` events, and inspect `room-floor`, `room-wall-north`, `room-desk`, `room-key-light`, and `room-contact-shadows`.
+
+Use this manual winding calculation for the first indexed triangle:
 
 ```js
-await scenario('bedroom rendering has a bounded material and shadow foundation', { viewport: { width: 1000, height: 700 } }, async (page) => {
-  const consoleProblems = [];
-  page.on('console', (message) => {
-    if (message.type() === 'warning' || message.type() === 'error') {
-      consoleProblems.push(`${message.type()}: ${message.text()}`);
-    }
-  });
-  page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
-  await page.goto(`${baseUrl}/?skipTitle=1&seed=0xC0FFEE`);
-  await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
-
-  const state = await page.evaluate(() => {
-    const host = window.__game['host'];
-    const scene = host.room.scene;
-    const floor = scene.getObjectByName('room-floor');
-    const wall = scene.getObjectByName('room-wall-north');
-    const desk = scene.getObjectByName('room-desk');
-    const key = scene.getObjectByName('room-key-light');
-    const shadowLights = [];
-    scene.traverse((object) => {
-      if (object.isLight && object.castShadow) shadowLights.push(object.name);
-    });
-    return {
-      toneMapping: host.renderer.toneMapping,
-      outputColorSpace: host.renderer.outputColorSpace,
-      shadowsEnabled: host.renderer.shadowMap.enabled,
-      shadowType: host.renderer.shadowMap.type,
-      floorMapped: Boolean(floor?.material?.map),
-      wallMapped: Boolean(wall?.material?.map),
-      floorReceives: floor?.receiveShadow,
-      deskCasts: desk?.castShadow,
-      keyCasts: key?.castShadow,
-      shadowSize: [key?.shadow?.mapSize?.width, key?.shadow?.mapSize?.height],
-      shadowLights,
-    };
-  });
-
-  assert.notEqual(state.toneMapping, 0, 'bedroom still uses NoToneMapping');
-  assert.equal(state.outputColorSpace, 'srgb');
-  assert.equal(state.shadowsEnabled, true);
-  assert.equal(state.shadowType, 1, 'bedroom must use supported PCFShadowMap');
-  assert.equal(state.floorMapped, true);
-  assert.equal(state.wallMapped, true);
-  assert.equal(state.floorReceives, true);
-  assert.equal(state.deskCasts, true);
-  assert.equal(state.keyCasts, true);
-  assert.deepEqual(state.shadowSize, [1024, 1024]);
-  assert.deepEqual(state.shadowLights, ['room-key-light']);
-  assert.deepEqual(consoleProblems, []);
-});
+const facesUp = (mesh) => {
+  const position = mesh?.geometry?.attributes?.position;
+  const index = mesh?.geometry?.index;
+  if (!position || !index || index.count < 3) return false;
+  const i0 = index.getX(0);
+  const i1 = index.getX(1);
+  const i2 = index.getX(2);
+  const ax = position.getX(i1) - position.getX(i0);
+  const az = position.getZ(i1) - position.getZ(i0);
+  const bx = position.getX(i2) - position.getX(i0);
+  const bz = position.getZ(i2) - position.getZ(i0);
+  return az * bx - ax * bz > 0;
+};
 ```
 
-- [ ] **Step 2: Run the focused browser suite and prove RED**
+Assert `toneMapping !== 0`, `outputColorSpace === 'srgb'`, `shadowMap.enabled === false`, both architectural meshes expose vertex colours, both horizontal meshes face upward, the contact material has a map with `depthWrite === false`, and caster/light arrays are empty.
 
-Run: `npm run build && npm run test:browser`
+- [ ] **Step 2: Prove RED against the untouched room**
 
-Expected: FAIL in `bedroom rendering has a bounded material and shadow foundation`, with `bedroom still uses NoToneMapping` as the first rendering-contract failure.
+Run: `$env:SMOKE_URL='http://127.0.0.1:<baseline-port>/'; node scripts/smoke.mjs`
+
+Expected: FAIL because the untouched floor and wall do not expose vertex colour attributes and `room-contact-shadows` does not exist.
 
 - [ ] **Step 3: Commit the failing contract**
 
@@ -100,185 +67,130 @@ git add -- scripts/smoke.mjs
 git commit -m "test: define bedroom rendering contract"
 ```
 
-### Task 2: Configure the Host Renderer
+### Task 2: Configure Filmic Renderer Response
 
 **Files:**
 - Modify: `src/host/app.ts:61-68`
 - Test: `scripts/smoke.mjs`
 
 **Interfaces:**
-- Consumes: Three.js `ACESFilmicToneMapping` and supported `PCFShadowMap` constants.
-- Produces: `HostApp.renderer` configured with filmic tone mapping, calibrated exposure, and enabled soft shadows before the room is built.
+- Consumes: Three.js `ACESFilmicToneMapping`.
+- Produces: `HostApp.renderer` with exposure `1.05`; output colour space remains Three.js's sRGB default; shadow maps remain disabled.
 
-- [ ] **Step 1: Configure renderer response and shadow support**
-
-Immediately after renderer construction, add:
+- [ ] **Step 1: Configure the renderer**
 
 ```ts
+this.renderer = new THREE.WebGLRenderer({ antialias: true });
 this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 this.renderer.toneMappingExposure = 1.05;
-this.renderer.shadowMap.enabled = true;
-this.renderer.shadowMap.type = THREE.PCFShadowMap;
 ```
-
-Do not assign `outputColorSpace`; Three.js already defaults to `SRGBColorSpace`, and the browser test pins that engine contract.
 
 - [ ] **Step 2: Run static and unit gates**
 
-Run: `npm test -- --run && npm run build`
+Run: `npm test -- --run; npm run build`
 
-Expected: 198 unit tests pass and the production build succeeds. The browser contract remains red because the room objects do not exist yet.
+Expected: 198 tests pass and the production build succeeds.
 
-- [ ] **Step 3: Commit the renderer seam**
+- [ ] **Step 3: Commit**
 
 ```powershell
 git add -- src/host/app.ts
 git commit -m "feat: configure cinematic room renderer"
 ```
 
-### Task 3: Add Deterministic Architectural Surface Textures
+### Task 3: Build Procedural Architectural Geometry
 
 **Files:**
-- Modify: `src/host/room.ts:60-66,792-840`
+- Modify: `src/host/room.ts`
 - Test: `scripts/smoke.mjs`
 
 **Interfaces:**
-- Consumes: browser Canvas 2D APIs and Three.js `CanvasTexture`, `RepeatWrapping`, and `SRGBColorSpace`.
-- Produces: `makePaintTexture(): THREE.CanvasTexture`, `makeFloorTexture(): THREE.CanvasTexture`, and named mapped shell meshes.
+- Produces: `makePaintGeometry(width, height): THREE.PlaneGeometry` and `makeFloorGeometry(): THREE.BufferGeometry`.
+- Consumers: named wall and floor meshes in the browser contract.
 
-- [ ] **Step 1: Implement deterministic canvas texture helpers**
+- [ ] **Step 1: Generate deterministic wall vertex colours**
 
-Add helpers near the existing material helper. Each texture must paint its final colour, set `colorSpace = THREE.SRGBColorSpace`, set both wrap axes to `THREE.RepeatWrapping`, and use only loop-index arithmetic rather than `Math.random()`.
+Create `PlaneGeometry(width, height, 4, 3)`. Add a three-component `color` attribute derived from base `0x8a7560` with deterministic lightness offset `((((i * 17) % 11) - 5) * 0.0025)`. Render it with a white `MeshLambertMaterial({ vertexColors: true })`.
+
+- [ ] **Step 2: Generate one indexed floorboard mesh**
+
+Build five adjacent one-metre quads spanning `x = -2.5..2.5`, `z = -2..2`, using board colours `0x97754f`, `0xa08058`, `0x94714b`, `0x9d7951`, and `0x96734d`. Set upward normals and use upward-facing indices:
 
 ```ts
-function makePaintTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas unavailable for wall texture');
-  ctx.fillStyle = '#8b6046';
-  ctx.fillRect(0, 0, 128, 128);
-  for (let y = 0; y < 128; y += 4) {
-    const alpha = 0.014 + ((y * 17) % 5) * 0.002;
-    ctx.fillStyle = `rgba(255,232,204,${alpha})`;
-    ctx.fillRect(0, y, 128, 2);
-  }
-  for (let i = 0; i < 96; i += 1) {
-    const x = (i * 47) % 128;
-    const y = (i * 73) % 128;
-    ctx.fillStyle = i % 2 ? 'rgba(35,20,18,0.018)' : 'rgba(255,238,214,0.018)';
-    ctx.fillRect(x, y, 2, 2);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(2.5, 2);
-  return texture;
-}
+indices.push(first, first + 2, first + 1, first, first + 3, first + 2);
 ```
 
-Implement `makeFloorTexture()` with a 256 by 256 warm-brown base, four 64-pixel boards, 1-pixel dark seams, and deterministic low-alpha lengthwise grain. Use `texture.repeat.set(1.6, 1.3)`.
+Name the mesh `room-floor` and render with vertex colours.
 
-- [ ] **Step 2: Apply and name the shell materials**
+- [ ] **Step 3: Build and run focused smoke**
 
-Create one wall texture and one floor texture per room. Use white Lambert materials so the colour map is not multiplied by the old solid colours. Name the floor `room-floor`, name the north wall `room-wall-north`, and give the other wall segments stable `room-wall-*` names. Set shell planes to `receiveShadow = true` and leave `castShadow = false`.
+Run: `npm run build; $env:SMOKE_URL='http://127.0.0.1:<candidate-port>/'; node scripts/smoke.mjs`
 
-- [ ] **Step 3: Run build and inspect the generated room**
+Expected: architectural assertions pass; contact-grounding assertions remain red.
 
-Run: `npm run build && npm run test:browser`
-
-Expected: the new map assertions pass; the scenario still fails because `room-key-light` and `room-desk` shadow participation have not been added.
-
-- [ ] **Step 4: Commit the surface foundation**
-
-```powershell
-git add -- src/host/room.ts
-git commit -m "feat: texture bedroom architecture"
-```
-
-### Task 4: Add One Bounded Key Shadow and Selective Casters
+### Task 4: Batch Contact Grounding and Calibrate Light
 
 **Files:**
-- Modify: `src/host/room.ts:792-840,1337-1404`
+- Modify: `src/host/room.ts`
 - Test: `scripts/smoke.mjs`
 
 **Interfaces:**
-- Consumes: the named shell meshes from Task 3 and the existing `setDusk(t)` room-light transition.
-- Produces: named `room-key-light`, named `room-desk`, exactly one shadow-casting light, and selective Lambert mesh shadow participation.
+- Produces: `makeContactShadowTexture(): THREE.CanvasTexture`, `makeContactShadows(): THREE.Mesh`, `room-contact-shadows`, `room-key-light`, and `room-desk`.
 
-- [ ] **Step 1: Name the desk and mark opaque furniture casters**
+- [ ] **Step 1: Create the shared radial alpha texture**
 
-Name the desk's primary mesh `room-desk`. After room construction and before returning, traverse the scene. For opaque `THREE.Mesh` instances with a `MeshLambertMaterial`, enable `receiveShadow`; enable `castShadow` unless the object is an architectural shell, transparent, or a thin decorative overlay. Preserve explicitly configured shell flags.
+Use a 64 by 64 canvas radial gradient with stops `rgba(45,22,14,0.46)` at 0, `rgba(45,22,14,0.22)` at 0.55, and transparent at 1.
 
-- [ ] **Step 2: Add the bounded key spotlight**
+- [ ] **Step 2: Batch five footprints into one upward-facing mesh**
 
-Add a warm `THREE.SpotLight` near the ceiling fixture:
+Include desk `(0.9,-1.55,1.75,0.85)`, chair `(0.9,-0.95,0.68,0.68)`, bed `(-1.95,-0.4,1.12,2.18)`, bin `(1.95,-1.1,0.42,0.42)`, and basket `(-1.85,1.55,0.58,0.58)`. Position vertices at `y = 0.007`, share one UV-mapped material, set `transparent: true`, `depthWrite: false`, and `toneMapped: false`.
 
-```ts
-const keyLight = new THREE.SpotLight(0xffd39a, 6.5, 5.5, Math.PI / 3.2, 0.65, 1.4);
-keyLight.name = 'room-key-light';
-keyLight.position.set(-0.4, 2.45, -0.2);
-keyLight.target.position.set(0, 0.2, 0.15);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
-keyLight.shadow.camera.near = 0.15;
-keyLight.shadow.camera.far = 6;
-keyLight.shadow.bias = -0.00035;
-keyLight.shadow.normalBias = 0.025;
-scene.add(keyLight, keyLight.target);
-```
+- [ ] **Step 3: Add the non-shadowing warm key and practical calibration**
 
-Reduce the existing practical point light from intensity 14 to 7 so it becomes fill rather than a second key. In `setDusk`, interpolate the key from 4.5 to 7 and the practical from 6 to 8 while preserving the existing ambient/window fade.
+Use the named spotlight at intensity `4.5`, practical point light at `6`, and dusk interpolation to `7` and `8`. Set `keyLight.castShadow = false`. Render the visible ceiling shade as unlit gold `0xc9964a` so nearby physical lights cannot saturate it.
 
-- [ ] **Step 3: Run the browser contract and prove GREEN**
+- [ ] **Step 4: Prove GREEN**
 
-Run: `npm run build && npm run test:browser`
+Run: `npm run build; $env:SMOKE_URL='http://127.0.0.1:<candidate-port>/'; node scripts/smoke.mjs`
 
-Expected: all smoke scenarios pass, including one shadow light named `room-key-light`, 1024 by 1024 shadow map, mapped shell, and desk caster assertions.
+Expected: all 12 isolated smoke scenarios pass with no console warnings/errors.
 
-- [ ] **Step 4: Commit the bounded lighting system**
-
-```powershell
-git add -- src/host/room.ts scripts/smoke.mjs
-git commit -m "feat: ground bedroom with bounded soft shadows"
-```
-
-### Task 5: Visual Calibration and Full Verification
+### Task 5: Measure, Render, and Adversarially Review
 
 **Files:**
-- Modify if calibration requires it: `src/host/app.ts`, `src/host/room.ts`
-- Verify: `scripts/smoke.mjs`, `scripts/e2e-full.mjs`
+- Verify: `src/host/app.ts`, `src/host/room.ts`, `scripts/smoke.mjs`
+- Artifact: `output/playwright/bedroom-lighting-after.png` (ignored generated evidence)
 
 **Interfaces:**
-- Consumes: fixed seed URL `/?skipTitle=1&seed=0xC0FFEE` and the completed rendering contract.
-- Produces: a fresh 1440 by 900 comparison render, clean browser console, and full gate evidence.
+- Consumes: identical 1440 by 900 baseline and candidate URLs with `?skipTitle=1&seed=0xC0FFEE`.
+- Produces: controlled A/B cadence/draw evidence and a clean production-preview PNG.
 
-- [ ] **Step 1: Capture and inspect a fixed-seed render**
+- [ ] **Step 1: Profile baseline and candidate in one Chromium process**
 
-Run a development server on an available port, open the fixed-seed URL at 1440 by 900, wait 900 milliseconds, save `shots/lighting-after.png`, and inspect it beside `shots/lighting-before.png`.
+Open each URL in alternating fresh pages, wait 500 milliseconds, and count `requestAnimationFrame` callbacks for two seconds. Record renderer calls, triangles, and texture count. Reject any candidate near the measured PCF result of 13 fps, 259 calls, and 8,660 triangles.
 
-Reject the calibration if the dialogue text loses contrast, the wall texture reads as noise, the lamp remains a featureless white blob, the floor seams shimmer, or shadows show hard aliasing/intersection acne.
+Expected optimized result: 18.5–19 fps versus 21.5–23 fps baseline, one extra draw call, one extra texture, and no shadow pass.
 
-- [ ] **Step 2: Calibrate only documented rendering constants**
+- [ ] **Step 2: Render from an immutable production preview**
 
-If necessary, adjust only renderer exposure, texture alpha/repeats, fill/key intensity, spotlight penumbra, and shadow bias. Do not widen into geometry or UI changes. After every calibration edit, rerun `npm run build && npm run test:browser`.
+Run:
+
+```powershell
+npm run build
+npm run preview -- --host 127.0.0.1 --port <preview-port> --strictPort
+npx playwright screenshot --browser chromium --viewport-size "1440, 900" --wait-for-selector "#room-canvas" --wait-for-timeout 1500 "http://127.0.0.1:<preview-port>/?skipTitle=1&seed=0xC0FFEE" "output/playwright/bedroom-lighting-after.png"
+```
+
+Reject the render for clipped/white fixture fill, black backface holes, opaque contact rectangles, corrupted dialogue, crushed window art, obvious wall patching, or warning/error console output.
 
 - [ ] **Step 3: Run full verification**
 
 Run: `npm run verify`
 
-Expected: all unit tests, type/build checks, size budgets, browser smoke scenarios, full E2E, and hub build pass. Record exact counts and bundle sizes from the command output.
+Expected: unit tests, production build, size budget, 12 browser smoke scenarios, full interaction E2E, and mounted hub build all pass.
 
-- [ ] **Step 4: Adversarially inspect final state**
+- [ ] **Step 4: Inspect final state**
 
-Run: `git diff --check`, inspect `git diff --stat`, confirm browser warnings/errors are empty, and verify the smoke assertion still reports exactly one shadow-casting light.
+Run: `git diff --check; git status --short; git log --oneline --decorate -8`
 
-- [ ] **Step 5: Commit final calibration if changed**
-
-```powershell
-git add -- src/host/app.ts src/host/room.ts scripts/smoke.mjs
-git commit -m "fix: calibrate bedroom lighting response"
-```
-
-Skip this commit when the tree is already clean.
+Confirm no untracked source files, conflict markers, stale PCF references, or generated screenshots are staged.

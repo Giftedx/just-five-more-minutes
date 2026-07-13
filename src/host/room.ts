@@ -64,66 +64,96 @@ function lambert(color: number, opts: { emissive?: number; emissiveIntensity?: n
   return m;
 }
 
-function makePaintTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas unavailable for wall texture');
-
-  ctx.fillStyle = '#8a7560';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  for (let i = 0; i < 72; i++) {
-    const x = (i * 47) % canvas.width;
-    const y = (i * 73) % canvas.height;
-    const radiusX = 2 + ((i * 11) % 6);
-    const radiusY = 1 + ((i * 7) % 3);
-    ctx.beginPath();
-    ctx.ellipse(x, y, radiusX, radiusY, (i % 5) * 0.18, 0, Math.PI * 2);
-    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,242,220,0.016)' : 'rgba(40,27,21,0.014)';
-    ctx.fill();
+function makePaintGeometry(width: number, height: number): THREE.PlaneGeometry {
+  const geometry = new THREE.PlaneGeometry(width, height, 4, 3);
+  const position = geometry.getAttribute('position');
+  const colors = new Float32Array(position.count * 3);
+  for (let i = 0; i < position.count; i++) {
+    const lightnessOffset = (((i * 17) % 11) - 5) * 0.0025;
+    const color = new THREE.Color(0x8a7560).offsetHSL(0, 0, lightnessOffset);
+    color.toArray(colors, i * 3);
   }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1.75, 1.4);
-  return texture;
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geometry;
 }
 
-function makeFloorTexture(): THREE.CanvasTexture {
+function makeFloorGeometry(): THREE.BufferGeometry {
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  const boardColors = [0x97754f, 0xa08058, 0x94714b, 0x9d7951, 0x96734d];
+  for (let board = 0; board < boardColors.length; board++) {
+    const x0 = -2.5 + board;
+    const x1 = x0 + 1;
+    const first = positions.length / 3;
+    positions.push(x0, 0, -2, x1, 0, -2, x1, 0, 2, x0, 0, 2);
+    normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
+    const color = new THREE.Color(boardColors[board]!);
+    for (let vertex = 0; vertex < 4; vertex++) color.toArray(colors, colors.length);
+    indices.push(first, first + 2, first + 1, first, first + 3, first + 2);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  return geometry;
+}
+
+function makeContactShadowTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
+  canvas.width = 64;
+  canvas.height = 64;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas unavailable for floor texture');
+  if (!ctx) throw new Error('2D canvas unavailable for contact shadows');
+  const gradient = ctx.createRadialGradient(32, 32, 3, 32, 32, 32);
+  gradient.addColorStop(0, 'rgba(45,22,14,0.46)');
+  gradient.addColorStop(0.55, 'rgba(45,22,14,0.22)');
+  gradient.addColorStop(1, 'rgba(45,22,14,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(canvas);
+}
 
-  const boardColors = ['#9c7b52', '#95734c', '#a08058', '#98764f'];
-  for (let board = 0; board < 4; board++) {
-    const x = board * 64;
-    ctx.fillStyle = boardColors[board]!;
-    ctx.fillRect(x, 0, 64, canvas.height);
-    ctx.fillStyle = 'rgba(48,31,18,0.34)';
-    ctx.fillRect(x, 0, 1, canvas.height);
-    ctx.fillStyle = 'rgba(255,222,174,0.12)';
-    ctx.fillRect(x + 1, 0, 1, canvas.height);
+function makeContactShadows(): THREE.Mesh {
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const footprints = [
+    { x: 0.9, z: -1.55, width: 1.75, depth: 0.85 },
+    { x: 0.9, z: -0.95, width: 0.68, depth: 0.68 },
+    { x: -1.95, z: -0.4, width: 1.12, depth: 2.18 },
+    { x: 1.95, z: -1.1, width: 0.42, depth: 0.42 },
+    { x: -1.85, z: 1.55, width: 0.58, depth: 0.58 },
+  ];
+  for (const footprint of footprints) {
+    const first = positions.length / 3;
+    const halfW = footprint.width / 2;
+    const halfD = footprint.depth / 2;
+    positions.push(
+      footprint.x - halfW, 0.007, footprint.z - halfD,
+      footprint.x + halfW, 0.007, footprint.z - halfD,
+      footprint.x + halfW, 0.007, footprint.z + halfD,
+      footprint.x - halfW, 0.007, footprint.z + halfD,
+    );
+    uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+    indices.push(first, first + 2, first + 1, first, first + 3, first + 2);
   }
-  for (let i = 0; i < 72; i++) {
-    const board = i % 4;
-    const x = board * 64 + 5 + ((i * 29) % 52);
-    const y = (i * 67) % canvas.height;
-    const length = 18 + ((i * 13) % 42);
-    ctx.fillStyle = i % 3 === 0 ? 'rgba(49,30,17,0.055)' : 'rgba(255,224,178,0.038)';
-    ctx.fillRect(x, y, 1, Math.min(length, canvas.height - y));
-  }
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1.25, 1);
-  return texture;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  const material = new THREE.MeshBasicMaterial({
+    map: makeContactShadowTexture(),
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = 'room-contact-shadows';
+  mesh.renderOrder = 1;
+  return mesh;
 }
 
 function box(
@@ -860,22 +890,19 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
 
   // ---- shell: floor, ceiling, walls (room 5 x 4 m, 2.6 m high)
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(5, 4),
-    new THREE.MeshLambertMaterial({ color: 0xffffff, map: makeFloorTexture() }),
+    makeFloorGeometry(),
+    new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
   );
   floor.name = 'room-floor';
-  floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
   scene.add(floor);
+  scene.add(makeContactShadows());
 
   const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(5, 4), lambert(0x7a6a58));
   ceiling.name = 'room-ceiling';
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.y = 2.6;
-  ceiling.receiveShadow = true;
   scene.add(ceiling);
 
-  const wallTexture = makePaintTexture();
   const mkWall = (
     name: string,
     w: number,
@@ -886,13 +913,12 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     ry: number,
   ): THREE.Mesh => {
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(w, h),
-      new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTexture }),
+      makePaintGeometry(w, h),
+      new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
     );
     m.name = name;
     m.position.set(x, y, z);
     m.rotation.y = ry;
-    m.receiveShadow = true;
     scene.add(m);
     return m;
   };
@@ -1427,12 +1453,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   keyLight.name = 'room-key-light';
   keyLight.position.set(-0.4, 2.45, -0.2);
   keyLight.target.position.set(0, 0.2, 0.15);
-  keyLight.castShadow = true;
-  keyLight.shadow.mapSize.set(1024, 1024);
-  keyLight.shadow.camera.near = 0.15;
-  keyLight.shadow.camera.far = 6;
-  keyLight.shadow.bias = -0.00035;
-  keyLight.shadow.normalBias = 0.025;
+  keyLight.castShadow = false;
   scene.add(keyLight, keyLight.target);
   // visible lamp fixture — open cone needs DoubleSide or the inside face
   // is culled and the shade vanishes when seen from below
@@ -1495,22 +1516,6 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     deskLampShadeMat.emissive.setHex(on ? 0xffd8a0 : 0x000000);
     deskLampShadeMat.emissiveIntensity = on ? 0.5 : 0;
   };
-
-  // Keep the single-light shadow budget useful: solid Lambert props ground
-  // one another, while architectural and decorative planes only receive.
-  scene.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) return;
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    const isOpaqueLambert = materials.length > 0 && materials.every(
-      (material) => material instanceof THREE.MeshLambertMaterial
-        && !material.transparent
-        && material.opacity === 1,
-    );
-    if (!isOpaqueLambert) return;
-    object.receiveShadow = true;
-    object.castShadow = !(object.geometry instanceof THREE.PlaneGeometry)
-      && !(object.geometry instanceof THREE.CircleGeometry);
-  });
 
   return {
     scene,
