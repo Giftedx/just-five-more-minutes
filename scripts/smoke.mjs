@@ -235,6 +235,36 @@ try {
     assert.ok(strip.reset, 'full reset control missing');
   });
 
+  await scenario('title stays fully composed on a short desktop', { viewport: { width: 1000, height: 700 } }, async (page) => {
+    await gotoOk(page, { seed: 61 });
+    await page.locator('.title-begin').waitFor({ state: 'visible' });
+    const geometry = await page.evaluate(() => {
+      const card = document.querySelector('.title-card');
+      const header = document.querySelector('.title-header');
+      const footer = document.querySelector('.title-footer');
+      const begin = document.querySelector('.title-begin');
+      const cardRect = card.getBoundingClientRect();
+      return {
+        scrollTop: card.scrollTop,
+        clientHeight: card.clientHeight,
+        scrollHeight: card.scrollHeight,
+        headerTop: header.getBoundingClientRect().top,
+        footerBottom: footer.getBoundingClientRect().bottom,
+        cardTop: cardRect.top,
+        cardBottom: cardRect.bottom,
+        beginFocused: document.activeElement === begin,
+      };
+    });
+    assert.equal(geometry.scrollTop, 0, `title autofocus changed scroll position: ${JSON.stringify(geometry)}`);
+    assert.ok(
+      geometry.scrollHeight <= geometry.clientHeight,
+      `title overflowed a 1000x700 desktop: ${JSON.stringify(geometry)}`,
+    );
+    assert.ok(geometry.headerTop >= geometry.cardTop, `title header was clipped: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.footerBottom <= geometry.cardBottom, `title footer was clipped: ${JSON.stringify(geometry)}`);
+    assert.equal(geometry.beginFocused, true, 'Begin did not retain initial keyboard focus');
+  });
+
   await scenario('scorecard is semantic, focused, and short-screen reachable', { viewport: { width: 900, height: 400 } }, async (page) => {
     await gotoOk(page, { speed: 20, t: 299, skipTitle: 1, seed: '0x0badc0de' });
     await page.locator('.sc-card').waitFor({ state: 'visible', timeout: 10_000 });

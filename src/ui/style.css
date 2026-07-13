@@ -1912,6 +1912,95 @@ body {
   color: #a89aae;
 }
 
+/* Keep the complete incident card staged at ordinary laptop heights. Width
+   alone is not a useful proxy here: 1000x700 is a supported desktop, and the
+   week strip otherwise pushes the focused Begin button below the fold. */
+@media (max-height: 800px) and (min-width: 681px) {
+  .title-card {
+    padding: 16px 28px 14px;
+    scrollbar-gutter: stable;
+  }
+
+  .title-header {
+    margin-bottom: 8px;
+  }
+
+  .title-header-meta {
+    margin-bottom: 6px;
+  }
+
+  .title-name {
+    font-size: clamp(38px, 6vw, 48px);
+  }
+
+  .title-premise {
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.42;
+  }
+
+  .title-scene {
+    gap: 14px;
+    margin-bottom: 10px;
+    padding: 10px 14px 12px;
+  }
+
+  .title-scene-col {
+    gap: 7px;
+  }
+
+  .title-crt-bezel {
+    padding: 8px 8px 11px;
+  }
+
+  .title-crt {
+    width: 168px;
+    height: 128px;
+  }
+
+  .title-crt-scanlines,
+  .title-crt-flicker {
+    inset: 8px 8px 11px;
+  }
+
+  .title-mum-quote {
+    padding: 12px 14px 11px;
+  }
+
+  .title-mum-quote-text {
+    margin-bottom: 6px;
+    font-size: 14px;
+    line-height: 1.42;
+  }
+
+  .title-week {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .title-week-day {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .title-week-card {
+    margin-top: 2px;
+  }
+
+  .title-controls {
+    margin-bottom: 3px;
+  }
+
+  .title-footer {
+    gap: 6px;
+    padding-top: 10px;
+  }
+
+  .title-reset {
+    margin-top: 6px;
+  }
+}
+
 /* ---- Week verdict card ---- */
 
 .sc-week-grades {

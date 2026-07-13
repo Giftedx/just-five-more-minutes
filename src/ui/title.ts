@@ -410,7 +410,7 @@ export function showTitle(
   document.addEventListener('keydown', onKey);
   beginButton?.addEventListener('click', onBeginClick);
   el.addEventListener('click', onScreenClick);
-  beginButton?.focus();
+  beginButton?.focus({ preventScroll: true });
 
   return () => {
     if (disposed) return;
