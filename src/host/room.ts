@@ -52,8 +52,6 @@ export interface Room {
   playerSpawn: THREE.Vector3;
 }
 
-const WALL = 0x8a7560;
-const FLOOR = 0x9c7b52;
 const WOOD = 0x7a5a38;
 const WOOD_DARK = 0x5c421f;
 
@@ -64,6 +62,69 @@ function lambert(color: number, opts: { emissive?: number; emissiveIntensity?: n
     m.emissiveIntensity = opts.emissiveIntensity ?? 1;
   }
   return m;
+}
+
+function makePaintTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2D canvas unavailable for wall texture');
+
+  ctx.fillStyle = '#8a7560';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (let y = 0; y < canvas.height; y += 4) {
+    const alpha = 0.012 + ((y * 17) % 5) * 0.002;
+    ctx.fillStyle = `rgba(255,238,216,${alpha})`;
+    ctx.fillRect(0, y, canvas.width, 2);
+  }
+  for (let i = 0; i < 96; i++) {
+    const x = (i * 47) % canvas.width;
+    const y = (i * 73) % canvas.height;
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(255,242,220,0.018)' : 'rgba(40,27,21,0.018)';
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2.5, 2);
+  return texture;
+}
+
+function makeFloorTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2D canvas unavailable for floor texture');
+
+  const boardColors = ['#9c7b52', '#95734c', '#a08058', '#98764f'];
+  for (let board = 0; board < 4; board++) {
+    const x = board * 64;
+    ctx.fillStyle = boardColors[board]!;
+    ctx.fillRect(x, 0, 64, canvas.height);
+    ctx.fillStyle = 'rgba(48,31,18,0.34)';
+    ctx.fillRect(x, 0, 1, canvas.height);
+    ctx.fillStyle = 'rgba(255,222,174,0.12)';
+    ctx.fillRect(x + 1, 0, 1, canvas.height);
+  }
+  for (let i = 0; i < 72; i++) {
+    const board = i % 4;
+    const x = board * 64 + 5 + ((i * 29) % 52);
+    const y = (i * 67) % canvas.height;
+    const length = 18 + ((i * 13) % 42);
+    ctx.fillStyle = i % 3 === 0 ? 'rgba(49,30,17,0.055)' : 'rgba(255,224,178,0.038)';
+    ctx.fillRect(x, y, 1, Math.min(length, canvas.height - y));
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.25, 1);
+  return texture;
 }
 
 function box(
@@ -799,29 +860,50 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   const items: RoomItemDef[] = [];
 
   // ---- shell: floor, ceiling, walls (room 5 x 4 m, 2.6 m high)
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(5, 4), lambert(FLOOR));
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(5, 4),
+    new THREE.MeshLambertMaterial({ color: 0xffffff, map: makeFloorTexture() }),
+  );
+  floor.name = 'room-floor';
   floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
   scene.add(floor);
 
   const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(5, 4), lambert(0x7a6a58));
+  ceiling.name = 'room-ceiling';
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.y = 2.6;
+  ceiling.receiveShadow = true;
   scene.add(ceiling);
 
-  const mkWall = (w: number, h: number, x: number, y: number, z: number, ry: number, color = WALL): THREE.Mesh => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), lambert(color));
+  const wallTexture = makePaintTexture();
+  const mkWall = (
+    name: string,
+    w: number,
+    h: number,
+    x: number,
+    y: number,
+    z: number,
+    ry: number,
+  ): THREE.Mesh => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, h),
+      new THREE.MeshLambertMaterial({ color: 0xffffff, map: wallTexture }),
+    );
+    m.name = name;
     m.position.set(x, y, z);
     m.rotation.y = ry;
+    m.receiveShadow = true;
     scene.add(m);
     return m;
   };
-  mkWall(5, 2.6, 0, 1.3, -2, 0); // north
-  mkWall(4, 2.6, -2.5, 1.3, 0, Math.PI / 2); // west
-  mkWall(4, 2.6, 2.5, 1.3, 0, -Math.PI / 2); // east
+  mkWall('room-wall-north', 5, 2.6, 0, 1.3, -2, 0);
+  mkWall('room-wall-west', 4, 2.6, -2.5, 1.3, 0, Math.PI / 2);
+  mkWall('room-wall-east', 4, 2.6, 2.5, 1.3, 0, -Math.PI / 2);
   // south wall has the door: build in segments around opening x in [-1.2,-0.4]
-  mkWall(1.3, 2.6, -1.85, 1.3, 2, Math.PI); // left of door
-  mkWall(2.9, 2.6, 1.05, 1.3, 2, Math.PI); // right of door
-  mkWall(0.8, 0.55, -0.8, 2.32, 2, Math.PI); // above door
+  mkWall('room-wall-south-left', 1.3, 2.6, -1.85, 1.3, 2, Math.PI);
+  mkWall('room-wall-south-right', 2.9, 2.6, 1.05, 1.3, 2, Math.PI);
+  mkWall('room-wall-south-header', 0.8, 0.55, -0.8, 2.32, 2, Math.PI);
 
   // skirting glow strip for warmth
   const rug = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), lambert(0x9c4a3c));
