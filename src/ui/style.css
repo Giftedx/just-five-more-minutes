@@ -734,9 +734,6 @@ body {
 
   .hud-mum {
     grid-area: mum;
-    min-width: 148px;
-    padding-block: 6px 7px;
-    transform: none;
   }
 }
 
@@ -2365,6 +2362,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hud-mum[data-tier='3'] {
     animation: none;
+  }
+}
+
+@media (max-height: 520px) {
+  .hud-mum {
+    min-width: 148px;
+    padding-block: 6px 7px;
+    transform: none;
   }
 }
 

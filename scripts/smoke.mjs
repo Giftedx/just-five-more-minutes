@@ -438,9 +438,11 @@ try {
         const taskRects = [...chores.map(rect), rect(mum)];
         const lowestTaskBottom = Math.max(...taskRects.map((value) => value.bottom));
         const promptRect = rect(prompt);
+        const mumStyle = getComputedStyle(mum);
         return {
           choreTexts: chores.map((chore) => chore.textContent),
           choreRects: chores.map(rect),
+          mumRect: rect(mum),
           tier: mum.dataset.tier,
           state: mum.querySelector('.hud-mum-state')?.textContent ?? '',
           steps: mum.querySelectorAll('.hud-mum-step').length,
@@ -448,7 +450,9 @@ try {
           live: mum.getAttribute('aria-live'),
           atomic: mum.getAttribute('aria-atomic'),
           label: mum.getAttribute('aria-label'),
-          animation: getComputedStyle(mum).animationName,
+          animation: mumStyle.animationName,
+          mumTransform: mumStyle.transform,
+          mumMinWidth: mumStyle.minWidth,
           taskDisplay: getComputedStyle(taskStack).display,
           choreDirection: getComputedStyle(document.querySelector('.hud-chores')).flexDirection,
           taskRect: rect(taskStack),
@@ -468,11 +472,19 @@ try {
       assert.equal(pressure.atomic, 'true');
       assert.equal(pressure.label, 'Mum: at the door');
       assert.equal(pressure.animation, 'none');
+      assert.equal(pressure.mumTransform, 'none');
+      assert.equal(pressure.mumMinWidth, '148px');
       assert.equal(pressure.taskDisplay, 'grid');
       assert.equal(pressure.choreDirection, 'row');
       assert.ok(pressure.taskRect.left >= 0 && pressure.taskRect.top >= 0, JSON.stringify(pressure));
       assert.ok(pressure.taskRect.right <= pressure.viewport.width, JSON.stringify(pressure));
       assert.ok(pressure.choreRects.every((value) => value.bottom <= pressure.viewport.height), JSON.stringify(pressure));
+      assert.ok(
+        [...pressure.choreRects, pressure.mumRect].every(
+          (value) => value.left >= 0 && value.right <= pressure.clockRect.left - 8,
+        ),
+        JSON.stringify(pressure),
+      );
       assert.ok(pressure.taskRect.right <= pressure.clockRect.left - 8, JSON.stringify(pressure));
       assert.ok(pressure.promptGap >= 8, JSON.stringify(pressure));
 
