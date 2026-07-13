@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { ChoreId } from '../director/director';
+import { makeEnvironmentDetails } from './environment-details';
 
 export type Interactable =
   | { type: 'item'; itemId: string; chore: ChoreId; name: string }
@@ -929,6 +930,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   mkWall('room-wall-south-left', 1.3, 2.6, -1.85, 1.3, 2, Math.PI);
   mkWall('room-wall-south-right', 2.9, 2.6, 1.05, 1.3, 2, Math.PI);
   mkWall('room-wall-south-header', 0.8, 0.55, -0.8, 2.32, 2, Math.PI);
+  scene.add(makeEnvironmentDetails());
 
   // skirting glow strip for warmth
   const rug = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), lambert(0x9c4a3c));
