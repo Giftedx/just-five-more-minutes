@@ -120,6 +120,25 @@ try {
         })),
         { anyFinePointer: false, hasGame: false, roomCanvases: 0 },
       );
+      for (const viewport of [{ width: 360, height: 400 }, { width: 640, height: 360 }]) {
+        await page.setViewportSize(viewport);
+        const geometry = await page.locator('.mobile-gate-card').evaluate((card) => {
+          const rect = card.getBoundingClientRect();
+          return {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            width: innerWidth,
+            height: innerHeight,
+          };
+        });
+        assert.ok(geometry.left >= 16 && geometry.top >= 16, JSON.stringify(geometry));
+        assert.ok(
+          geometry.right <= geometry.width - 16 && geometry.bottom <= geometry.height - 16,
+          JSON.stringify(geometry),
+        );
+      }
     },
   );
 

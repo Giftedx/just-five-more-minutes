@@ -2159,6 +2159,18 @@ body {
   }
 }
 
+@media (max-height: 440px) and (max-width: 519px) {
+  .mobile-gate-visual {
+    display: none;
+  }
+}
+
+@media (max-height: 440px) and (min-width: 520px) and (max-width: 640px) {
+  .mobile-gate-card {
+    grid-template-columns: minmax(170px, 0.75fr) minmax(260px, 1.25fr);
+  }
+}
+
 /* ---------- volume control ---------- */
 
 .volume-control {
