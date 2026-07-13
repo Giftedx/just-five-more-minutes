@@ -875,6 +875,13 @@ body {
   transform: translateX(3px);
 }
 
+.hud-prompt-option:focus-visible {
+  outline: 2px solid rgba(255, 220, 120, 0.92);
+  outline-offset: 3px;
+  background: linear-gradient(to bottom, rgba(120, 92, 44, 0.95), rgba(86, 64, 30, 0.95));
+  border-color: rgba(255, 220, 130, 0.72);
+}
+
 .hud-prompt-timer {
   height: 5px;
   background: rgba(255, 255, 255, 0.1);
@@ -1902,14 +1909,19 @@ body {
   margin-top: 10px;
   background: none;
   border: none;
-  color: #6a6274;
+  color: #9b90a6;
   font: 500 11px 'Courier New', monospace;
   text-decoration: underline;
   cursor: pointer;
 }
 
 .title-reset:hover {
-  color: #a89aae;
+  color: #c0b2ca;
+}
+
+.title-reset:focus-visible {
+  outline: 2px solid rgba(255, 220, 120, 0.92);
+  outline-offset: 3px;
 }
 
 /* Keep the complete incident card staged at ordinary laptop heights. Width

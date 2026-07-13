@@ -158,6 +158,16 @@ try {
       geometry.taskGap >= 17.5,
       `objective/chore gap was ${geometry.taskGap.toFixed(2)}px, expected at least 17.5px`,
     );
+    const firstPromptOption = page.locator('.hud-prompt-option').first();
+    await firstPromptOption.focus();
+    assert.deepEqual(
+      await firstPromptOption.evaluate((button) => {
+        const style = getComputedStyle(button);
+        return { width: style.outlineWidth, offset: style.outlineOffset };
+      }),
+      { width: '2px', offset: '3px' },
+      'Mum response button did not use the intentional keyboard focus treatment',
+    );
     await page.evaluate(() => {
       const game = window.__game;
       game['handleMmoEvents']([{ type: 'playerDied', coinsLost: 4, whileAway: true }]);
@@ -263,6 +273,18 @@ try {
     assert.ok(geometry.headerTop >= geometry.cardTop, `title header was clipped: ${JSON.stringify(geometry)}`);
     assert.ok(geometry.footerBottom <= geometry.cardBottom, `title footer was clipped: ${JSON.stringify(geometry)}`);
     assert.equal(geometry.beginFocused, true, 'Begin did not retain initial keyboard focus');
+
+    await page.keyboard.press('Tab');
+    const reset = page.locator('.title-reset');
+    assert.equal(await reset.evaluate((button) => document.activeElement === button), true);
+    assert.deepEqual(
+      await reset.evaluate((button) => {
+        const style = getComputedStyle(button);
+        return { width: style.outlineWidth, offset: style.outlineOffset };
+      }),
+      { width: '2px', offset: '3px' },
+      'full-reset control did not use the intentional keyboard focus treatment',
+    );
   });
 
   await scenario('scorecard is semantic, focused, and short-screen reachable', { viewport: { width: 900, height: 400 } }, async (page) => {
