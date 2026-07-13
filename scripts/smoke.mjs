@@ -186,8 +186,30 @@ try {
     await page.keyboard.press('Shift+Tab');
     assert.notEqual(await page.evaluate(() => document.activeElement?.id), 'j5mm-volume-slider');
     await begin.focus();
+    await page.evaluate(() => {
+      window.__pauseFocusLabel = null;
+      document.addEventListener('focusin', (event) => {
+        if (event.target instanceof HTMLElement && event.target.classList.contains('pause-overlay-hint')) {
+          window.__pauseFocusLabel = event.target.textContent;
+        }
+      });
+    });
     await page.locator('.title-begin').click();
     await page.locator('.pause-overlay-hint').waitFor({ state: 'visible' });
+    const overlay = page.locator('.pause-overlay');
+    const panel = page.locator('.pause-overlay-panel');
+    const title = page.locator('.pause-overlay-title');
+    const hint = page.locator('.pause-overlay-hint');
+    const titleId = await title.getAttribute('id');
+    assert.equal(await overlay.getAttribute('role'), 'dialog');
+    assert.equal(await overlay.getAttribute('aria-labelledby'), titleId);
+    assert.equal(await overlay.getAttribute('aria-modal'), null);
+    assert.equal(await page.locator('.pause-overlay-eyebrow').textContent(), 'ROOM MODE · INPUT CHECK');
+    assert.equal(await title.textContent(), 'Ready when you are.');
+    assert.equal(await page.locator('.pause-overlay-copy').textContent(), 'The room is paused until it has your mouse.');
+    assert.equal(await hint.textContent(), 'Click to start looking');
+    assert.equal(await hint.evaluate((button) => document.activeElement === button), true);
+    assert.equal(await page.evaluate(() => window.__pauseFocusLabel), 'Click to start looking');
     assert.deepEqual(
       await page.locator('.volume-control').evaluate((control) => ({
         display: getComputedStyle(control).display,
@@ -199,6 +221,28 @@ try {
     await page.waitForTimeout(500);
     const after = await page.evaluate(() => window.__game['director'].t);
     assert.ok(after - before < 0.05, `director advanced ${(after - before).toFixed(3)}s while first lock failed`);
+
+    for (const viewport of [{ width: 1000, height: 700 }, { width: 900, height: 400 }]) {
+      await page.setViewportSize(viewport);
+      const geometry = await panel.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: innerWidth, height: innerHeight };
+      });
+      assert.ok(geometry.left >= 16 && geometry.top >= 16, JSON.stringify(geometry));
+      assert.ok(
+        geometry.right <= geometry.width - 16 && geometry.bottom <= geometry.height - 16,
+        JSON.stringify(geometry),
+      );
+    }
+
+    await page.evaluate(() => {
+      window.__game['hadPointerLock'] = true;
+      document.dispatchEvent(new Event('pointerlockchange'));
+    });
+    assert.equal(await page.locator('.pause-overlay-eyebrow').textContent(), 'ROOM MODE · PAUSED');
+    assert.equal(await title.textContent(), 'The room is holding still.');
+    assert.equal(await page.locator('.pause-overlay-copy').textContent(), 'Dinner and Mudwick are frozen until you return.');
+    assert.equal(await hint.textContent(), 'Resume looking');
   });
 
   await scenario('dialogue staging keeps Mum visible and controls separated', { viewport: { width: 900, height: 600 } }, async (page) => {

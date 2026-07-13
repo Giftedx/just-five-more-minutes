@@ -258,23 +258,48 @@ export class Game {
 
   private syncPauseOverlay(): void {
     const show = this.paused && !document.hidden;
+    let focusHint = false;
     if (show && !this.pauseOverlay) {
       const el = document.createElement('div');
       el.className = 'pause-overlay';
+      el.setAttribute('role', 'dialog');
+      el.setAttribute('aria-labelledby', 'j5mm-pause-title');
+      el.setAttribute('aria-describedby', 'j5mm-pause-copy');
+      const panel = document.createElement('section');
+      panel.className = 'pause-overlay-panel';
+      const eyebrow = document.createElement('p');
+      eyebrow.className = 'pause-overlay-eyebrow';
+      const title = document.createElement('h2');
+      title.id = 'j5mm-pause-title';
+      title.className = 'pause-overlay-title';
+      const copy = document.createElement('p');
+      copy.id = 'j5mm-pause-copy';
+      copy.className = 'pause-overlay-copy';
       const hint = document.createElement('button');
       hint.type = 'button';
       hint.className = 'pause-overlay-hint';
       hint.addEventListener('click', () => this.host.requestPointerLock());
-      el.appendChild(hint);
+      panel.append(eyebrow, title, copy, hint);
+      el.appendChild(panel);
       this.root.appendChild(el);
       this.pauseOverlay = el;
+      focusHint = true;
     }
     if (show && this.pauseOverlay) {
+      const eyebrow = this.pauseOverlay.querySelector<HTMLElement>('.pause-overlay-eyebrow');
+      const title = this.pauseOverlay.querySelector<HTMLElement>('.pause-overlay-title');
+      const copy = this.pauseOverlay.querySelector<HTMLElement>('.pause-overlay-copy');
       const hint = this.pauseOverlay.querySelector<HTMLButtonElement>('.pause-overlay-hint');
+      if (eyebrow) eyebrow.textContent = this.hadPointerLock ? 'ROOM MODE · PAUSED' : 'ROOM MODE · INPUT CHECK';
+      if (title) title.textContent = this.hadPointerLock ? 'The room is holding still.' : 'Ready when you are.';
+      if (copy) {
+        copy.textContent = this.hadPointerLock
+          ? 'Dinner and Mudwick are frozen until you return.'
+          : 'The room is paused until it has your mouse.';
+      }
       if (hint) {
-        hint.textContent = this.hadPointerLock
-          ? 'Paused — click to resume'
-          : 'Click to start looking';
+        hint.textContent = this.hadPointerLock ? 'Resume looking' : 'Click to start looking';
+        if (focusHint) hint.focus({ preventScroll: true });
       }
     } else if (!show && this.pauseOverlay) {
       this.pauseOverlay.remove();
