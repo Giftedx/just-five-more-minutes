@@ -82,6 +82,18 @@ try {
     },
   );
 
+  await scenario('document icon is self-contained and resource-clean', { viewport: { width: 1000, height: 700 } }, async (page) => {
+    const failedResponses = [];
+    page.on('response', (response) => {
+      if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.url()}`);
+    });
+    await gotoOk(page, { seed: 111 });
+    await page.waitForLoadState('networkidle');
+    const iconHref = await page.locator('link[rel~="icon"]').getAttribute('href');
+    assert.match(iconHref ?? '', /^data:image\/svg\+xml,/);
+    assert.deepEqual(failedResponses, [], `failed document resources: ${failedResponses.join(', ')}`);
+  });
+
   await scenario('first pointer-lock rejection freezes time', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await page.addInitScript(() => {
       // Pin the permissions policy to "allowed": this scenario tests the
