@@ -1025,7 +1025,9 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
 
   // ---- desk + monitor + chair (north-east area)
   const desk = new THREE.Group();
-  desk.add(box(1.6, 0.06, 0.7, lambert(WOOD), 0, 0.75, 0));
+  const deskTop = box(1.6, 0.06, 0.7, lambert(WOOD), 0, 0.75, 0);
+  deskTop.name = 'room-desk';
+  desk.add(deskTop);
   for (const [lx, lz] of [
     [-0.74, -0.3],
     [0.74, -0.3],
@@ -1416,12 +1418,23 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     ],
   };
 
-  // ---- lighting: one warm point light + dim ambient + faint window blue
+  // ---- lighting: a bounded warm key + non-shadowing practical and window fill
   const ambient = new THREE.AmbientLight(0x9a90b8, 0.55);
   scene.add(ambient);
-  const lamp = new THREE.PointLight(0xffc878, 14, 0, 1.8);
+  const lamp = new THREE.PointLight(0xffc878, 6, 0, 1.8);
   lamp.position.set(-0.4, 2.25, -0.2);
   scene.add(lamp);
+  const keyLight = new THREE.SpotLight(0xffd39a, 4.5, 5.5, Math.PI / 3.2, 0.65, 1.4);
+  keyLight.name = 'room-key-light';
+  keyLight.position.set(-0.4, 2.45, -0.2);
+  keyLight.target.position.set(0, 0.2, 0.15);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(1024, 1024);
+  keyLight.shadow.camera.near = 0.15;
+  keyLight.shadow.camera.far = 6;
+  keyLight.shadow.bias = -0.00035;
+  keyLight.shadow.normalBias = 0.025;
+  scene.add(keyLight, keyLight.target);
   // visible lamp fixture — open cone needs DoubleSide or the inside face
   // is culled and the shade vanishes when seen from below
   const shadeMat = lambert(0xe8c878, { emissive: 0xffb868, emissiveIntensity: 0.32 });
@@ -1475,7 +1488,8 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     ambient.intensity = 0.55 - 0.2 * t;
     windowLight.intensity = 2.2 - 1.1 * t;
     windowLight.color.setHSL(0.62, 0.45, 0.42 - 0.14 * t);
-    lamp.intensity = 14 + 3 * t;
+    lamp.intensity = 6 + 2 * t;
+    keyLight.intensity = 4.5 + 2.5 * t;
   };
 
   const setDeskLamp = (on: boolean): void => {
@@ -1483,6 +1497,22 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     deskLampShadeMat.emissive.setHex(on ? 0xffd8a0 : 0x000000);
     deskLampShadeMat.emissiveIntensity = on ? 0.5 : 0;
   };
+
+  // Keep the single-light shadow budget useful: solid Lambert props ground
+  // one another, while architectural and decorative planes only receive.
+  scene.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    const isOpaqueLambert = materials.length > 0 && materials.every(
+      (material) => material instanceof THREE.MeshLambertMaterial
+        && !material.transparent
+        && material.opacity === 1,
+    );
+    if (!isOpaqueLambert) return;
+    object.receiveShadow = true;
+    object.castShadow = !(object.geometry instanceof THREE.PlaneGeometry)
+      && !(object.geometry instanceof THREE.CircleGeometry);
+  });
 
   return {
     scene,
