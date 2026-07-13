@@ -140,21 +140,21 @@ function makeStoryBoardTexture(): THREE.CanvasTexture {
 function makeStoryBoard(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'room-story-board';
-  group.position.set(-0.72, 1.55, -1.968);
+  group.position.set(-0.42, 1.55, -1.968);
 
   const face = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.96, 0.6),
-    new THREE.MeshBasicMaterial({ map: makeStoryBoardTexture() }),
+    new THREE.PlaneGeometry(0.84, 0.52),
+    new THREE.MeshBasicMaterial({ map: makeStoryBoardTexture(), color: 0xd8c3a4 }),
   );
   face.name = 'room-story-board-face';
   face.position.z = 0.018;
   group.add(face);
 
   const frame = instances(lambert(0x4a2d19), [
-    { position: [-0.505, 0, 0.035], scale: [0.05, 0.68, 0.055] },
-    { position: [0.505, 0, 0.035], scale: [0.05, 0.68, 0.055] },
-    { position: [0, -0.325, 0.035], scale: [1.06, 0.05, 0.055] },
-    { position: [0, 0.325, 0.035], scale: [1.06, 0.05, 0.055] },
+    { position: [-0.445, 0, 0.035], scale: [0.045, 0.6, 0.05] },
+    { position: [0.445, 0, 0.035], scale: [0.045, 0.6, 0.05] },
+    { position: [0, -0.285, 0.035], scale: [0.93, 0.045, 0.05] },
+    { position: [0, 0.285, 0.035], scale: [0.93, 0.045, 0.05] },
   ]);
   frame.name = 'room-story-board-frame';
   group.add(frame);
@@ -189,36 +189,36 @@ function makeDeskDrawers(): THREE.Group {
 function makeRadiator(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'room-radiator';
-  group.position.set(2.43, 0.52, 0.4);
+  group.position.set(2.43, 0.45, 0.46);
 
-  const bodyMaterial = lambert(0xc2bba8);
-  const body = box(0.1, 0.58, 0.88, bodyMaterial);
+  const bodyMaterial = lambert(0xa79f8e);
+  const body = box(0.085, 0.44, 0.68, bodyMaterial);
   body.name = 'room-radiator-panel';
   group.add(body);
 
-  const ribs = instances(lambert(0xd7d0bd), Array.from({ length: 8 }, (_, i) => ({
-    position: [-0.061, 0, -0.35 + i * 0.1] as [number, number, number],
-    scale: [0.025, 0.48, 0.055] as [number, number, number],
+  const ribs = instances(lambert(0xbab29e), Array.from({ length: 7 }, (_, i) => ({
+    position: [-0.052, 0, -0.27 + i * 0.09] as [number, number, number],
+    scale: [0.022, 0.36, 0.045] as [number, number, number],
   })));
   ribs.name = 'room-radiator-ribs';
   group.add(ribs);
 
   const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.3, 8), lambert(0xa9a28f));
-  pipe.position.set(-0.01, -0.38, -0.47);
+  pipe.position.set(-0.01, -0.3, -0.37);
   group.add(pipe);
-  group.add(box(0.11, 0.065, 0.08, lambert(0x8e8878), -0.04, -0.23, -0.47));
+  group.add(box(0.1, 0.06, 0.075, lambert(0x817b6d), -0.04, -0.17, -0.37));
   return group;
 }
 
 function makeCoving(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'room-coving';
-  const material = lambert(0x4f3524);
+  const material = lambert(0x6a513b);
   const rails = [
-    box(5, 0.08, 0.08, material, 0, 2.54, -1.95),
-    box(5, 0.08, 0.08, material, 0, 2.54, 1.95),
-    box(0.08, 0.08, 3.82, material, -2.45, 2.54, 0),
-    box(0.08, 0.08, 3.82, material, 2.45, 2.54, 0),
+    box(5, 0.045, 0.045, material, 0, 2.565, -1.97),
+    box(5, 0.045, 0.045, material, 0, 2.565, 1.97),
+    box(0.045, 0.045, 3.9, material, -2.47, 2.565, 0),
+    box(0.045, 0.045, 3.9, material, 2.47, 2.565, 0),
   ];
   for (const [index, rail] of rails.entries()) {
     rail.name = `room-coving-${index + 1}`;
