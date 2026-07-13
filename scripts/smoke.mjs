@@ -588,10 +588,12 @@ try {
             .filter((_, index) => index % 3 === 2)
             .map((value) => Number(value.toFixed(4))))]
           : [];
-        const namedChildren = [
+        const chairChildren = [
           'room-chair-seat',
           'room-chair-back',
           'room-chair-base',
+        ];
+        const bedChildren = [
           'room-bed-frame',
           'room-bed-mattress',
           'room-bed-headboard',
@@ -602,7 +604,10 @@ try {
         return {
           chairName: chair?.name,
           bedName: bed?.name,
-          namedChildren: namedChildren.map((name) => scene.getObjectByName(name)?.name),
+          namedChildren: [
+            ...chairChildren.map((name) => chair?.getObjectByName(name)?.name),
+            ...bedChildren.map((name) => bed?.getObjectByName(name)?.name),
+          ],
           chairInteraction: chair?.userData.interact?.type,
           chairInteractableMembers: chair
             ? host.room.interactables.filter((object) => belongsTo(object, chair)).length
