@@ -697,6 +697,49 @@ body {
   from { transform: translateY(-8px) rotate(-4deg); opacity: 0; }
 }
 
+@media (max-height: 520px) {
+  .hud-task-stack {
+    right: 118px;
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      'objective objective'
+      'chores mum';
+    align-items: start;
+    width: max-content;
+    max-width: calc(100vw - 154px);
+    gap: 14px 10px;
+  }
+
+  .hud-objective {
+    grid-area: objective;
+  }
+
+  .hud-chores {
+    grid-area: chores;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .hud-chore {
+    padding: 6px 9px 7px;
+    font-size: 12px;
+    transform: rotate(-1deg);
+  }
+
+  .hud-chore:nth-child(even) {
+    transform: rotate(0.8deg);
+  }
+
+  .hud-mum {
+    grid-area: mum;
+    min-width: 148px;
+    padding-block: 6px 7px;
+    transform: none;
+  }
+}
+
 /* clock: a little LED alarm clock pinned top-right */
 .hud-clock {
   position: absolute;
@@ -2247,39 +2290,81 @@ body {
   cursor: pointer;
 }
 
-/* ---- Mum status chip (suspicion tier, diegetic-ish) ---- */
+/* ---- Mum status ticket (household pressure, not debug telemetry) ---- */
 
 .hud-mum {
-  background: rgba(20, 16, 24, 0.72);
-  color: #cfc4b0;
-  padding: 5px 10px;
-  font: 600 11px 'Courier New', monospace;
+  --mum-accent: #8e8067;
+  min-width: 158px;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'label state'
+    'rail rail';
+  align-items: center;
+  gap: 4px 10px;
+  padding: 7px 10px 8px 12px;
+  background: linear-gradient(170deg, rgba(239, 230, 207, 0.96), rgba(210, 194, 160, 0.94));
+  border: 1px solid rgba(59, 37, 29, 0.48);
+  border-left: 3px solid var(--mum-accent);
+  color: #3b251d;
+  box-shadow: 2px 5px 12px rgba(0, 0, 0, 0.38);
+  transform: rotate(0.35deg);
+}
+
+.hud-mum-label {
+  grid-area: label;
+  font: 700 8.5px 'Courier New', monospace;
+  letter-spacing: 0.18em;
+}
+
+.hud-mum-state {
+  grid-area: state;
+  justify-self: end;
+  font: 700 10px 'Courier New', monospace;
   letter-spacing: 0.08em;
-  border-left: 3px solid #6a5a44;
-  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hud-mum-rail {
+  grid-area: rail;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.hud-mum-step {
+  height: 3px;
+  background: rgba(59, 37, 29, 0.18);
+}
+
+.hud-mum[data-tier='1'] {
+  --mum-accent: #b8954a;
 }
 
 .hud-mum[data-tier='2'] {
-  color: #f0c060;
-  border-left-color: #c08a30;
+  --mum-accent: #d87844;
 }
 
 .hud-mum[data-tier='3'] {
-  color: #ff9070;
-  border-left-color: #c05030;
+  --mum-accent: #c05030;
   animation: mumpulse 1.2s ease-in-out infinite;
+}
+
+.hud-mum[data-tier='0'] .hud-mum-step:nth-child(-n + 1),
+.hud-mum[data-tier='1'] .hud-mum-step:nth-child(-n + 2),
+.hud-mum[data-tier='2'] .hud-mum-step:nth-child(-n + 3),
+.hud-mum[data-tier='3'] .hud-mum-step:nth-child(-n + 4) {
+  background: var(--mum-accent);
 }
 
 @keyframes mumpulse {
   50% {
-    background: rgba(60, 24, 16, 0.78);
+    box-shadow: 2px 5px 12px rgba(0, 0, 0, 0.38), 0 0 14px rgba(192, 80, 48, 0.35);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hud-mum[data-tier='3'] {
     animation: none;
-    background: rgba(60, 24, 16, 0.78);
   }
 }
 

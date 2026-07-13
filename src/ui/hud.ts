@@ -14,6 +14,7 @@ export class Hud {
   private objectiveEl: HTMLDivElement;
   private choreEl: HTMLDivElement;
   private mumEl: HTMLDivElement;
+  private mumStateEl: HTMLSpanElement;
   private clockEl: HTMLDivElement;
   private subtitleEl: HTMLDivElement;
   private promptEl: HTMLDivElement;
@@ -35,6 +36,23 @@ export class Hud {
     this.objectiveEl = this.div('hud-objective', taskStackEl);
     this.choreEl = this.div('hud-chores', taskStackEl);
     this.mumEl = this.div('hud-mum', taskStackEl);
+    this.mumEl.setAttribute('role', 'status');
+    this.mumEl.setAttribute('aria-live', 'polite');
+    this.mumEl.setAttribute('aria-atomic', 'true');
+    const mumLabelEl = document.createElement('span');
+    mumLabelEl.className = 'hud-mum-label';
+    mumLabelEl.textContent = 'MUM';
+    this.mumStateEl = document.createElement('span');
+    this.mumStateEl.className = 'hud-mum-state';
+    const mumRailEl = document.createElement('span');
+    mumRailEl.className = 'hud-mum-rail';
+    mumRailEl.setAttribute('aria-hidden', 'true');
+    for (let index = 0; index < 4; index++) {
+      const step = document.createElement('span');
+      step.className = 'hud-mum-step';
+      mumRailEl.appendChild(step);
+    }
+    this.mumEl.append(mumLabelEl, this.mumStateEl, mumRailEl);
     this.clockEl = this.div('hud-clock');
     const dialogueStackEl = this.div('hud-dialogue-stack');
     this.promptEl = this.div('hud-prompt', dialogueStackEl);
@@ -104,9 +122,14 @@ export class Hud {
       this.mumEl.style.display = 'none';
       return;
     }
-    this.mumEl.style.display = 'block';
-    this.mumEl.textContent = `MUM: ${label}`;
-    this.mumEl.dataset['tier'] = String(tier);
+    this.mumEl.style.display = 'grid';
+    const state = label.toUpperCase();
+    if (this.mumStateEl.textContent !== state) {
+      this.mumStateEl.textContent = state;
+      this.mumEl.setAttribute('aria-label', `Mum: ${label}`);
+    }
+    const tierValue = String(tier);
+    if (this.mumEl.dataset['tier'] !== tierValue) this.mumEl.dataset['tier'] = tierValue;
   }
 
   /** One chip per active chore, oldest first. Empty array hides the stack. */
