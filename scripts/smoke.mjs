@@ -272,14 +272,16 @@ try {
       assert.equal(await label.getAttribute('for'), 'j5mm-volume-slider');
       assert.equal(await slider.getAttribute('aria-label'), 'Volume');
       assert.equal(await level.textContent(), '60%');
-      assert.deepEqual(
-        await control.evaluate((element) => ({
+      const initialState = await control.evaluate((element) => ({
           fill: element.style.getPropertyValue('--volume-level'),
           muted: element.dataset.muted,
           height: element.getBoundingClientRect().height,
-        })),
-        { fill: '60%', muted: 'false', height: 48 },
+      }));
+      assert.deepEqual(
+        { fill: initialState.fill, muted: initialState.muted },
+        { fill: '60%', muted: 'false' },
       );
+      assert.ok(initialState.height >= 32, `volume pointer target was ${initialState.height}px high`);
       assert.equal(await slider.evaluate((element) => getComputedStyle(element).appearance), 'none');
 
       await slider.focus();

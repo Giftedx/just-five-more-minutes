@@ -2266,25 +2266,116 @@ body {
 /* ---------- volume control ---------- */
 
 .volume-control {
+  --volume-level: 60%;
   position: absolute;
-  bottom: 14px;
   right: 16px;
+  bottom: 14px;
   z-index: 35;
+  box-sizing: border-box;
+  width: 166px;
+  min-height: 32px;
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: rgba(10, 8, 6, 0.7);
-  padding: 6px 11px;
-  border-radius: 9px;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgba(216, 168, 85, 0.34);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 224, 150, 0.045), transparent 42%),
+    linear-gradient(155deg, rgba(31, 25, 17, 0.96), rgba(12, 10, 7, 0.96));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48), inset 0 1px rgba(255, 255, 255, 0.04);
   color: #b8b0a0;
-  font: 600 12px 'Segoe UI', system-ui, sans-serif;
+  font: 700 9px 'Segoe UI', system-ui, sans-serif;
+}
+
+.volume-control-meta {
+  display: flex;
+  flex: 0 0 38px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.volume-control label {
+  letter-spacing: 1.8px;
+  color: #c7b889;
+}
+
+.volume-control-level {
+  color: #e8c33f;
+  font: 700 10px ui-monospace, 'Cascadia Mono', monospace;
+  letter-spacing: 0.4px;
 }
 
 .volume-control input {
-  width: 80px;
-  accent-color: #e8c33f;
+  appearance: none;
+  width: 104px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: pointer;
+}
+
+.volume-control input::-webkit-slider-runnable-track {
+  height: 6px;
+  border: 1px solid rgba(216, 168, 85, 0.3);
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 10px, rgba(255, 244, 210, 0.13) 10px 11px),
+    linear-gradient(90deg, #e8c33f 0 var(--volume-level), #211b12 var(--volume-level) 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.volume-control input::-webkit-slider-thumb {
+  appearance: none;
+  width: 11px;
+  height: 16px;
+  margin-top: -6px;
+  border: 1px solid #7a6225;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.75);
+}
+
+.volume-control input::-moz-range-track {
+  height: 6px;
+  border: 1px solid rgba(216, 168, 85, 0.3);
+  border-radius: 2px;
+  background: #211b12;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.volume-control input::-moz-range-progress {
+  height: 6px;
+  border-radius: 1px;
+  background: #e8c33f;
+}
+
+.volume-control input::-moz-range-thumb {
+  width: 11px;
+  height: 16px;
+  border: 1px solid #7a6225;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.75);
+}
+
+.volume-control input:focus {
+  outline: none;
+}
+
+.volume-control input:focus-visible {
+  outline: 2px solid #e8c33f;
+  outline-offset: 3px;
+}
+
+.volume-control[data-muted='true'] .volume-control-level {
+  color: #9d9279;
 }
 
 /* ---- Mum status ticket (household pressure, not debug telemetry) ---- */

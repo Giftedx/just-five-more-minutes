@@ -530,8 +530,13 @@ export class Game {
   private buildVolumeControl(): HTMLDivElement {
     const wrap = document.createElement('div');
     wrap.className = 'volume-control';
+    const meta = document.createElement('span');
+    meta.className = 'volume-control-meta';
     const label = document.createElement('label');
-    label.textContent = 'VOL';
+    label.textContent = 'AUDIO';
+    const level = document.createElement('output');
+    level.className = 'volume-control-level';
+    level.setAttribute('aria-hidden', 'true');
     const slider = document.createElement('input');
     slider.type = 'range';
     slider.id = 'j5mm-volume-slider';
@@ -540,6 +545,16 @@ export class Game {
     slider.min = '0';
     slider.max = '1';
     slider.step = '0.05';
+    meta.append(label, level);
+
+    const syncDisplay = (value: number): void => {
+      const percentage = Math.round(value * 100);
+      slider.value = String(value);
+      wrap.style.setProperty('--volume-level', `${percentage}%`);
+      wrap.dataset.muted = String(percentage === 0);
+      level.value = percentage === 0 ? 'OFF' : `${percentage}%`;
+    };
+
     let initial = this.audio.getVolume();
     try {
       const saved = localStorage.getItem('j5mm-volume');
@@ -548,18 +563,17 @@ export class Game {
       // Storage can be unavailable in privacy-restricted embeds.
     }
     if (Number.isFinite(initial)) this.audio.setVolume(initial);
-    slider.value = String(this.audio.getVolume());
+    syncDisplay(this.audio.getVolume());
     slider.addEventListener('input', () => {
-      const v = Number(slider.value);
-      this.audio.setVolume(v);
+      this.audio.setVolume(Number(slider.value));
+      syncDisplay(this.audio.getVolume());
       try {
-        localStorage.setItem('j5mm-volume', String(v));
+        localStorage.setItem('j5mm-volume', String(this.audio.getVolume()));
       } catch {
         // Volume still works for this run when persistence is unavailable.
       }
     });
-    wrap.appendChild(label);
-    wrap.appendChild(slider);
+    wrap.append(meta, slider);
     this.root.appendChild(wrap);
     this.overlays.push(wrap);
     return wrap;
