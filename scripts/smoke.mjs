@@ -172,6 +172,7 @@ try {
       const prompt = rect('.hud-prompt');
       const subtitle = rect('.hud-subtitle');
       const volume = rect('.volume-control');
+      const choreRect = rect('.hud-chore');
       const objectiveEl = document.querySelector('.hud-objective');
       const objective = objectiveEl.getBoundingClientRect();
       const objectiveRange = document.createRange();
@@ -216,12 +217,15 @@ try {
         prompt,
         subtitle,
         volume,
+        chore: choreRect,
         mum: upperBody,
         promptSubtitleOverlap: overlapArea(prompt, subtitle),
         promptMumOverlap: overlapArea(prompt, upperBody),
         subtitleMumOverlap: overlapArea(subtitle, upperBody),
         subtitleVolumeOverlap: overlapArea(subtitle, volume),
         subtitleVolumeGap: volume.top - subtitle.bottom,
+        chorePromptOverlap: overlapArea(choreRect, prompt),
+        chorePromptGap: prompt.top - choreRect.bottom,
         taskGap: chore.top - objective.bottom,
         objectiveTextWrap: getComputedStyle(objectiveEl).textWrap,
         objectiveLineWidths,
@@ -257,6 +261,16 @@ try {
       finalObjectiveLine >= widestObjectiveLine * 0.35,
       `objective reward orphaned: ${JSON.stringify(desktopGeometry.objectiveLineWidths)}`,
     );
+
+    await page.setViewportSize({ width: 900, height: 400 });
+    await page.waitForTimeout(100);
+    const shortGeometry = await measureDialogueGeometry();
+    assertDialogueGeometry(shortGeometry);
+    assert.equal(shortGeometry.chorePromptOverlap, 0, JSON.stringify(shortGeometry));
+    assert.ok(shortGeometry.chorePromptGap >= 8, JSON.stringify(shortGeometry));
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.waitForTimeout(100);
 
     const firstPromptOption = page.locator('.hud-prompt-option').first();
     await firstPromptOption.focus();

@@ -863,6 +863,22 @@ body {
   }
 }
 
+@media (max-height: 520px) {
+  .hud-prompt {
+    gap: 4px;
+    padding: 8px 10px;
+    transform: translateY(36px);
+  }
+
+  .hud-prompt-hint {
+    margin-bottom: 0;
+  }
+
+  .hud-prompt-option {
+    padding: 5px 10px 5px 8px;
+  }
+}
+
 @keyframes promptin {
   from { opacity: 0; }
 }
