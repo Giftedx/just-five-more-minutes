@@ -19,14 +19,14 @@ The subject is a runtime-generated 2004 browser MMO seen through a teenager's CR
 | Title | Split-screen incident card, live CRT, school-week strip, short-height and reduced-motion browser guards | Already satisfied | Preserve and recapture |
 | Bedroom | Filmic Lambert response, vertex-coloured shell, contact grounding, hero furniture, environment storytelling, woven rug | Already satisfied | Preserve budgets and recapture |
 | Mum encounter | Authored character, hallway vignette, dialogue staging, focal-path microdetail, transform/material guards | Already satisfied | Preserve and recapture |
-| HUD and dialogue | Responsive stack, keyboard focus, semantics, volume persistence, compact objective/chore hierarchy | Already satisfied | Preserve and recapture |
+| HUD and dialogue | Responsive stack, keyboard focus, semantics, compact objective/chore hierarchy, authored volume fader | Confirmed volume seam repaired | Preserve browser contracts and recapture |
 | Scorecard | Lined household report, filing marks, career annotation, semantic modal and short-screen reachability | Already satisfied | Preserve and recapture |
 | Mudwick action pose | `PLAYER_ATTACK_SPRITE` declares a weapon colour but contains no weapon pixels | Confirmed defect | Repair test-first |
 | Mudwick player and trader faces | Face rows contain only flat skin blocks | Missing finish | Add restrained eye cues |
 | Hobgoblin silhouette | Reuses the ordinary goblin rows with palette changes only | Missing finish | Give it a distinct armoured/tusked silhouette |
 | Mudwick HP display | Ten generic circles resemble a bank of buttons | Missing finish | Replace with full/empty pixel-heart states |
 | Mudwick feedback | Click markers, hitsplats, particles, XP drops, coin pops, hover text, chatter, and low-HP pulse already exist | Already satisfied | Preserve timing and layering |
-| Audio and transitions | Procedural UI sounds, scene modes, pause/gate ownership, and reduced-motion paths exist | Missing guard only if future visual QA finds a defect | No speculative change |
+| Audio and transitions | Procedural UI sounds, scene modes, pause/gate ownership, reduced-motion paths, native persisted fader | Authored and guarded | Preserve behavior; intervene only on rendered evidence |
 
 ## Approaches considered
 
@@ -125,7 +125,7 @@ The deliberate aesthetic risk is exaggeration at tiny scale. A weapon and hobgob
 4. Build production and capture title, physical CRT, and full PC mode at representative desktop sizes.
 5. Reject the candidate if the sword looks detached, eyes read as holes, hobgoblins become visually larger than their tile, hearts resemble flowers, panel spacing shifts, or effects outrank the world.
 6. Compare renderer cadence before and after at the same PC-mode state; this pass must introduce no detectable frame-cadence regression.
-7. Run the complete `npm run verify` gate, including standalone and mounted builds, size budgets, 17 browser scenarios, full interaction E2E, and 20-restart WebGL disposal coverage.
+7. Run the complete `npm run verify` gate, including standalone and mounted builds, size budgets, every isolated browser scenario, full interaction E2E, and 20-restart WebGL disposal coverage.
 8. Preserve deployment provenance: a local mounted build is not a live deployment claim.
 
 ## Program continuation rule

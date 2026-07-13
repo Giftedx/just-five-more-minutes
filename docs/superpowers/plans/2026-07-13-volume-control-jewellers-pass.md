@@ -48,14 +48,16 @@ Insert this scenario between the pointer-lock and dialogue-staging scenarios:
       assert.equal(await label.getAttribute('for'), 'j5mm-volume-slider');
       assert.equal(await slider.getAttribute('aria-label'), 'Volume');
       assert.equal(await level.textContent(), '60%');
-      assert.deepEqual(
-        await control.evaluate((element) => ({
+      const initialState = await control.evaluate((element) => ({
           fill: element.style.getPropertyValue('--volume-level'),
           muted: element.dataset.muted,
           height: element.getBoundingClientRect().height,
-        })),
-        { fill: '60%', muted: 'false', height: 48 },
+      }));
+      assert.deepEqual(
+        { fill: initialState.fill, muted: initialState.muted },
+        { fill: '60%', muted: 'false' },
       );
+      assert.ok(initialState.height >= 32, `volume pointer target was ${initialState.height}px high`);
       assert.equal(await slider.evaluate((element) => getComputedStyle(element).appearance), 'none');
 
       await slider.focus();
@@ -103,7 +105,8 @@ Run:
 ```powershell
 $node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
 & $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\smoke.mjs http://127.0.0.1:4173
+$env:SMOKE_URL='http://127.0.0.1:4173/'
+& $node .\scripts\smoke.mjs
 ```
 
 Use the managed preview helper instead if port 4173 is not already serving the built `dist/`.
@@ -174,29 +177,24 @@ Replace the volume CSS block with:
   bottom: 14px;
   z-index: 35;
   box-sizing: border-box;
-  width: 132px;
-  min-height: 48px;
-  pointer-events: auto;
+  width: 166px;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 5px;
-  padding: 7px 9px 8px;
-  border: 1px solid rgba(216, 168, 85, 0.34);
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid #d8a85557;
   border-radius: 6px;
-  background:
-    linear-gradient(180deg, rgba(255, 224, 150, 0.045), transparent 42%),
-    linear-gradient(155deg, rgba(31, 25, 17, 0.96), rgba(12, 10, 7, 0.96));
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48), inset 0 1px rgba(255, 255, 255, 0.04);
-  color: #b8b0a0;
+  background: linear-gradient(155deg, #1f1911f5, #0c0a07f5);
+  box-shadow: 0 8px 22px #0000007a;
   font: 700 9px 'Segoe UI', system-ui, sans-serif;
 }
 
 .volume-control-meta {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  line-height: 1;
+  flex: 0 0 38px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .volume-control label {
@@ -206,14 +204,13 @@ Replace the volume CSS block with:
 
 .volume-control-level {
   color: #e8c33f;
-  font: 700 10px ui-monospace, 'Cascadia Mono', monospace;
-  letter-spacing: 0.4px;
+  font: 700 10px ui-monospace, monospace;
 }
 
 .volume-control input {
   appearance: none;
-  width: 114px;
-  height: 16px;
+  width: 104px;
+  height: 22px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -223,12 +220,12 @@ Replace the volume CSS block with:
 
 .volume-control input::-webkit-slider-runnable-track {
   height: 6px;
-  border: 1px solid rgba(216, 168, 85, 0.3);
+  border: 1px solid #d8a8554d;
   border-radius: 2px;
   background:
-    repeating-linear-gradient(90deg, transparent 0 10px, rgba(255, 244, 210, 0.13) 10px 11px),
+    repeating-linear-gradient(90deg, transparent 0 10px, #fff4d221 10px 11px),
     linear-gradient(90deg, #e8c33f 0 var(--volume-level), #211b12 var(--volume-level) 100%);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+  box-shadow: inset 0 1px 2px #000000e6;
 }
 
 .volume-control input::-webkit-slider-thumb {
@@ -239,15 +236,15 @@ Replace the volume CSS block with:
   border: 1px solid #7a6225;
   border-radius: 2px;
   background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 2px 4px #000000bf;
 }
 
 .volume-control input::-moz-range-track {
   height: 6px;
-  border: 1px solid rgba(216, 168, 85, 0.3);
+  border: 1px solid #d8a8554d;
   border-radius: 2px;
   background: #211b12;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+  box-shadow: inset 0 1px 2px #000000e6;
 }
 
 .volume-control input::-moz-range-progress {
@@ -262,11 +259,7 @@ Replace the volume CSS block with:
   border: 1px solid #7a6225;
   border-radius: 2px;
   background: linear-gradient(180deg, #ffe078 0 24%, #d1a62d 25% 72%, #705719 73% 100%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.75);
-}
-
-.volume-control input:focus {
-  outline: none;
+  box-shadow: 0 2px 4px #000000bf;
 }
 
 .volume-control input:focus-visible {
@@ -274,9 +267,6 @@ Replace the volume CSS block with:
   outline-offset: 3px;
 }
 
-.volume-control[data-muted='true'] .volume-control-level {
-  color: #9d9279;
-}
 ```
 
 - [ ] **Step 3: Build and run the isolated browser suite to verify GREEN**

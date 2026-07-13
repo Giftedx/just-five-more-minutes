@@ -51,7 +51,7 @@ The control is a tiny desk-console fader, not another floating notification card
 
 The wrapper gains:
 
-- a decorative top line containing the linked `AUDIO` label and a `.volume-control-level` output;
+- a compact metadata block containing the linked `AUDIO` label and a `.volume-control-level` output beside the fader;
 - `--volume-level` set to the current percentage for track fill;
 - `data-muted="true"` only when the value is zero.
 
