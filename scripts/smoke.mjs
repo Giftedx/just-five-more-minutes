@@ -172,7 +172,11 @@ try {
       const prompt = rect('.hud-prompt');
       const subtitle = rect('.hud-subtitle');
       const volume = rect('.volume-control');
-      const objective = document.querySelector('.hud-objective').getBoundingClientRect();
+      const objectiveEl = document.querySelector('.hud-objective');
+      const objective = objectiveEl.getBoundingClientRect();
+      const objectiveRange = document.createRange();
+      objectiveRange.selectNodeContents(objectiveEl);
+      const objectiveLineWidths = [...objectiveRange.getClientRects()].map((line) => line.width);
       const chore = document.querySelector('.hud-chore').getBoundingClientRect();
       const host = window.__game['host'];
       const root = host.room.npcSilhouette;
@@ -219,6 +223,8 @@ try {
         subtitleVolumeOverlap: overlapArea(subtitle, volume),
         subtitleVolumeGap: volume.top - subtitle.bottom,
         taskGap: chore.top - objective.bottom,
+        objectiveTextWrap: getComputedStyle(objectiveEl).textWrap,
+        objectiveLineWidths,
         viewportWidth: innerWidth,
       };
     });
@@ -244,6 +250,13 @@ try {
     await page.waitForTimeout(100);
     const desktopGeometry = await measureDialogueGeometry();
     assertDialogueGeometry(desktopGeometry);
+    assert.equal(desktopGeometry.objectiveTextWrap, 'balance');
+    const widestObjectiveLine = Math.max(...desktopGeometry.objectiveLineWidths);
+    const finalObjectiveLine = desktopGeometry.objectiveLineWidths.at(-1) ?? 0;
+    assert.ok(
+      finalObjectiveLine >= widestObjectiveLine * 0.35,
+      `objective reward orphaned: ${JSON.stringify(desktopGeometry.objectiveLineWidths)}`,
+    );
 
     const firstPromptOption = page.locator('.hud-prompt-option').first();
     await firstPromptOption.focus();
