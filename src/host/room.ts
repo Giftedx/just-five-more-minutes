@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { ChoreId } from '../director/director';
 import { makeEnvironmentDetails } from './environment-details';
 import { makeBed, makeDeskChair } from './hero-furniture';
+import { makeMumDoorway } from './mum-doorway';
 import { makeWovenRug } from './woven-rug';
 
 export type Interactable =
@@ -542,158 +543,6 @@ function makeBrandTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-/** Mum's face: half-lowered lids, one raised brow, flat unimpressed mouth. */
-function makeMumFaceTexture(): THREE.CanvasTexture {
-  const c = document.createElement('canvas');
-  c.width = 64;
-  c.height = 64;
-  const ctx = c.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#e2b491';
-    ctx.fillRect(0, 0, 64, 64);
-    // soft cheek blush
-    ctx.fillStyle = 'rgba(214,120,110,0.22)';
-    ctx.beginPath();
-    ctx.arc(16, 43, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(48, 43, 6, 0, Math.PI * 2);
-    ctx.fill();
-    // brows — one raised, the universal mum eyebrow
-    ctx.strokeStyle = '#6e5648';
-    ctx.lineWidth = 2.6;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(13, 26);
-    ctx.lineTo(25, 24);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(39, 21);
-    ctx.lineTo(51, 24);
-    ctx.stroke();
-    // eyes
-    ctx.fillStyle = '#3a2e26';
-    ctx.beginPath();
-    ctx.arc(19, 32, 2.7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(45, 32, 2.7, 0, Math.PI * 2);
-    ctx.fill();
-    // half-lowered lids (deadpan)
-    ctx.fillStyle = '#e2b491';
-    ctx.fillRect(14, 27, 11, 3.5);
-    ctx.fillRect(40, 27, 11, 3.5);
-    // nose hint
-    ctx.strokeStyle = '#c89a78';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(32, 35);
-    ctx.lineTo(32, 41);
-    ctx.stroke();
-    // flat mouth: not angry, just… noting things down mentally
-    ctx.strokeStyle = '#9c5a50';
-    ctx.lineWidth = 2.6;
-    ctx.beginPath();
-    ctx.moveTo(25, 50);
-    ctx.lineTo(40, 50);
-    ctx.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
-/**
- * Mum, in full: cardigan, crossed arms, tea towel over one forearm, bun.
- * Built facing +z (caller rotates her toward the room). Returns a tick fn
- * for her idle: a slow weight-shift sway and a skeptical head tilt.
- */
-function makeMum(): { group: THREE.Group; tick: (nowMs: number) => void } {
-  const g = new THREE.Group();
-  const SKIN = 0xe2b491;
-  const CARDIGAN = 0xa86878;
-  const CARDIGAN_DARK = 0x8f5565;
-  const SKIRT = 0x3e4a68;
-  const HAIR = 0x7a6050;
-  const TIGHTS = 0x4a4046;
-
-  // slippers + ankles
-  for (const fx of [-0.06, 0.06]) {
-    const s = makeSlipper(0xc46a78, 0xefe0d4);
-    s.position.set(fx, 0, 0.03);
-    s.scale.set(0.95, 0.95, 0.85);
-    g.add(s);
-  }
-  g.add(box(0.05, 0.18, 0.06, TIGHTS, -0.055, 0.16, 0));
-  g.add(box(0.05, 0.18, 0.06, TIGHTS, 0.055, 0.16, 0));
-
-  // skirt — a sensible A-line
-  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.175, 0.56, 14), lambert(SKIRT));
-  skirt.position.y = 0.53;
-  g.add(skirt);
-
-  // cardigan torso with a sliver of cream blouse
-  g.add(box(0.32, 0.4, 0.2, CARDIGAN, 0, 1.0, 0));
-  g.add(box(0.36, 0.1, 0.21, CARDIGAN, 0, 1.17, 0));
-  g.add(box(0.06, 0.34, 0.012, 0xefe6d4, 0, 1.02, 0.103));
-
-  // upper arms, angled in toward the fold
-  const armL = box(0.09, 0.26, 0.1, CARDIGAN_DARK, -0.185, 1.05, 0.01);
-  armL.rotation.z = -0.2;
-  const armR = box(0.09, 0.26, 0.1, CARDIGAN_DARK, 0.185, 1.05, 0.01);
-  armR.rotation.z = 0.2;
-  g.add(armL, armR);
-
-  // crossed forearms + hands
-  const fold = box(0.3, 0.085, 0.095, CARDIGAN_DARK, 0, 0.95, 0.125);
-  fold.rotation.z = 0.05;
-  g.add(fold);
-  g.add(box(0.055, 0.05, 0.06, SKIN, -0.155, 0.965, 0.13));
-  g.add(box(0.055, 0.05, 0.06, SKIN, 0.155, 0.935, 0.13));
-
-  // tea towel draped over the forearm (deadpan domestic authority)
-  g.add(box(0.09, 0.16, 0.02, 0xe8e2d0, -0.07, 0.86, 0.182));
-  g.add(box(0.092, 0.022, 0.022, 0xa04438, -0.07, 0.82, 0.182));
-
-  // neck + head (face texture on the +z side only)
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.07, 10), lambert(SKIN));
-  neck.position.y = 1.235;
-  g.add(neck);
-
-  const headG = new THREE.Group();
-  headG.position.y = 1.37;
-  const skinMat = lambert(SKIN);
-  const faceMat = new THREE.MeshLambertMaterial({ map: makeMumFaceTexture() });
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.2, 0.18), [
-    skinMat, skinMat, skinMat, skinMat, faceMat, skinMat,
-  ]);
-  headG.add(head);
-  // hair: swept cap, sides, back, and the load-bearing bun
-  headG.add(box(0.19, 0.075, 0.2, HAIR, 0, 0.1, -0.005));
-  headG.add(box(0.19, 0.045, 0.025, HAIR, 0, 0.075, 0.088));
-  // side panels sit a hair behind the face plane (z 0.08 < 0.09) so they
-  // never z-fight with the front of the head box
-  headG.add(box(0.022, 0.15, 0.19, HAIR, -0.087, 0.025, -0.015));
-  headG.add(box(0.022, 0.15, 0.19, HAIR, 0.087, 0.025, -0.015));
-  headG.add(box(0.19, 0.18, 0.035, HAIR, 0, 0.005, -0.098));
-  const bun = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), lambert(HAIR));
-  bun.position.set(0, 0.085, -0.105);
-  headG.add(bun);
-  // tiny gold studs
-  headG.add(box(0.012, 0.026, 0.012, 0xe8c33f, -0.092, -0.04, 0.01));
-  headG.add(box(0.012, 0.026, 0.012, 0xe8c33f, 0.092, -0.04, 0.01));
-  g.add(headG);
-
-  const tick = (nowMs: number): void => {
-    const t = nowMs / 1000;
-    g.rotation.z = Math.sin(t * 1.1) * 0.013; // weight shift, hip to hip
-    headG.rotation.z = Math.sin(t * 0.7 + 1) * 0.045; // slow skeptical tilt
-    headG.position.y = 1.37 + Math.sin(t * 2.1) * 0.004; // breathing
-  };
-
-  return { group: g, tick };
-}
-
 // ---------------------------------------------------------------- pieces
 
 /** Lighten/darken a packed RGB colour by `amt` per channel. */
@@ -997,12 +846,10 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   let doorAngle = 0;
   let doorTarget = 0;
 
-  const mum = makeMum();
-  // a step back into the hall, beyond the door's swing arc
-  mum.group.position.set(-0.8, 0, 2.72);
-  mum.group.rotation.y = Math.PI; // facing into the room, obviously
-  mum.group.visible = false;
-  scene.add(mum.group);
+  const mum = makeMumDoorway();
+  mum.root.position.set(-0.8, 0, 2.5);
+  mum.character.visible = false;
+  scene.add(mum.root);
 
   // Always-on room tick: eases the door toward its target and runs mum's
   // idle while she's visible.
@@ -1012,17 +859,8 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     lastTickAt = nowMs;
     doorAngle += (doorTarget - doorAngle) * (1 - Math.exp(-dt / 150));
     door.rotation.y = doorAngle;
-    if (mum.group.visible) mum.tick(nowMs);
+    if (mum.character.visible) mum.tick(nowMs);
   };
-
-  // warm hall light behind her + soft spill onto her front, both off until
-  // she appears
-  const hallLight = new THREE.PointLight(0xffc080, 0, 3.0, 1.6);
-  hallLight.position.set(-0.8, 1.95, 2.92);
-  scene.add(hallLight);
-  const mumFill = new THREE.PointLight(0xffd8a8, 0, 2.8, 1.7);
-  mumFill.position.set(-0.8, 1.55, 1.6);
-  scene.add(mumFill);
 
   // ---- window (east wall) with night glow
   const winFrame = lambert(WOOD_DARK);
@@ -1482,8 +1320,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   scene.add(deskLampGroup);
 
   const setHallLight = (on: boolean): void => {
-    hallLight.intensity = on ? 2.4 : 0;
-    mumFill.intensity = on ? 1.8 : 0;
+    mum.setRevealed(on);
     doorTarget = on ? DOOR_OPEN : 0;
   };
 
@@ -1512,7 +1349,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     items,
     slots,
     monitorScreen: screen,
-    npcSilhouette: mum.group,
+    npcSilhouette: mum.character,
     npcTick: roomTick,
     setHallLight,
     setDusk,

@@ -330,6 +330,7 @@ try {
         const scene = host.room.scene;
         const root = scene.getObjectByName('room-mum-doorway');
         const mum = scene.getObjectByName('mum-character');
+        const head = scene.getObjectByName('mum-head');
         const hall = scene.getObjectByName('mum-hall-dressing');
         const names = [
           'mum-head',
@@ -376,27 +377,35 @@ try {
           }
           return false;
         };
-        const points = [];
-        mum?.updateWorldMatrix(true, true);
-        mum?.traverse((object) => {
-          if (!object.isMesh || !object.geometry) return;
-          object.geometry.computeBoundingBox();
-          const box = object.geometry.boundingBox;
-          if (!box) return;
-          for (const x of [box.min.x, box.max.x]) {
-            for (const y of [box.min.y, box.max.y]) {
-              for (const z of [box.min.z, box.max.z]) {
-                const point = box.min.clone().set(x, y, z);
-                object.localToWorld(point);
-                point.project(host.camera);
-                points.push({
-                  x: (point.x * 0.5 + 0.5) * innerWidth,
-                  y: (-point.y * 0.5 + 0.5) * innerHeight,
-                });
+        const projectedBounds = (target) => {
+          const points = [];
+          target?.updateWorldMatrix(true, true);
+          target?.traverse((object) => {
+            if (!object.isMesh || !object.geometry) return;
+            object.geometry.computeBoundingBox();
+            const box = object.geometry.boundingBox;
+            if (!box) return;
+            for (const x of [box.min.x, box.max.x]) {
+              for (const y of [box.min.y, box.max.y]) {
+                for (const z of [box.min.z, box.max.z]) {
+                  const point = box.min.clone().set(x, y, z);
+                  object.localToWorld(point);
+                  point.project(host.camera);
+                  points.push({
+                    x: (point.x * 0.5 + 0.5) * innerWidth,
+                    y: (-point.y * 0.5 + 0.5) * innerHeight,
+                  });
+                }
               }
             }
-          }
-        });
+          });
+          return {
+            left: Math.min(...points.map((point) => point.x)),
+            right: Math.max(...points.map((point) => point.x)),
+            top: Math.min(...points.map((point) => point.y)),
+            bottom: Math.max(...points.map((point) => point.y)),
+          };
+        };
         host.renderer.render(scene, host.camera);
         return {
           rootName: root?.name,
@@ -406,12 +415,8 @@ try {
           rootVisible: root?.visible,
           mum: metrics(mum),
           hall: metrics(hall),
-          projected: {
-            left: Math.min(...points.map((point) => point.x)),
-            right: Math.max(...points.map((point) => point.x)),
-            top: Math.min(...points.map((point) => point.y)),
-            bottom: Math.max(...points.map((point) => point.y)),
-          },
+          projected: projectedBounds(mum),
+          headProjected: projectedBounds(head),
           interactions: root ? host.room.interactables.filter((object) => belongsTo(object, root)).length : 0,
           colliders: host.room.colliders.length,
           calls: host.renderer.info.render.calls,
@@ -456,11 +461,17 @@ try {
       assert.equal(before.colliders, colliderCount);
       assert.equal(before.shadowsEnabled, false);
       assert.ok(
-        before.projected.left >= before.viewportWidth * 0.39
-          && before.projected.right <= before.viewportWidth * 0.61,
+        before.projected.left >= before.viewportWidth * 0.35
+          && before.projected.right <= before.viewportWidth * 0.65,
         JSON.stringify(before),
       );
-      assert.ok(before.projected.top >= 110 && before.projected.bottom <= before.viewportHeight + 8, JSON.stringify(before));
+      assert.ok(
+        before.headProjected.left >= before.viewportWidth * 0.42
+          && before.headProjected.right <= before.viewportWidth * 0.65
+          && before.headProjected.top >= 100
+          && before.headProjected.bottom <= before.viewportHeight * 0.72,
+        JSON.stringify(before),
+      );
       assert.ok(before.calls <= 55 && before.triangles <= 4000 && before.rendererTextures <= 14, JSON.stringify(before));
 
       const poseA = await page.evaluate(() => ({
