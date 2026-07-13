@@ -4,10 +4,71 @@ export type DeviceBlockReason = 'pointer' | 'viewport';
 
 const finePointer = window.matchMedia('(any-pointer: fine)');
 
-const GATE_TEXT: Readonly<Record<DeviceBlockReason, string>> = {
-  pointer: 'This one needs a keyboard, a mouse, and a chair you refuse to leave.',
-  viewport: 'Mudwick needs a little more desk space. Widen this window to at least 900 pixels.',
+interface GateContent {
+  eyebrow: string;
+  title: string;
+  copy: string;
+}
+
+const GATE_CONTENT: Readonly<Record<DeviceBlockReason, GateContent>> = {
+  pointer: {
+    eyebrow: 'EQUIPMENT CHECK · POINTER',
+    title: 'Mouse and keyboard required.',
+    copy: 'This one needs a keyboard, a mouse, and a chair you refuse to leave.',
+  },
+  viewport: {
+    eyebrow: 'EQUIPMENT CHECK · WINDOW',
+    title: 'Not enough desk space.',
+    copy: 'Mudwick needs a little more desk space. Widen this window to at least 900 pixels.',
+  },
 };
+
+const makeElement = <K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  text?: string,
+): HTMLElementTagNameMap[K] => {
+  const element = document.createElement(tag);
+  element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+};
+
+function renderGate(gate: HTMLDivElement, reason: DeviceBlockReason): void {
+  const content = GATE_CONTENT[reason];
+  const card = makeElement('section', 'mobile-gate-card');
+  card.setAttribute('aria-labelledby', 'mobile-gate-title');
+
+  const header = makeElement('header', 'mobile-gate-header');
+  header.append(
+    makeElement('span', 'mobile-gate-eyebrow', content.eyebrow),
+    makeElement('span', 'mobile-gate-badge', 'FAILED'),
+  );
+
+  const visual = makeElement('div', 'mobile-gate-visual');
+  visual.setAttribute('aria-hidden', 'true');
+  const crt = makeElement('div', 'mobile-gate-crt');
+  const screen = makeElement('div', 'mobile-gate-screen');
+  screen.append(
+    makeElement('span', 'mobile-gate-screen-title', 'MUDWICK ONLINE'),
+    makeElement('span', 'mobile-gate-goblin'),
+    makeElement('span', 'mobile-gate-screen-status', 'WAITING...'),
+  );
+  crt.append(screen, makeElement('span', 'mobile-gate-led'));
+  visual.append(crt);
+
+  const copy = makeElement('div', 'mobile-gate-message');
+  const title = makeElement('h1', 'mobile-gate-title', content.title);
+  title.id = 'mobile-gate-title';
+  copy.append(
+    title,
+    makeElement('p', 'mobile-gate-copy', content.copy),
+    makeElement('p', 'mobile-gate-note', 'The evening starts automatically when this check passes.'),
+  );
+
+  card.append(header, visual, copy);
+  gate.replaceChildren(card);
+}
 
 export function deviceBlockReason(): DeviceBlockReason | null {
   if (!finePointer.matches) return 'pointer';
@@ -40,7 +101,7 @@ export function installGate(
       parent.appendChild(gate);
     }
     gate.dataset.reason = reason;
-    gate.textContent = GATE_TEXT[reason];
+    renderGate(gate, reason);
   };
 
   const sync = (): void => {

@@ -45,6 +45,35 @@ try {
   await scenario('gate owns game lifecycle', { viewport: { width: 800, height: 600 } }, async (page) => {
     await gotoOk(page, { skipTitle: 1, seed: 1 });
     await page.locator('.mobile-gate').waitFor({ state: 'visible' });
+    const gateState = await page.locator('.mobile-gate').evaluate((gate) => {
+      const card = gate.querySelector('.mobile-gate-card');
+      const visual = gate.querySelector('.mobile-gate-visual');
+      const rect = card.getBoundingClientRect();
+      return {
+        reason: gate.dataset.reason,
+        role: gate.getAttribute('role'),
+        eyebrow: gate.querySelector('.mobile-gate-eyebrow')?.textContent ?? '',
+        title: gate.querySelector('.mobile-gate-title')?.textContent ?? '',
+        copy: gate.querySelector('.mobile-gate-copy')?.textContent ?? '',
+        note: gate.querySelector('.mobile-gate-note')?.textContent ?? '',
+        visualHidden: visual?.getAttribute('aria-hidden'),
+        bounds: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+        viewport: { width: innerWidth, height: innerHeight },
+      };
+    });
+    assert.equal(gateState.reason, 'viewport');
+    assert.equal(gateState.role, 'alert');
+    assert.equal(gateState.eyebrow, 'EQUIPMENT CHECK · WINDOW');
+    assert.equal(gateState.title, 'Not enough desk space.');
+    assert.match(gateState.copy, /at least 900 pixels/);
+    assert.equal(gateState.note, 'The evening starts automatically when this check passes.');
+    assert.equal(gateState.visualHidden, 'true');
+    assert.ok(gateState.bounds.left >= 16 && gateState.bounds.top >= 16, JSON.stringify(gateState));
+    assert.ok(
+      gateState.bounds.right <= gateState.viewport.width - 16
+        && gateState.bounds.bottom <= gateState.viewport.height - 16,
+      JSON.stringify(gateState),
+    );
     assert.deepEqual(
       await page.evaluate(() => ({
         hasGame: Object.prototype.hasOwnProperty.call(window, '__game'),
@@ -71,6 +100,18 @@ try {
     async (page) => {
       await gotoOk(page, { skipTitle: 1, seed: 11 });
       await page.locator('.mobile-gate[data-reason="pointer"]').waitFor({ state: 'visible' });
+      const pointerGate = await page.locator('.mobile-gate').evaluate((gate) => ({
+        reason: gate.dataset.reason,
+        eyebrow: gate.querySelector('.mobile-gate-eyebrow')?.textContent ?? '',
+        title: gate.querySelector('.mobile-gate-title')?.textContent ?? '',
+        copy: gate.querySelector('.mobile-gate-copy')?.textContent ?? '',
+      }));
+      assert.deepEqual(pointerGate, {
+        reason: 'pointer',
+        eyebrow: 'EQUIPMENT CHECK · POINTER',
+        title: 'Mouse and keyboard required.',
+        copy: 'This one needs a keyboard, a mouse, and a chair you refuse to leave.',
+      });
       assert.deepEqual(
         await page.evaluate(() => ({
           anyFinePointer: matchMedia('(any-pointer: fine)').matches,

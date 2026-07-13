@@ -1823,14 +1823,340 @@ body {
   position: fixed;
   inset: 0;
   z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(141, 73, 56, 0.18), transparent 32%),
+    radial-gradient(circle at 82% 78%, rgba(72, 115, 47, 0.12), transparent 30%),
+    #0e0b14;
+  color: #efe6cf;
+}
+
+.mobile-gate::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image:
+    radial-gradient(circle at 12% 18%, #e8c33f 0 1px, transparent 1.5px),
+    radial-gradient(circle at 86% 24%, #9be86b 0 1px, transparent 1.5px),
+    radial-gradient(circle at 74% 82%, #efe6cf 0 1px, transparent 1.5px),
+    radial-gradient(circle at 24% 76%, #8d4938 0 1px, transparent 1.5px);
+}
+
+.mobile-gate-card {
+  position: relative;
+  width: min(720px, 100%);
+  display: grid;
+  grid-template-columns: minmax(210px, 0.8fr) minmax(260px, 1.2fr);
+  gap: 26px 34px;
+  padding: 28px 30px 30px;
+  border: 1px solid rgba(232, 195, 63, 0.46);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(32, 24, 17, 0.98), rgba(18, 14, 12, 0.98));
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.62), inset 0 1px rgba(255, 233, 176, 0.06);
+}
+
+.mobile-gate-header {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(232, 195, 63, 0.2);
+}
+
+.mobile-gate-eyebrow,
+.mobile-gate-note {
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.mobile-gate-eyebrow {
+  color: #d0b46a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mobile-gate-badge {
+  border: 1px solid rgba(202, 100, 75, 0.72);
+  padding: 4px 8px 3px;
+  color: #ffbd99;
+  background: rgba(141, 73, 56, 0.2);
+  font: 700 10px/1 'Courier New', monospace;
+  letter-spacing: 1.6px;
+  transform: rotate(1.5deg);
+}
+
+.mobile-gate-visual {
+  position: relative;
+  min-height: 200px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(155, 232, 107, 0.12);
+  border-radius: 13px;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(155, 232, 107, 0.1), transparent 52%),
+    linear-gradient(180deg, rgba(29, 39, 22, 0.48), rgba(10, 8, 8, 0.36));
+}
+
+.mobile-gate-visual::after {
+  content: '';
+  position: absolute;
+  left: 11%;
+  right: 11%;
+  bottom: 20px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.46);
+  filter: blur(2px);
+}
+
+.mobile-gate-crt {
+  position: relative;
+  z-index: 1;
+  width: min(210px, 82%);
+  padding: 11px 11px 23px;
+  border: 4px solid #d6cdb9;
+  border-bottom-color: #aaa18f;
+  border-radius: 10px 10px 8px 8px;
+  background: linear-gradient(145deg, #bdb4a1, #8e8778);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.48), inset 2px 2px rgba(255, 255, 255, 0.16);
+}
+
+.mobile-gate-crt::before {
+  content: '';
+  position: absolute;
+  width: 28%;
+  height: 15px;
+  left: 36%;
+  bottom: -18px;
+  background: linear-gradient(90deg, #756f63, #a29a89, #756f63);
+}
+
+.mobile-gate-crt::after {
+  content: '';
+  position: absolute;
+  width: 56%;
+  height: 7px;
+  left: 22%;
+  bottom: -23px;
+  border-radius: 50%;
+  background: #898274;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.42);
+}
+
+.mobile-gate-screen {
+  position: relative;
+  min-height: 125px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 12px 10px 9px;
+  border: 5px solid #3f3a32;
+  border-radius: 15% / 10%;
+  background:
+    repeating-linear-gradient(0deg, rgba(8, 18, 8, 0.22) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 50% 46%, #31592a, #142916 74%);
+  color: #9be86b;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.72), inset 0 0 9px rgba(155, 232, 107, 0.1);
+}
+
+.mobile-gate-screen-title,
+.mobile-gate-screen-status,
+.mobile-gate-title {
+  font-family: RuneScape, 'Courier New', monospace;
+}
+
+.mobile-gate-screen-title {
+  align-self: stretch;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(155, 232, 107, 0.24);
+  font-size: 13px;
+  letter-spacing: 1px;
   text-align: center;
-  background: #0e0b14;
-  color: #e8e2d4;
-  padding: 32px;
-  font: 500 19px/1.6 'Segoe UI', system-ui, sans-serif;
+}
+
+.mobile-gate-screen-status {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+}
+
+.mobile-gate-goblin {
+  position: relative;
+  width: 30px;
+  height: 24px;
+  border: 4px solid #2e4c25;
+  background: #6da348;
+  box-shadow: inset 0 -6px #537e37, -7px 3px 0 -3px #6da348, 7px 3px 0 -3px #6da348;
+}
+
+.mobile-gate-goblin::before {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  left: 5px;
+  top: 5px;
+  background: #ffe071;
+  box-shadow: 12px 0 #ffe071;
+}
+
+.mobile-gate-goblin::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 3px;
+  left: 5px;
+  bottom: 4px;
+  background: #2e4c25;
+}
+
+.mobile-gate-led {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #72e65f;
+  box-shadow: 0 0 7px rgba(114, 230, 95, 0.72);
+}
+
+.mobile-gate-message {
+  align-self: center;
+  text-align: left;
+}
+
+.mobile-gate-title {
+  max-width: 390px;
+  margin-bottom: 12px;
+  color: #ffe071;
+  font-size: clamp(32px, 4.4vw, 46px);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: 0.5px;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.42);
+}
+
+.mobile-gate-copy {
+  max-width: 390px;
+  color: #efe6cf;
+  font: 500 18px/1.52 'Segoe UI', system-ui, sans-serif;
+}
+
+.mobile-gate-note {
+  max-width: 390px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(239, 230, 207, 0.12);
+  color: #948b7b;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .mobile-gate {
+    padding: 16px;
+  }
+
+  .mobile-gate-card {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 20px;
+    border-radius: 14px;
+  }
+
+  .mobile-gate-header {
+    padding-bottom: 11px;
+  }
+
+  .mobile-gate-visual {
+    min-height: 158px;
+  }
+
+  .mobile-gate-crt {
+    width: min(180px, 72%);
+    padding: 9px 9px 18px;
+  }
+
+  .mobile-gate-screen {
+    min-height: 92px;
+    padding: 8px 8px 6px;
+  }
+
+  .mobile-gate-screen-title {
+    font-size: 11px;
+  }
+
+  .mobile-gate-goblin {
+    width: 26px;
+    height: 21px;
+  }
+
+  .mobile-gate-title {
+    margin-bottom: 9px;
+    font-size: clamp(30px, 10vw, 38px);
+  }
+
+  .mobile-gate-copy {
+    font-size: 16px;
+  }
+
+  .mobile-gate-note {
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+}
+
+@media (max-height: 520px) {
+  .mobile-gate {
+    padding: 16px;
+  }
+
+  .mobile-gate-card {
+    gap: 14px 24px;
+    padding: 16px 20px 18px;
+  }
+
+  .mobile-gate-header {
+    padding-bottom: 9px;
+  }
+
+  .mobile-gate-visual {
+    min-height: 154px;
+  }
+
+  .mobile-gate-crt {
+    width: min(172px, 76%);
+    padding: 8px 8px 17px;
+  }
+
+  .mobile-gate-screen {
+    min-height: 88px;
+    padding: 7px 7px 5px;
+  }
+
+  .mobile-gate-title {
+    font-size: 32px;
+  }
+
+  .mobile-gate-copy {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .mobile-gate-note {
+    margin-top: 10px;
+    padding-top: 8px;
+  }
 }
 
 /* ---------- volume control ---------- */
