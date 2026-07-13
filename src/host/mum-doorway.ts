@@ -26,6 +26,12 @@ const TOWEL_STRIPE = 0x98443b;
 
 const lambert = (color: number): THREE.MeshLambertMaterial => new THREE.MeshLambertMaterial({ color });
 
+const metal = (color: number): THREE.MeshPhongMaterial => new THREE.MeshPhongMaterial({
+  color,
+  specular: 0xffd8a0,
+  shininess: 58,
+});
+
 function named<T extends THREE.Object3D>(object: T, name: string): T {
   object.name = name;
   return object;
@@ -126,10 +132,11 @@ function batchStaticMeshes(
 
 function makeExpressionTexture(): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
+  canvas.width = 192;
+  canvas.height = 192;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D canvas unavailable for Mum expression');
+  ctx.scale(1.5, 1.5);
 
   ctx.lineCap = 'round';
   ctx.strokeStyle = '#684c40';
@@ -143,12 +150,25 @@ function makeExpressionTexture(): THREE.CanvasTexture {
   ctx.quadraticCurveTo(91, 40, 103, 48);
   ctx.stroke();
 
-  ctx.fillStyle = '#352821';
+  ctx.fillStyle = '#f1dfcb';
   ctx.beginPath();
-  ctx.ellipse(39, 63, 5, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(39, 63, 9, 5.5, -0.03, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(89, 63, 5, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(89, 63, 9, 5.5, 0.03, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#352821';
+  for (const x of [39, 89]) {
+    ctx.beginPath();
+    ctx.arc(x, 63, 4.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#f8ead8';
+  ctx.beginPath();
+  ctx.arc(40.5, 61.5, 1.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(90.5, 61.5, 1.25, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = 'rgba(104,76,64,0.72)';
   ctx.lineWidth = 4;
@@ -167,6 +187,12 @@ function makeExpressionTexture(): THREE.CanvasTexture {
   ctx.moveTo(64, 67);
   ctx.quadraticCurveTo(60, 78, 67, 82);
   ctx.stroke();
+  ctx.fillStyle = 'rgba(104,76,64,0.7)';
+  for (const x of [60, 68]) {
+    ctx.beginPath();
+    ctx.arc(x, 82, 1.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.fillStyle = 'rgba(205,101,95,0.23)';
   ctx.beginPath();
@@ -181,6 +207,20 @@ function makeExpressionTexture(): THREE.CanvasTexture {
   ctx.beginPath();
   ctx.moveTo(51, 98);
   ctx.quadraticCurveTo(64, 96, 78, 98);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(143,79,77,0.76)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(47, 99);
+  ctx.lineTo(51, 98);
+  ctx.moveTo(78, 98);
+  ctx.lineTo(82, 99);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(104,76,64,0.26)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(55, 107);
+  ctx.quadraticCurveTo(64, 110, 73, 107);
   ctx.stroke();
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -217,7 +257,7 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   const hair = lambert(HAIR);
   const hairLight = lambert(HAIR_LIGHT);
   const tights = lambert(TIGHTS);
-  const gold = lambert(GOLD);
+  const gold = metal(GOLD);
   const towelMaterial = lambert(TOWEL);
   const towelShadow = lambert(TOWEL_SHADOW);
   const towelStripe = lambert(TOWEL_STRIPE);
@@ -247,17 +287,42 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   torso.scale.z = 0.62;
   character.add(torso);
   character.add(box([0.065, 0.28, 0.025], blouse, [0, 1.025, 0.13], 'mum-blouse'));
-  const lapelLeft = box([0.058, 0.25, 0.025], cardiganLight, [-0.055, 1.05, 0.139], 'mum-lapel-left');
+  const lapelLeft = box([0.047, 0.25, 0.025], cardiganLight, [-0.047, 1.05, 0.139], 'mum-lapel-left');
   lapelLeft.rotation.z = -0.18;
-  const lapelRight = box([0.058, 0.25, 0.025], cardiganLight, [0.055, 1.05, 0.139], 'mum-lapel-right');
+  const lapelRight = box([0.047, 0.25, 0.025], cardiganLight, [0.047, 1.05, 0.139], 'mum-lapel-right');
   lapelRight.rotation.z = 0.18;
   character.add(lapelLeft, lapelRight);
   character.add(box([0.3, 0.035, 0.17], cardiganDark, [0, 0.82, 0.005], 'mum-cardigan-hem'));
+  const neckline = named(
+    new THREE.Mesh(new THREE.TorusGeometry(0.082, 0.007, 4, 12, Math.PI), cardiganDark),
+    'mum-cardigan-neckline',
+  );
+  neckline.position.set(0, 1.155, 0.137);
+  neckline.rotation.z = Math.PI;
+  character.add(neckline);
+  const ribbing = named(new THREE.Group(), 'mum-cardigan-ribbing');
+  for (const y of [0.805, 0.815, 0.825]) {
+    ribbing.add(box([0.28, 0.006, 0.01], cardiganDark, [0, y, 0.093]));
+  }
+  character.add(ribbing);
   for (const y of [1.09, 1.01, 0.93]) {
     character.add(ellipsoid(0.012, [7, 5], [1, 1, 0.55], cardiganDark, [0, y, 0.153]));
   }
-  character.add(ellipsoid(0.082, [9, 6], [1, 0.72, 0.72], cardigan, [-0.18, 1.13, 0]));
-  character.add(ellipsoid(0.082, [9, 6], [1, 0.72, 0.72], cardigan, [0.18, 1.13, 0]));
+  character.add(ellipsoid(0.068, [9, 6], [1, 0.62, 0.7], cardigan, [-0.178, 1.125, 0]));
+  character.add(ellipsoid(0.068, [9, 6], [1, 0.62, 0.7], cardigan, [0.178, 1.125, 0]));
+  const seamLeft = named(
+    new THREE.Mesh(new THREE.TorusGeometry(0.059, 0.006, 4, 10, Math.PI), cardiganDark),
+    'mum-armhole-seam-left',
+  );
+  seamLeft.position.set(-0.178, 1.125, 0.04);
+  seamLeft.rotation.z = -0.38;
+  const seamRight = named(
+    new THREE.Mesh(new THREE.TorusGeometry(0.059, 0.006, 4, 10, Math.PI), cardiganDark),
+    'mum-armhole-seam-right',
+  );
+  seamRight.position.set(0.178, 1.125, 0.04);
+  seamRight.rotation.z = 0.38;
+  character.add(seamLeft, seamRight);
 
   const shoulderLeft = new THREE.Vector3(-0.18, 1.12, 0);
   const elbowLeft = new THREE.Vector3(-0.225, 0.98, 0.07);
@@ -271,14 +336,26 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   character.add(limbBetween('mum-forearm-right', elbowRight, handRight, 0.052, cardiganLight));
   character.add(ellipsoid(0.045, [8, 6], [1.08, 0.78, 0.95], skin, [0.105, 0.91, 0.16], 'mum-hand-left'));
   character.add(ellipsoid(0.045, [8, 6], [1.08, 0.78, 0.95], skin, [-0.11, 0.88, 0.18], 'mum-hand-right'));
+  character.add(ellipsoid(0.019, [7, 5], [0.7, 1.05, 0.7], skinShadow, [0.082, 0.932, 0.192], 'mum-thumb-left'));
+  character.add(ellipsoid(0.019, [7, 5], [0.7, 1.05, 0.7], skinShadow, [-0.086, 0.902, 0.205], 'mum-thumb-right'));
   character.add(box([0.07, 0.035, 0.075], cardiganLight, [0.086, 0.92, 0.145], 'mum-cuff-left'));
   character.add(box([0.07, 0.035, 0.075], cardiganDark, [-0.09, 0.89, 0.168], 'mum-cuff-right'));
+  const necklace = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.004, 4, 12, Math.PI), gold);
+  necklace.position.set(0, 1.12, 0.157);
+  necklace.rotation.z = Math.PI;
+  character.add(necklace);
+  character.add(ellipsoid(0.012, [7, 5], [0.82, 1, 0.65], gold, [0, 1.065, 0.163], 'mum-locket'));
 
   const towel = named(new THREE.Group(), 'mum-tea-towel');
   towel.add(box([0.105, 0.19, 0.022], towelMaterial, [-0.055, 0.79, 0.213]));
-  towel.add(box([0.095, 0.13, 0.025], towelShadow, [-0.024, 0.665, 0.216]));
+  towel.add(box([0.095, 0.13, 0.025], towelShadow, [-0.014, 0.665, 0.216]));
   towel.add(box([0.108, 0.024, 0.027], towelStripe, [-0.055, 0.735, 0.216]));
   towel.add(box([0.098, 0.021, 0.029], towelStripe, [-0.024, 0.62, 0.219]));
+  towel.add(box([0.102, 0.018, 0.03], towelShadow, [-0.024, 0.602, 0.22], 'mum-towel-hem'));
+  const fold = box([0.018, 0.18, 0.012], towelShadow, [-0.006, 0.73, 0.231], 'mum-towel-fold');
+  fold.rotation.z = -0.06;
+  towel.add(fold);
+  towel.add(box([0.012, 0.18, 0.028], towelStripe, [-0.103, 0.785, 0.216], 'mum-towel-binding'));
   towel.rotation.z = 0.045;
   character.add(towel);
 
@@ -315,7 +392,18 @@ function makeCharacter(): { character: THREE.Group; head: THREE.Group; towel: TH
   const fringe = box([0.12, 0.03, 0.025], hairLight, [-0.02, 0.085, 0.101], 'mum-hair-fringe');
   fringe.rotation.z = -0.13;
   head.add(fringe);
+  const hairPart = box([0.008, 0.07, 0.01], hair, [-0.018, 0.105, 0.108], 'mum-hair-part');
+  hairPart.rotation.z = -0.2;
+  head.add(hairPart);
+  const hairSweep = new THREE.Mesh(new THREE.TorusGeometry(0.088, 0.006, 4, 12, Math.PI * 0.72), hairLight);
+  hairSweep.position.set(0.006, 0.105, 0.065);
+  hairSweep.rotation.z = 0.22;
+  head.add(hairSweep);
   head.add(ellipsoid(0.058, [10, 7], [1, 1, 0.88], hair, [0, 0.075, -0.125], 'mum-hair-bun'));
+  const bunPin = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.085, 6), gold);
+  bunPin.position.set(0.035, 0.092, -0.165);
+  bunPin.rotation.z = Math.PI / 2.4;
+  head.add(bunPin);
   head.add(ellipsoid(0.011, [7, 5], [0.8, 1, 0.55], gold, [-0.128, -0.035, 0.012], 'mum-stud-left'));
   head.add(ellipsoid(0.011, [7, 5], [0.8, 1, 0.55], gold, [0.128, -0.035, 0.012], 'mum-stud-right'));
   character.add(head);
