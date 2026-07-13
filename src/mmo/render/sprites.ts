@@ -29,6 +29,7 @@ export const PLAYER_SPRITE: Sprite = {
   palette: {
     h: '#8a5a2b', // hair
     s: '#e0b088', // skin
+    e: '#2e2218', // eyes
     b: '#3a5a9c', // tunic
     d: '#2c4377', // tunic shade
     l: '#5a4632', // legs
@@ -38,7 +39,7 @@ export const PLAYER_SPRITE: Sprite = {
     '....hhhh....',
     '...hhhhhh...',
     '...hssssh...',
-    '...ssssss...',
+    '...sesse....',
     '....ssss....',
     '...bbbbbb...',
     '..bbbbbbbb..',
@@ -56,27 +57,29 @@ export const PLAYER_ATTACK_SPRITE: Sprite = {
   palette: {
     h: '#8a5a2b',
     s: '#e0b088',
+    e: '#2e2218',
     b: '#3a5a9c',
     d: '#2c4377',
     l: '#5a4632',
     k: '#2e2218',
-    w: '#c8c0b0', // wooden sword
+    w: '#d5d0c2',
+    g: '#7a4d28',
   },
   rows: [
-    '....hhhh....',
-    '...hhhhhh...',
-    '...hssssh...',
-    '...ssssss...',
-    '....ssss....',
-    '...bbbbbb...',
-    '..bbbbbbbb..',
-    '..sbbddbbs..',
-    '...bbbbbb...',
-    '...llllll...',
-    '...ll..ll...',
-    '...kk..kk...',
-    '...kk..kk...',
-    '...kk..kk...',
+    '....hhhh........',
+    '...hhhhhh.......',
+    '...hssssh.......',
+    '...sesse........',
+    '....ssss......w.',
+    '...bbbbbb....w..',
+    '..bbbbbbbb..w...',
+    '..sbbddbbs.w....',
+    '..sbbddbbsg.....',
+    '...bbbbbb.......',
+    '...llllll.......',
+    '...ll..ll.......',
+    '...kk..kk.......',
+    '...kk..kk.......',
   ],
 };
 
@@ -115,6 +118,7 @@ export const TRADER_SPRITE: Sprite = {
   palette: {
     h: '#d8d8d8', // hood
     s: '#caa37a', // skin
+    e: '#3b2a1f', // eyes
     r: '#7a3b8f', // robe
     d: '#5b2c6b', // robe shade
     g: '#e8c33f', // coin trim
@@ -123,7 +127,7 @@ export const TRADER_SPRITE: Sprite = {
     '....hhhh....',
     '...hhhhhh...',
     '...hssssh...',
-    '...hssssh...',
+    '...sesse....',
     '....ssss....',
     '...rrrrrr...',
     '..rrrrrrrr..',
