@@ -716,6 +716,8 @@ try {
             .filter((_, index) => index % 3 === 2)
             .map((value) => Number(value.toFixed(4))))]
           : [];
+        braid?.geometry.computeBoundingBox();
+        const braidBounds = braid?.geometry.boundingBox;
         host.renderer.render(host.room.scene, host.camera);
         return {
           rootName: root?.name,
@@ -730,6 +732,8 @@ try {
           surfaceHasUvs: Boolean(surface?.geometry.attributes.uv),
           relief,
           braidVertexColors: braid?.material.vertexColors,
+          braidThickness: braidBounds ? braidBounds.max.z - braidBounds.min.z : null,
+          braidFloorClearance: braidBounds ? braid.position.y + braidBounds.min.z : null,
           lights,
           casters,
           interactions,
@@ -750,6 +754,8 @@ try {
       assert.ok(state.relief.length >= 3, `rug surface is mathematically flat: ${state.relief}`);
       assert.ok(Math.max(...state.relief.map(Math.abs)) <= 0.003, `rug relief hides props: ${state.relief}`);
       assert.equal(state.braidVertexColors, true);
+      assert.ok(state.braidThickness <= 0.04, `rug braid is overinflated: ${state.braidThickness}`);
+      assert.ok(state.braidFloorClearance >= 0.003, `rug braid clips through floor: ${state.braidFloorClearance}`);
       assert.equal(state.lights, 0);
       assert.equal(state.casters, 0);
       assert.equal(state.interactions, 0);

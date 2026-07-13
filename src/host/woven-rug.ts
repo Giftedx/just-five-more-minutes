@@ -15,7 +15,7 @@ function makeRugTexture(): THREE.CanvasTexture {
   ctx.beginPath();
   ctx.ellipse(128, 96, 112, 80, 0, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.strokeStyle = '#c06a46';
+  ctx.strokeStyle = '#9b5240';
   ctx.lineWidth = 5;
   ctx.beginPath();
   ctx.ellipse(128, 96, 99, 68, 0, 0, Math.PI * 2);
@@ -31,13 +31,13 @@ function makeRugTexture(): THREE.CanvasTexture {
     ctx.closePath();
     ctx.fill();
   };
-  diamond(128, 96, 58, 42, '#c58a4a');
+  diamond(128, 96, 58, 42, '#a76548');
   diamond(128, 96, 39, 29, '#4d6172');
-  diamond(128, 96, 22, 17, '#e2c487');
+  diamond(128, 96, 22, 17, '#c39b69');
   diamond(128, 96, 9, 7, '#71363f');
   for (const x of [50, 206]) {
-    diamond(x, 96, 18, 28, '#b45c45');
-    diamond(x, 96, 8, 14, '#d6ad65');
+    diamond(x, 96, 18, 28, '#84444a');
+    diamond(x, 96, 8, 14, '#b07c55');
   }
 
   for (let y = 1; y < canvas.height; y += 3) {
@@ -71,7 +71,7 @@ function makeSurfaceGeometry(): THREE.CircleGeometry {
 }
 
 function makeBraidGeometry(): THREE.TorusGeometry {
-  const geometry = new THREE.TorusGeometry(0.91, 0.035, 6, 32);
+  const geometry = new THREE.TorusGeometry(0.91, 0.018, 6, 32);
   const position = geometry.getAttribute('position');
   const colors = new Float32Array(position.count * 3);
   for (let i = 0; i < position.count; i++) {
@@ -105,7 +105,7 @@ export function makeWovenRug(): THREE.Group {
   braid.name = 'room-rug-braid';
   braid.rotation.x = -Math.PI / 2;
   braid.scale.y = 0.76;
-  braid.position.y = 0.014;
+  braid.position.y = 0.022;
   rug.add(braid);
   return rug;
 }
