@@ -217,6 +217,18 @@ try {
       })),
       { display: 'flex', inert: false },
     );
+    const slider = page.locator('#j5mm-volume-slider');
+    const initialVolume = Number(await slider.inputValue());
+    const sliderBox = await slider.boundingBox();
+    assert.ok(sliderBox, 'volume slider has no clickable bounds while paused');
+    const clickPosition = {
+      x: sliderBox.width * (initialVolume < 0.5 ? 0.75 : 0.25),
+      y: sliderBox.height / 2,
+    };
+    await slider.click({ position: clickPosition });
+    const changedVolume = Number(await slider.inputValue());
+    assert.notEqual(changedVolume, initialVolume, 'pause overlay intercepted the live volume slider');
+    assert.equal(await page.evaluate(() => window.__game['audio'].getVolume()), changedVolume);
     const before = await page.evaluate(() => window.__game['director'].t);
     await page.waitForTimeout(500);
     const after = await page.evaluate(() => window.__game['director'].t);
