@@ -861,6 +861,18 @@ try {
     assert.match(state.seed, /RUN SEED\s*·\s*0x0BADC0DE/);
     assert.equal(state.raf, 0, 'game retained an animation frame after ending');
 
+    await page.keyboard.press('Tab');
+    const nightlyAction = page.locator('.scorecard:not(.sc-week) .sc-restart');
+    assert.equal(await nightlyAction.evaluate((button) => document.activeElement === button), true);
+    const nightlyActionBounds = await nightlyAction.evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, height: innerHeight };
+    });
+    assert.ok(
+      nightlyActionBounds.top >= 0 && nightlyActionBounds.bottom <= nightlyActionBounds.height,
+      JSON.stringify(nightlyActionBounds),
+    );
+
     const topState = await page.evaluate(() => {
       const overlay = document.querySelector('.scorecard');
       overlay.scrollTop = 0;
