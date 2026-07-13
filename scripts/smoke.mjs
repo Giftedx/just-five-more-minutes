@@ -455,30 +455,51 @@ try {
         ].map((name) => root?.getObjectByName(name)?.name);
         const textures = new Map();
         let meshCount = 0;
+        let instanceCount = 0;
+        let triangles = 0;
         let lights = 0;
         let casters = 0;
         let interactions = 0;
         root?.traverse((object) => {
           if (object.isMesh) {
             meshCount++;
+            const multiplier = object.isInstancedMesh ? object.count : 1;
+            instanceCount += multiplier;
+            const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
+            triangles += Math.floor(primitives / 3) * multiplier;
             if (object.castShadow) casters++;
             const materials = Array.isArray(object.material) ? object.material : [object.material];
             for (const material of materials) {
-              if (material?.map) textures.set(material.map.uuid, material.map.colorSpace);
+              if (material?.map) {
+                textures.set(material.map.uuid, {
+                  colorSpace: material.map.colorSpace,
+                  width: material.map.image?.width,
+                  height: material.map.image?.height,
+                });
+              }
             }
           }
           if (object.isLight) lights++;
           if (object.userData?.interact) interactions++;
         });
+        const belongsToDetailRoot = (object) => {
+          for (let cursor = object; cursor; cursor = cursor.parent) {
+            if (cursor === root) return true;
+          }
+          return false;
+        };
         return {
           rootName: root?.name,
           clusters,
           meshCount,
-          textureSpaces: [...textures.values()],
+          instanceCount,
+          triangles,
+          textureMetadata: [...textures.values()],
           covingRails: root?.getObjectByName('room-coving')?.children.length,
           lights,
           casters,
           interactions,
+          interactableMembers: host.room.interactables.filter(belongsToDetailRoot).length,
           shadowsEnabled: host.renderer.shadowMap.enabled,
         };
       });
@@ -491,11 +512,14 @@ try {
         'room-coving',
       ]);
       assert.ok(state.meshCount >= 10 && state.meshCount <= 18, `detail mesh budget exceeded: ${state.meshCount}`);
-      assert.deepEqual(state.textureSpaces, ['srgb']);
+      assert.ok(state.instanceCount <= 32, `detail instance budget exceeded: ${state.instanceCount}`);
+      assert.ok(state.triangles <= 1200, `detail triangle budget exceeded: ${state.triangles}`);
+      assert.deepEqual(state.textureMetadata, [{ colorSpace: 'srgb', width: 256, height: 160 }]);
       assert.equal(state.covingRails, 4);
       assert.equal(state.lights, 0);
       assert.equal(state.casters, 0);
       assert.equal(state.interactions, 0);
+      assert.equal(state.interactableMembers, 0);
       assert.equal(state.shadowsEnabled, false);
       assert.deepEqual(consoleProblems, []);
     },
