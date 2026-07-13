@@ -525,6 +525,135 @@ try {
     },
   );
 
+  await scenario(
+    'bedroom hero furniture preserves gameplay contracts',
+    { viewport: { width: 1000, height: 700 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
+
+      const state = await page.evaluate(() => {
+        const host = window.__game['host'];
+        const scene = host.room.scene;
+        const chair = scene.getObjectByName('room-desk-chair');
+        const bed = scene.getObjectByName('room-bed');
+        const furnitureRoots = [chair, bed].filter(Boolean);
+        const textures = new Set();
+        let meshCount = 0;
+        let instanceCount = 0;
+        let triangles = 0;
+        let lights = 0;
+        let casters = 0;
+        for (const root of furnitureRoots) {
+          root.traverse((object) => {
+            if (object.isMesh) {
+              meshCount++;
+              const multiplier = object.isInstancedMesh ? object.count : 1;
+              instanceCount += multiplier;
+              const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
+              triangles += Math.floor(primitives / 3) * multiplier;
+              if (object.castShadow) casters++;
+              const materials = Array.isArray(object.material) ? object.material : [object.material];
+              for (const material of materials) {
+                if (material?.map) textures.add(material.map.uuid);
+              }
+            }
+            if (object.isLight) lights++;
+          });
+        }
+        const belongsTo = (object, root) => {
+          for (let cursor = object; cursor; cursor = cursor.parent) {
+            if (cursor === root) return true;
+          }
+          return false;
+        };
+        const collider = (min, max) => host.room.colliders.find((box) => (
+          Math.abs(box.min.x - min[0]) < 1e-6
+          && Math.abs(box.min.y - min[1]) < 1e-6
+          && Math.abs(box.min.z - min[2]) < 1e-6
+          && Math.abs(box.max.x - max[0]) < 1e-6
+          && Math.abs(box.max.y - max[1]) < 1e-6
+          && Math.abs(box.max.z - max[2]) < 1e-6
+        ));
+        const duvet = bed?.getObjectByName('room-bed-duvet');
+        const duvetDepths = duvet?.geometry.attributes.position
+          ? [...new Set(Array.from(duvet.geometry.attributes.position.array)
+            .filter((_, index) => index % 3 === 2)
+            .map((value) => Number(value.toFixed(4))))]
+          : [];
+        const namedChildren = [
+          'room-chair-seat',
+          'room-chair-back',
+          'room-chair-base',
+          'room-bed-frame',
+          'room-bed-mattress',
+          'room-bed-headboard',
+          'room-bed-duvet',
+          'room-bed-pillow',
+        ];
+
+        return {
+          chairName: chair?.name,
+          bedName: bed?.name,
+          namedChildren: namedChildren.map((name) => scene.getObjectByName(name)?.name),
+          chairInteraction: chair?.userData.interact?.type,
+          chairInteractableMembers: chair
+            ? host.room.interactables.filter((object) => belongsTo(object, chair)).length
+            : 0,
+          bedInteractableMembers: bed
+            ? host.room.interactables.filter((object) => belongsTo(object, bed)).length
+            : 0,
+          meshCount,
+          instanceCount,
+          triangles,
+          textures: textures.size,
+          lights,
+          casters,
+          chairCollider: Boolean(collider([0.65, 0, -1.2], [1.15, 0.9, -0.7])),
+          bedCollider: Boolean(collider([-2.475, 0, -1.45], [-1.425, 0.6, 0.65])),
+          duvetVertexColors: duvet?.material.vertexColors,
+          duvetHasColors: Boolean(duvet?.geometry.attributes.color),
+          duvetDepthCount: duvetDepths.length,
+        };
+      });
+
+      assert.equal(state.chairName, 'room-desk-chair');
+      assert.equal(state.bedName, 'room-bed');
+      assert.deepEqual(state.namedChildren, [
+        'room-chair-seat',
+        'room-chair-back',
+        'room-chair-base',
+        'room-bed-frame',
+        'room-bed-mattress',
+        'room-bed-headboard',
+        'room-bed-duvet',
+        'room-bed-pillow',
+      ]);
+      assert.equal(state.chairInteraction, 'pc');
+      assert.equal(state.chairInteractableMembers, 1);
+      assert.equal(state.bedInteractableMembers, 0);
+      assert.ok(state.meshCount >= 12 && state.meshCount <= 18, `furniture mesh budget exceeded: ${state.meshCount}`);
+      assert.ok(state.instanceCount <= 32, `furniture instance budget exceeded: ${state.instanceCount}`);
+      assert.ok(state.triangles <= 1200, `furniture triangle budget exceeded: ${state.triangles}`);
+      assert.equal(state.textures, 0);
+      assert.equal(state.lights, 0);
+      assert.equal(state.casters, 0);
+      assert.equal(state.chairCollider, true);
+      assert.equal(state.bedCollider, true);
+      assert.equal(state.duvetVertexColors, true);
+      assert.equal(state.duvetHasColors, true);
+      assert.ok(state.duvetDepthCount >= 3, `duvet is not visibly sculpted: ${state.duvetDepthCount} depths`);
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
   await scenario('room-mode MMO render cadence is capped', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await gotoOk(page, { skipTitle: 1, seed: 6 });
     await page.waitForFunction(() => {
