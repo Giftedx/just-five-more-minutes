@@ -350,13 +350,27 @@ try {
           'mum-hall-skirting',
           'mum-hall-domestic-detail',
           'mum-contact-cue',
+          'mum-hair-part',
+          'mum-armhole-seam-left',
+          'mum-armhole-seam-right',
+          'mum-cardigan-neckline',
+          'mum-cardigan-ribbing',
+          'mum-thumb-left',
+          'mum-thumb-right',
+          'mum-locket',
+          'mum-towel-hem',
+          'mum-towel-fold',
+          'mum-sconce-socket',
+          'mum-sconce-rim',
+          'mum-family-portrait',
         ];
         const metrics = (target) => {
           let meshes = 0;
           let triangles = 0;
           let casters = 0;
           let lights = 0;
-          const textures = new Set();
+          const textures = new Map();
+          const materialTypes = new Set();
           target?.traverse((object) => {
             if (object.isMesh) {
               meshes++;
@@ -365,11 +379,28 @@ try {
               triangles += Math.floor(primitives / 3) * multiplier;
               if (object.castShadow) casters++;
               const materials = Array.isArray(object.material) ? object.material : [object.material];
-              for (const material of materials) if (material?.map) textures.add(material.map.uuid);
+              for (const material of materials) {
+                if (!material) continue;
+                materialTypes.add(material.type);
+                if (material.map) {
+                  textures.set(material.map.uuid, {
+                    width: material.map.image?.width,
+                    height: material.map.image?.height,
+                    colorSpace: material.map.colorSpace,
+                  });
+                }
+              }
             }
             if (object.isLight) lights++;
           });
-          return { meshes, triangles, casters, lights, textures: textures.size };
+          return {
+            meshes,
+            triangles,
+            casters,
+            lights,
+            textures: [...textures.values()],
+            materialTypes: [...materialTypes],
+          };
         };
         const belongsTo = (object, target) => {
           for (let cursor = object; cursor; cursor = cursor.parent) {
@@ -453,15 +484,34 @@ try {
         'mum-hall-skirting',
         'mum-hall-domestic-detail',
         'mum-contact-cue',
+        'mum-hair-part',
+        'mum-armhole-seam-left',
+        'mum-armhole-seam-right',
+        'mum-cardigan-neckline',
+        'mum-cardigan-ribbing',
+        'mum-thumb-left',
+        'mum-thumb-right',
+        'mum-locket',
+        'mum-towel-hem',
+        'mum-towel-fold',
+        'mum-sconce-socket',
+        'mum-sconce-rim',
+        'mum-family-portrait',
       ]);
       assert.equal(before.rootVisible, true);
       assert.ok(before.characterDepth >= 0.4 && before.characterDepth <= 0.46, JSON.stringify(before));
       assert.ok(before.contactDepth >= 0.4 && before.contactDepth <= 0.46, JSON.stringify(before));
       assert.ok(before.thresholdDepth >= -0.52 && before.thresholdDepth <= -0.46, JSON.stringify(before));
-      assert.ok(before.mum.meshes <= 45 && before.mum.triangles <= 2500, JSON.stringify(before));
-      assert.equal(before.mum.textures, 1);
-      assert.ok(before.hall.meshes <= 16 && before.hall.triangles <= 900, JSON.stringify(before));
-      assert.ok(before.hall.textures <= 1);
+      assert.ok(before.mum.meshes <= 45 && before.mum.triangles <= 3400, JSON.stringify(before));
+      assert.deepEqual(before.mum.textures, [{ width: 192, height: 192, colorSpace: 'srgb' }]);
+      assert.ok(before.hall.meshes <= 16 && before.hall.triangles <= 1200, JSON.stringify(before));
+      assert.deepEqual(before.hall.textures, []);
+      const materialTypes = new Set([...before.mum.materialTypes, ...before.hall.materialTypes]);
+      const phongCount = [...before.mum.materialTypes, ...before.hall.materialTypes]
+        .filter((type) => type === 'MeshPhongMaterial').length;
+      assert.ok(phongCount >= 1 && phongCount <= 2, JSON.stringify(before));
+      assert.equal(materialTypes.has('MeshStandardMaterial'), false);
+      assert.equal(materialTypes.has('MeshPhysicalMaterial'), false);
       assert.equal(before.mum.casters + before.hall.casters, 0);
       assert.equal(before.interactions, 0);
       assert.equal(before.colliders, colliderCount);
@@ -478,7 +528,7 @@ try {
           && before.headProjected.bottom <= before.viewportHeight * 0.72,
         JSON.stringify(before),
       );
-      assert.ok(before.calls <= 55 && before.triangles <= 4000 && before.rendererTextures <= 14, JSON.stringify(before));
+      assert.ok(before.calls <= 55 && before.triangles <= 5000 && before.rendererTextures <= 14, JSON.stringify(before));
 
       const poseA = await page.evaluate(() => ({
         body: window.__game['host'].room.npcSilhouette.rotation.z,
