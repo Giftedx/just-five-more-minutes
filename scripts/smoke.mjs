@@ -827,6 +827,8 @@ try {
         title: title.textContent,
         ending: ending.textContent,
         total: total.textContent,
+        initialScrollTop: scorecard.scrollTop,
+        titleFocused: document.activeElement === title,
         restartFocused: document.activeElement === restart,
         volumeDisplay: getComputedStyle(volume).display,
         career: document.querySelector('.sc-career')?.textContent ?? '',
@@ -840,7 +842,9 @@ try {
     assert.equal(state.role, 'dialog');
     assert.equal(state.modal, 'true');
     assert.equal(state.labelledBy, state.titleId);
-    assert.equal(state.restartFocused, true);
+    assert.equal(state.initialScrollTop, 0, 'nightly report skipped its heading on open');
+    assert.equal(state.titleFocused, true, 'nightly report heading did not own initial focus');
+    assert.equal(state.restartFocused, false, 'nightly report opened on its final action');
     assert.equal(state.volumeDisplay, 'none');
     assert.match(state.career, /RUN\s+\d+/);
     assert.match(state.seed, /RUN SEED\s*·\s*0x0BADC0DE/);
@@ -874,6 +878,52 @@ try {
       bottomState.restartTop < bottomState.overlayBottom && bottomState.restartBottom <= bottomState.overlayBottom + 1,
       `restart was unreachable at max scroll: ${JSON.stringify(bottomState)}`,
     );
+
+    await page.evaluate(() => {
+      document.querySelector('.scorecard')?.remove();
+      const game = window.__game;
+      game['career'].week.reports = Array.from({ length: 5 }, (_, night) => ({
+        night,
+        total: 90,
+        rows: [35, 28, 18, 9],
+        choresDone: 3,
+        milestones: ['dinnerFund'],
+      }));
+      game['career'].week.lieDebt = 3;
+      game['career'].week.suspicionCarry = 0;
+      game['showVerdictThenRestart']();
+    });
+    await page.locator('.scorecard.sc-week').waitFor({ state: 'visible' });
+    const week = await page.evaluate(() => {
+      const overlay = document.querySelector('.scorecard.sc-week');
+      const title = overlay.querySelector('.sc-title');
+      return {
+        scrollTop: overlay.scrollTop,
+        titleFocused: document.activeElement === title,
+        role: overlay.getAttribute('role'),
+        modal: overlay.getAttribute('aria-modal'),
+        labelledBy: overlay.getAttribute('aria-labelledby'),
+        titleId: title.id,
+        grades: overlay.querySelectorAll('.sc-week-day').length,
+        stamps: [...overlay.querySelectorAll('.sc-week-stamp')].map((stamp) => stamp.textContent),
+      };
+    });
+    assert.equal(week.scrollTop, 0, 'week verdict skipped its heading on open');
+    assert.equal(week.titleFocused, true, 'week verdict heading did not own initial focus');
+    assert.equal(week.role, 'dialog');
+    assert.equal(week.modal, 'true');
+    assert.equal(week.labelledBy, week.titleId);
+    assert.equal(week.grades, 5);
+    assert.deepEqual(week.stamps, ['EVERY CHORE, EVERY NIGHT', 'RELIABLE ECONOMY', 'IT WAS NEVER ONE SEC']);
+
+    await page.keyboard.press('Tab');
+    const weekAction = page.locator('.scorecard.sc-week .sc-restart');
+    assert.equal(await weekAction.evaluate((button) => document.activeElement === button), true);
+    const actionBounds = await weekAction.evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, height: innerHeight };
+    });
+    assert.ok(actionBounds.top >= 0 && actionBounds.bottom <= actionBounds.height, JSON.stringify(actionBounds));
   });
 
   await scenario(
