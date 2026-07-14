@@ -5,6 +5,7 @@ import { makeEnvironmentDetails } from './environment-details';
 import { makeBed, makeDeskChair } from './hero-furniture';
 import { makeMumDoorway } from './mum-doorway';
 import { makeCurtainTug, makeDuvetTug, makeWallPhone } from './night-props';
+import { makeWindowCurtains } from './window-curtains';
 import { makeWovenRug } from './woven-rug';
 
 export type Interactable =
@@ -1151,18 +1152,11 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   scene.add(box(0.02, 0.74, 0.02, cableMat, 1.08, 0.37, -1.92));
   scene.add(box(0.32, 0.02, 0.02, cableMat, 1.26, 0.012, -1.88));
 
-  // curtain rod + panels framing the window (east wall); panels hang clear
-  // of the wall so they pass in front of the sill instead of through it
-  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.74, 8), lambert(WOOD_DARK));
-  rod.rotation.x = Math.PI / 2;
-  rod.position.set(2.36, 2.26, 0.4);
-  scene.add(rod);
-  const curtainMat = lambert(0x6e4a8c);
-  for (const cz of [-0.34, 1.14]) {
-    const panel = box(0.06, 1.42, 0.26, curtainMat, 2.36, 1.5, cz);
-    scene.add(panel);
-    scene.add(box(0.045, 1.42, 0.1, curtainMat, 2.33, 1.46, cz + (cz < 0.4 ? 0.16 : -0.16)));
-  }
+  // Sculpted permanent dressing stays visual-only; Thursday's separate tug
+  // roots keep the exact interaction anchors layered over these panels.
+  const curtains = makeWindowCurtains();
+  curtains.position.set(2.36, 0, 0.4);
+  scene.add(curtains);
 
   // window sill + a small potted plant (centered on the sill)
   scene.add(box(0.1, 0.045, 1.34, lambert(WOOD_DARK), 2.44, 0.96, 0.4));

@@ -1489,6 +1489,164 @@ try {
   );
 
   await scenario(
+    'bedroom window curtains stay sculpted, inert, and bounded',
+    { viewport: { width: 1200, height: 800 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+      await gotoOk(page, { skipTitle: 1, night: 0, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.host?.room?.scene);
+
+      const neutral = await page.evaluate(() => {
+        const host = window.__game.host;
+        const root = host.room.scene.getObjectByName('room-window-curtains');
+        const childNames = [
+          'room-curtain-fabric',
+          'room-curtain-rings',
+          'room-curtain-rod',
+          'room-curtain-finials',
+        ];
+        let meshes = 0;
+        let drawCalls = 0;
+        let hardwareInstances = 0;
+        let triangles = 0;
+        let textures = 0;
+        let lights = 0;
+        let casters = 0;
+        let interactions = 0;
+        const forbiddenMaterials = [];
+        root?.traverse((object) => {
+          if (object.isLight) lights++;
+          if (object.userData?.interact) interactions++;
+          if (!object.isMesh) return;
+          meshes++;
+          if (object.castShadow) casters++;
+          const multiplier = object.isInstancedMesh ? object.count : 1;
+          if (object.isInstancedMesh) hardwareInstances += object.count;
+          const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
+          triangles += Math.floor(primitives / 3) * multiplier;
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          drawCalls += materials.length;
+          for (const material of materials) {
+            if (material?.map) textures++;
+            if (!material?.isMeshLambertMaterial) forbiddenMaterials.push(material?.type);
+          }
+        });
+        const belongsToRoot = (object) => {
+          for (let cursor = object; cursor; cursor = cursor.parent) if (cursor === root) return true;
+          return false;
+        };
+        const fabric = root?.getObjectByName('room-curtain-fabric');
+        const positions = fabric?.geometry?.attributes?.position;
+        const depths = positions
+          ? [...new Set(Array.from(positions.array).filter((_, index) => index % 3 === 0).map((value) => Number(value.toFixed(4))))]
+          : [];
+        fabric?.geometry.computeBoundingBox();
+        const bounds = fabric?.geometry.boundingBox;
+        const instanceBounds = ['room-curtain-rings', 'room-curtain-finials'].map((name) => {
+          const batch = root?.getObjectByName(name);
+          batch?.computeBoundingBox();
+          if (!batch?.boundingBox || !batch.boundingSphere) return null;
+          const expected = batch.boundingBox.getBoundingSphere(batch.boundingSphere.clone());
+          return {
+            count: batch.count,
+            centerDelta: batch.boundingSphere.center.distanceTo(expected.center),
+            radiusDelta: Math.abs(batch.boundingSphere.radius - expected.radius),
+          };
+        });
+        host.renderer.render(host.room.scene, host.camera);
+        return {
+          rootName: root?.name,
+          rootPosition: root?.position.toArray(),
+          childNames: childNames.map((name) => root?.getObjectByName(name)?.name),
+          meshes,
+          drawCalls,
+          hardwareInstances,
+          triangles,
+          textures,
+          lights,
+          casters,
+          interactions,
+          forbiddenMaterials,
+          interactableMembers: root ? host.room.interactables.filter(belongsToRoot).length : -1,
+          colliderCount: host.room.colliders.length,
+          fabricVertexColors: fabric?.material?.vertexColors,
+          fabricHasColors: Boolean(fabric?.geometry?.attributes?.color),
+          fabricDepths: depths.length,
+          fabricBounds: bounds ? {
+            min: bounds.min.toArray().map((value) => Number(value.toFixed(4))),
+            max: bounds.max.toArray().map((value) => Number(value.toFixed(4))),
+          } : null,
+          instanceBounds,
+          roomCalls: host.renderer.info.render.calls,
+          rendererTextures: host.renderer.info.memory.textures,
+        };
+      });
+
+      assert.equal(neutral.rootName, 'room-window-curtains');
+      assert.deepEqual(neutral.rootPosition, [2.36, 0, 0.4]);
+      assert.deepEqual(neutral.childNames, [
+        'room-curtain-fabric',
+        'room-curtain-rings',
+        'room-curtain-rod',
+        'room-curtain-finials',
+      ]);
+      assert.equal(neutral.meshes, 4);
+      assert.equal(neutral.drawCalls, 4);
+      assert.equal(neutral.hardwareInstances, 10);
+      assert.ok(neutral.triangles <= 1000, `curtain triangle budget exceeded: ${neutral.triangles}`);
+      assert.equal(neutral.textures, 0);
+      assert.equal(neutral.lights, 0);
+      assert.equal(neutral.casters, 0);
+      assert.equal(neutral.interactions, 0);
+      assert.deepEqual(neutral.forbiddenMaterials, []);
+      assert.equal(neutral.interactableMembers, 0);
+      assert.equal(neutral.colliderCount, 6);
+      assert.equal(neutral.fabricVertexColors, true);
+      assert.equal(neutral.fabricHasColors, true);
+      assert.ok(neutral.fabricDepths >= 3, `curtain fabric stayed flat: ${neutral.fabricDepths} depths`);
+      assert.deepEqual(neutral.fabricBounds, { min: [-0.075, 0.79, -0.92], max: [-0.035, 2.21, 0.92] });
+      assert.deepEqual(neutral.instanceBounds.map((bounds) => bounds?.count), [8, 2]);
+      for (const bounds of neutral.instanceBounds) {
+        assert.ok(bounds && bounds.centerDelta <= 1e-9 && bounds.radiusDelta <= 1e-9, `curtain culling bounds drifted: ${JSON.stringify(neutral.instanceBounds)}`);
+      }
+      assert.ok(neutral.roomCalls <= 128, `room draw-call budget exceeded: ${neutral.roomCalls}`);
+      assert.ok(neutral.rendererTextures <= 12, `room texture budget exceeded: ${neutral.rendererTextures}`);
+
+      await gotoOk(page, { skipTitle: 1, night: 3, seed: 313 });
+      await page.waitForFunction(() => window.__game?.host?.room?.scene);
+      const thursday = await page.evaluate(() => {
+        const host = window.__game.host;
+        const rootNames = ['room-curtain-tug-left', 'room-curtain-tug-right'];
+        const roots = rootNames.map((name) => host.room.scene.getObjectByName(name));
+        return {
+          permanentCount: (() => {
+            let count = 0;
+            host.room.scene.traverse((object) => { if (object.name === 'room-window-curtains') count++; });
+            return count;
+          })(),
+          positions: roots.map((root) => root?.position.toArray()),
+          contracts: roots.map((root) => root?.userData.interact),
+          memberships: roots.map((root) => host.room.interactables.filter((item) => item === root).length),
+        };
+      });
+      assert.equal(thursday.permanentCount, 1);
+      assert.deepEqual(thursday.positions, [[2.33, 1.35, -0.05], [2.33, 1.35, 0.85]]);
+      assert.deepEqual(thursday.contracts, [
+        { type: 'tug', itemId: 'curt0', chore: 'wrappers', name: 'curtain', action: 'Throw the curtains open' },
+        { type: 'tug', itemId: 'curt1', chore: 'wrappers', name: 'curtain', action: 'Throw the curtains open' },
+      ]);
+      assert.deepEqual(thursday.memberships, [1, 1]);
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
+  await scenario(
     'bedroom hero furniture preserves gameplay contracts',
     { viewport: { width: 1000, height: 700 } },
     async (page) => {
