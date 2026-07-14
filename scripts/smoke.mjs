@@ -590,6 +590,25 @@ try {
     assertDialogueGeometry(shortGeometry);
     assert.equal(shortGeometry.chorePromptOverlap, 0, JSON.stringify(shortGeometry));
     assert.ok(shortGeometry.chorePromptGap >= 8, JSON.stringify(shortGeometry));
+    const compactPromptStyles = await page.evaluate(() => {
+      const hint = document.querySelector('.hud-prompt-hint');
+      const option = document.querySelector('.hud-prompt-option');
+      if (!(hint instanceof HTMLElement)) throw new Error('Expected a prompt hint');
+      if (!(option instanceof HTMLElement)) throw new Error('Expected a prompt option');
+      const hintStyle = getComputedStyle(hint);
+      const optionStyle = getComputedStyle(option);
+      return {
+        hintMarginBottom: hintStyle.marginBottom,
+        optionPadding: [
+          optionStyle.paddingTop,
+          optionStyle.paddingRight,
+          optionStyle.paddingBottom,
+          optionStyle.paddingLeft,
+        ],
+      };
+    });
+    assert.equal(compactPromptStyles.hintMarginBottom, '0px');
+    assert.deepEqual(compactPromptStyles.optionPadding, ['5px', '10px', '5px', '8px']);
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.waitForTimeout(100);

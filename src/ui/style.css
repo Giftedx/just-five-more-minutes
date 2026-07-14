@@ -103,9 +103,7 @@ body {
   /* spacebar row */
   content: '';
   position: absolute;
-  left: 25%;
-  right: 25%;
-  bottom: 12px;
+  inset: auto 25% 12px;
   height: 11px;
   border-radius: 3px;
   background: linear-gradient(to bottom, #c8c0b0, #a89e8c);
@@ -183,7 +181,6 @@ body {
      towers over the seated eye, which sits at note height in 3D). */
   bottom: calc(var(--crt-top, 540px) - var(--wall, 420px) * 0.22);
   left: calc(50% - var(--crt-half, 350px) - var(--wall, 420px) * 0.23);
-  box-sizing: border-box;
   width: calc(var(--wall, 420px) * 0.075);
   height: calc(var(--wall, 420px) * 0.075);
   padding: calc(var(--wall, 420px) * 0.009) calc(var(--wall, 420px) * 0.006);
@@ -565,9 +562,7 @@ body {
   /* shallow front recess line, as on a real CRT plinth */
   content: '';
   position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 11px;
+  inset: 11px 8% auto;
   height: 7px;
   border-radius: 3px;
   background: rgba(60, 52, 40, 0.18);
@@ -697,46 +692,6 @@ body {
   from { transform: translateY(-8px) rotate(-4deg); opacity: 0; }
 }
 
-@media (max-height: 520px) {
-  .hud-task-stack {
-    right: 118px;
-    display: grid;
-    grid-template-columns: auto auto;
-    grid-template-areas:
-      'objective objective'
-      'chores mum';
-    align-items: start;
-    width: max-content;
-    max-width: calc(100vw - 154px);
-    gap: 14px 10px;
-  }
-
-  .hud-objective {
-    grid-area: objective;
-  }
-
-  .hud-chores {
-    grid-area: chores;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .hud-chore {
-    padding: 6px 9px 7px;
-    font-size: 12px;
-    transform: rotate(-1deg);
-  }
-
-  .hud-chore:nth-child(even) {
-    transform: rotate(0.8deg);
-  }
-
-  .hud-mum {
-    grid-area: mum;
-  }
-}
-
 /* clock: a little LED alarm clock pinned top-right */
 .hud-clock {
   position: absolute;
@@ -787,9 +742,7 @@ body {
 /* Mum owns the centre stage; choices and captions frame the doorway. */
 .hud-dialogue-stack {
   position: fixed;
-  left: 18px;
-  right: 18px;
-  bottom: clamp(54px, 8vh, 72px);
+  inset: auto 18px clamp(54px, 8vh, 72px);
   width: auto;
   display: grid;
   grid-template-columns: minmax(300px, 340px) minmax(320px, 360px);
@@ -903,22 +856,6 @@ body {
   }
 }
 
-@media (max-height: 520px) {
-  .hud-prompt {
-    gap: 4px;
-    padding: 8px 10px;
-    transform: translateY(36px);
-  }
-
-  .hud-prompt-hint {
-    margin-bottom: 0;
-  }
-
-  .hud-prompt-option {
-    padding: 5px 10px 5px 8px;
-  }
-}
-
 @keyframes promptin {
   from { opacity: 0; }
 }
@@ -1029,8 +966,6 @@ body {
 @font-face {
   font-family: RuneScape;
   src: url('/fonts/RuneScape.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
   font-display: swap;
 }
 
@@ -1038,7 +973,6 @@ body {
   font-family: RuneScape;
   src: url('/fonts/RuneScape-Bold.woff2') format('woff2');
   font-weight: 700;
-  font-style: normal;
   font-display: swap;
 }
 
@@ -1069,7 +1003,6 @@ body {
 }
 
 .title-screen--exit .title-desk-glow {
-  opacity: 1;
   transform: scale(1.35);
 }
 
@@ -1082,9 +1015,7 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
   transition: transform 0.4s ease-out;
-  will-change: transform;
 }
 
 .title-lamp {
@@ -1109,7 +1040,7 @@ body {
   width: min(38vw, 300px);
   height: 42%;
   background: radial-gradient(ellipse at 50% 100%, rgba(120, 200, 100, 0.14), transparent 70%);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition: transform 0.5s ease;
 }
 
 .title-motes {
@@ -1134,7 +1065,6 @@ body {
   overflow-y: auto;
   text-align: center;
   padding: 28px 36px 24px;
-  cursor: default;
   background:
     radial-gradient(ellipse at 50% -30%, rgba(255, 200, 100, 0.07), transparent 58%),
     linear-gradient(168deg, rgba(28, 22, 14, 0.98), rgba(10, 8, 6, 0.99));
@@ -1147,7 +1077,6 @@ body {
 }
 
 .title-card > * {
-  position: relative;
   animation: titlein 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
@@ -1155,8 +1084,6 @@ body {
 .title-card > *:nth-child(2) { animation-delay: 0.1s; }
 .title-card > *:nth-child(3) { animation-delay: 0.16s; }
 .title-card > *:nth-child(4) { animation-delay: 0.22s; }
-.title-card > *:nth-child(5) { animation-delay: 0.28s; }
-
 @keyframes titlein {
   from { transform: translateY(12px); opacity: 0; }
 }
@@ -1232,6 +1159,7 @@ body {
 
 .title-word:nth-child(1) { animation-delay: 0.12s; }
 .title-word:nth-child(2) { animation-delay: 0.2s; }
+.title-card > *:nth-child(5),
 .title-word:nth-child(3) { animation-delay: 0.28s; }
 .title-word:nth-child(4) { animation-delay: 0.36s; }
 
@@ -1256,8 +1184,7 @@ body {
 }
 
 @keyframes titlewordhero {
-  0% { transform: translateY(18px) scale(0.92); opacity: 0; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+  from { transform: translateY(18px) scale(0.92); opacity: 0; }
 }
 
 .title-premise {
@@ -1453,13 +1380,12 @@ body {
 }
 
 .title-mum-quote {
-  margin: 0;
   padding: 16px 16px 14px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(232, 170, 150, 0.14);
   border-left: 2px solid rgba(232, 150, 130, 0.5);
-  transition: opacity 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+  transition: opacity 0.22s ease, border-color 0.22s ease;
 }
 
 .title-mum-quote--knock {
@@ -1545,7 +1471,6 @@ body {
 }
 
 .title-footer-note {
-  margin: 0;
   font-size: 11px;
   color: #a79a83;
   letter-spacing: 0.25px;
@@ -1581,10 +1506,6 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .title-scene-col:first-child .title-crt-wrap {
-    order: 0;
-  }
-
   .title-controls {
     gap: 8px 10px;
     font-size: 11px;
@@ -1614,9 +1535,6 @@ body {
     transform: none !important;
   }
 
-  .hud-clock-late {
-    animation: none !important;
-  }
 }
 
 /* ---------- scorecard ---------- */
@@ -1666,7 +1584,6 @@ body {
 
 @keyframes cardin {
   from { transform: translateY(26px) rotate(-2deg); opacity: 0; }
-  to { transform: rotate(-0.4deg); opacity: 1; }
 }
 
 .sc-stamp {
@@ -1847,7 +1764,6 @@ body {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  box-sizing: border-box;
   background:
     radial-gradient(circle at 50% 46%, rgba(113, 83, 29, 0.16), transparent 42%),
     rgba(7, 6, 9, 0.94);
@@ -1860,7 +1776,6 @@ body {
   position: relative;
   width: min(480px, 100%);
   padding: 27px 28px 29px;
-  box-sizing: border-box;
   overflow: hidden;
   border: 1px solid rgba(232, 195, 63, 0.58);
   border-radius: 3px;
@@ -1886,7 +1801,6 @@ body {
 }
 
 .pause-overlay-title {
-  margin: 0;
   color: #ffe6a0;
   font: 700 clamp(30px, 5vw, 43px)/0.98 RuneScape, Georgia, serif;
   text-shadow: 0 2px 0 #4c3015, 0 5px 20px rgba(0, 0, 0, 0.65);
@@ -1951,7 +1865,6 @@ body {
 }
 
 .mobile-gate-card {
-  position: relative;
   width: min(720px, 100%);
   display: grid;
   grid-template-columns: minmax(210px, 0.8fr) minmax(260px, 1.2fr);
@@ -2011,9 +1924,7 @@ body {
 .mobile-gate-visual::after {
   content: '';
   position: absolute;
-  left: 11%;
-  right: 11%;
-  bottom: 20px;
+  inset: auto 11% 20px;
   height: 4px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.46);
@@ -2135,7 +2046,6 @@ body {
 
 .mobile-gate-message {
   align-self: center;
-  text-align: left;
 }
 
 .mobile-gate-title {
@@ -2219,49 +2129,6 @@ body {
   }
 }
 
-@media (max-height: 520px) {
-  .mobile-gate {
-    padding: 16px;
-  }
-
-  .mobile-gate-card {
-    gap: 14px 24px;
-    padding: 16px 20px 18px;
-  }
-
-  .mobile-gate-header {
-    padding-bottom: 9px;
-  }
-
-  .mobile-gate-visual {
-    min-height: 154px;
-  }
-
-  .mobile-gate-crt {
-    width: min(172px, 76%);
-    padding: 8px 8px 17px;
-  }
-
-  .mobile-gate-screen {
-    min-height: 88px;
-    padding: 7px 7px 5px;
-  }
-
-  .mobile-gate-title {
-    font-size: 32px;
-  }
-
-  .mobile-gate-copy {
-    font-size: 15px;
-    line-height: 1.4;
-  }
-
-  .mobile-gate-note {
-    margin-top: 10px;
-    padding-top: 8px;
-  }
-}
-
 @media (max-height: 440px) and (max-width: 519px) {
   .mobile-gate-visual {
     display: none;
@@ -2282,7 +2149,6 @@ body {
   right: 16px;
   bottom: 12px;
   z-index: 35;
-  box-sizing: border-box;
   width: 166px;
   display: flex;
   align-items: center;
@@ -2315,8 +2181,6 @@ body {
   appearance: none;
   width: 104px;
   height: 32px;
-  margin: 0;
-  padding: 0;
   border: 0;
   outline: 0;
   background: transparent;
@@ -2440,17 +2304,101 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hud-mum[data-tier='3'] {
-    animation: none;
-  }
-}
-
 @media (max-height: 520px) {
+  .hud-task-stack {
+    right: 118px;
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      'objective objective'
+      'chores mum';
+    align-items: start;
+    width: max-content;
+    max-width: calc(100vw - 154px);
+    gap: 14px 10px;
+  }
+
+  .hud-objective {
+    grid-area: objective;
+  }
+
+  .hud-chores {
+    grid-area: chores;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .hud-chore {
+    padding: 6px 9px 7px;
+    font-size: 12px;
+    transform: rotate(-1deg);
+  }
+
+  .hud-chore:nth-child(even) {
+    transform: rotate(0.8deg);
+  }
+
+  .hud-prompt {
+    gap: 4px;
+    padding: 8px 10px;
+    transform: translateY(36px);
+  }
+
+  .hud-prompt-hint {
+    margin-bottom: 0;
+  }
+
+  .hud-prompt-option {
+    padding: 5px 10px 5px 8px;
+  }
+
   .hud-mum {
+    grid-area: mum;
     min-width: 148px;
     padding-block: 6px 7px;
     transform: none;
+  }
+
+  .mobile-gate {
+    padding: 16px;
+  }
+
+  .mobile-gate-card {
+    gap: 14px 24px;
+    padding: 16px 20px 18px;
+  }
+
+  .mobile-gate-header {
+    padding-bottom: 9px;
+  }
+
+  .mobile-gate-visual {
+    min-height: 154px;
+  }
+
+  .mobile-gate-crt {
+    width: min(172px, 76%);
+    padding: 8px 8px 17px;
+  }
+
+  .mobile-gate-screen {
+    min-height: 88px;
+    padding: 7px 7px 5px;
+  }
+
+  .mobile-gate-title {
+    font-size: 32px;
+  }
+
+  .mobile-gate-copy {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .mobile-gate-note {
+    margin-top: 10px;
+    padding-top: 8px;
   }
 }
 

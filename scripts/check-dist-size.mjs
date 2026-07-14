@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const assetsDir = fileURLToPath(new URL('../dist/assets/', import.meta.url));
 const budgets = {
   JavaScript: { extension: '.js', gzip: 200 * 1024 },
-  CSS: { extension: '.css', gzip: 10 * 1024 },
+  CSS: { extension: '.css', gzip: 10_112 },
 };
 
 async function filesBelow(directory) {
