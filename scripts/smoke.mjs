@@ -621,6 +621,49 @@ try {
     assert.equal(boundaryPromptStyles.hintMarginBottom, '2px');
     assert.deepEqual(boundaryPromptStyles.optionPadding, ['7px', '12px', '7px', '8px']);
 
+    const objectiveFlash = await page.locator('.hud-objective').evaluate((element) => {
+      const previous = {
+        animation: element.style.animation,
+        background: element.style.background,
+        color: element.style.color,
+      };
+      try {
+        element.style.animation = 'none';
+        element.style.background = '#e8c33f';
+        element.style.color = '#1a1408';
+        const card = getComputedStyle(element);
+        const eyebrow = getComputedStyle(element, '::before');
+        const channels = (value) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+        const composite = (foreground, background, alpha) =>
+          foreground.map((channel, index) =>
+            Math.round(channel * alpha + (background[index] ?? 0) * (1 - alpha)));
+        const luminance = (rgb) => {
+          const linear = rgb.map((channel) => {
+            const value = channel / 255;
+            return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+        };
+        const alpha = Number(eyebrow.opacity);
+        const foreground = composite(channels(eyebrow.color), channels(card.backgroundColor), alpha);
+        const background = channels(card.backgroundColor);
+        const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+        return {
+          bodyColor: card.color,
+          eyebrowColor: eyebrow.color,
+          eyebrowOpacity: eyebrow.opacity,
+          contrast: ((values[0] ?? 0) + 0.05) / ((values[1] ?? 0) + 0.05),
+        };
+      } finally {
+        element.style.animation = previous.animation;
+        element.style.background = previous.background;
+        element.style.color = previous.color;
+      }
+    });
+    assert.equal(objectiveFlash.eyebrowColor, objectiveFlash.bodyColor);
+    assert.equal(objectiveFlash.eyebrowOpacity, '0.65');
+    assert.ok(objectiveFlash.contrast >= 4.5, JSON.stringify(objectiveFlash));
+
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.waitForTimeout(100);
 
