@@ -1771,10 +1771,20 @@ try {
             }
             return palette.size;
           }),
-          basketRimBounds: (() => {
-            const rim = roots[2]?.getObjectByName('room-chore-basket-rim');
-            return rim?.boundingSphere?.radius;
-          })(),
+          instanceBounds: [
+            roots[0]?.getObjectByName('room-chore-tray-rim'),
+            roots[2]?.getObjectByName('room-chore-basket-slats'),
+            roots[2]?.getObjectByName('room-chore-basket-rim'),
+          ].map((batch) => {
+            batch?.computeBoundingBox();
+            if (!batch?.boundingBox || !batch.boundingSphere) return null;
+            const expected = batch.boundingBox.getBoundingSphere(batch.boundingSphere.clone());
+            return {
+              centerDelta: batch.boundingSphere.center.distanceTo(expected.center),
+              radiusDelta: Math.abs(batch.boundingSphere.radius - expected.radius),
+              radius: batch.boundingSphere.radius,
+            };
+          }),
           binMouthBatch: (() => {
             const mouth = roots[1]?.getObjectByName('room-chore-bin-mouth');
             return {
@@ -1814,14 +1824,17 @@ try {
       assert.deepEqual(state.interactableMembership, [1, 1, 1]);
       assert.deepEqual(state.instanceCounts, [4, 12, 4]);
       assert.deepEqual(state.instancePaletteSizes, [3, 3, 3]);
-      assert.ok(state.basketRimBounds <= 0.4, `basket rim culling bounds are inflated: ${state.basketRimBounds}`);
+      for (const bounds of state.instanceBounds) {
+        assert.ok(bounds && bounds.centerDelta <= 1e-9 && bounds.radiusDelta <= 1e-9, `instance bounds drifted: ${JSON.stringify(state.instanceBounds)}`);
+      }
+      assert.ok(state.instanceBounds[2].radius <= 0.4, `basket rim culling bounds are inflated: ${state.instanceBounds[2].radius}`);
       assert.deepEqual(state.binMouthBatch, {
         name: 'room-chore-bin-mouth',
         vertexColors: true,
         hasColors: true,
       });
       assert.equal(state.meshCount, 8);
-      assert.ok(state.instanceCount <= 26, `target instance budget exceeded: ${state.instanceCount}`);
+      assert.ok(state.instanceCount <= 25, `target instance budget exceeded: ${state.instanceCount}`);
       assert.ok(state.triangles <= 500, `target triangle budget exceeded: ${state.triangles}`);
       assert.equal(state.textures, 0);
       assert.equal(state.lights, 0);
