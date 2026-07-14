@@ -4,13 +4,13 @@
 
 **Goal:** Keep the objective-completion flash celebratory while making its small OBJECTIVE eyebrow readable throughout the animation.
 
-**Architecture:** Preserve the existing HUD animation and make its pseudo-element inherit the objective card's animated foreground colour at reduced opacity. Guard the rendered state in the existing production browser smoke, then reconcile the game-wide program with Mudwick work that already ships.
+**Architecture:** Make the pseudo-element inherit the objective card's foreground at reduced opacity and replace the unsafe eased cross-fade with a two-state pulse that preserves duration and iteration count. Guard both iterations over time in the existing production browser smoke, then reconcile the game-wide program with Mudwick work that already ships.
 
 **Tech Stack:** TypeScript 7, DOM/CSS, Playwright 1.61.1, Vite 8.1.4, Vitest 4.1.10
 
 ## Global Constraints
 
-- Preserve hudflash duration, easing, iteration count, background endpoints, body colours, panel geometry, and responsive rules.
+- Preserve hudflash duration, iteration count, background endpoints, body colours, panel geometry, and responsive rules; replace only the unsafe easing behavior.
 - Do not raise the CSS gzip ceiling above 10,112 bytes or the JavaScript ceiling above 204,800 bytes.
 - Add no dependency, asset, runtime state, timer, event listener, or JavaScript animation.
 - Preserve normal-state hierarchy and reduced-motion behaviour.
@@ -30,15 +30,15 @@
 
 **Files:**
 - Modify: scripts/smoke.mjs in the dialogue-staging scenario
-- Modify: src/ui/style.css in .hud-objective::before
+- Modify: src/ui/style.css in .hud-objective::before, .hud-flash, and @keyframes hudflash
 
 **Interfaces:**
 - Consumes: the real .hud-objective element, its ::before pseudo-element, and the existing hudflash colour endpoints.
-- Produces: computed-style evidence that the pseudo-element follows the animated foreground at opacity 0.7 and clears 4.5:1 during the translucent gold phase over a conservative black backdrop.
+- Produces: computed-style evidence that the pseudo-element follows the foreground at opacity 0.7 and clears 4.5:1 at 12 points spanning both animation iterations over a conservative black backdrop.
 
-- [x] **Step 1: Add the failing browser contrast contract**
+- [x] **Step 1: Add the initial failing endpoint contract (superseded by Task 1B)**
 
-After the short-screen prompt style assertions in the dialogue-staging scenario, add a style probe that temporarily freezes the existing objective element at the gold flash endpoint, restores all inline styles in a finally block, and returns computed values:
+After the short-screen prompt style assertions in the dialogue-staging scenario, add the initial style probe that freezes the objective at the gold flash endpoint. This was the first RED/GREEN contract and is retained below as execution history; Task 1B replaces it with the final temporal guard.
 
 ~~~js
     const objectiveFlash = await page.locator('.hud-objective').evaluate((element) => {
@@ -107,7 +107,7 @@ npm run test:browser
 
 Expected: the gate stops in the dialogue-staging scenario because the current eyebrow computes to rgb(184, 149, 74), opacity 1, and about 1.66:1 contrast on the gold phase.
 
-- [x] **Step 3: Apply the minimal CSS repair**
+- [x] **Step 3: Apply the initial CSS repair**
 
 Replace the fixed eyebrow colour:
 
@@ -116,7 +116,7 @@ Replace the fixed eyebrow colour:
   opacity: 0.7;
 ~~~
 
-Do not change the hudflash keyframes.
+Do not change the hudflash keyframes in this initial pass.
 
 - [x] **Step 4: Rebuild and rerun the production browser gate to verify GREEN**
 
@@ -124,7 +124,7 @@ Run the same build and npm run test:browser commands.
 
 Expected: all isolated scenarios and the full interaction E2E pass; computed eyebrow colour equals the body colour, opacity is 0.7, and worst-case composited contrast is at least 4.5:1.
 
-Red-team note: the first green check used an opaque-gold surrogate and overstated contrast. Reading the real 90%-alpha keyframe exposed a 4.065:1 dark-backdrop failure at opacity 0.65; the hardened 0.7 contract computes 4.610:1.
+Red-team note: the first green check used an opaque-gold surrogate and overstated contrast. Reading the real 90%-alpha keyframe exposed a 4.065:1 dark-backdrop failure at opacity 0.65. Independent review then sampled the real eased animation and exposed a deeper 1.101:1 failure at 225ms. Task 1B is the final repair.
 
 - [x] **Step 5: Verify artifact budgets**
 
@@ -142,6 +142,35 @@ Expected: JavaScript gzip remains at or below 204,800 bytes and CSS gzip remains
 git add scripts/smoke.mjs src/ui/style.css
 git commit -m "fix: preserve objective flash contrast"
 ~~~
+
+### Task 1B: Harden the complete animation timeline
+
+- [x] **Step 1: Replace the endpoint probe with a temporal browser contract**
+
+Clone the real objective element into the document as a hidden isolated probe, run its production `hudflash` animation, pause it through WAAPI at 12 points spanning both 0.9-second iterations and both sides of every 450ms boundary, and remove the clone in `finally`. At each point, composite the background colour and any gradient stop over black, composite the 0.7-opacity eyebrow, and require at least 4.5:1.
+
+- [x] **Step 2: Verify the temporal contract fails against the eased cross-fade**
+
+Expected RED: the dialogue-staging scenario reports 1.101:1 at 225ms while the foreground is `rgb(113, 101, 72)` over `rgba(232, 195, 63, 0.56)`.
+
+- [x] **Step 3: Replace unsafe interpolation with a two-state pulse**
+
+Keep `0.9s` and two iterations. Use `step-end`, keep gold/dark at 0%, and enter the existing dark-glass/cream state at 50%:
+
+~~~css
+.hud-flash { animation: hudflash 0.9s step-end 2; }
+
+@keyframes hudflash {
+  0% { background: rgba(232, 195, 63, 0.9); color: #1a1408; }
+  50%, 100% { background: linear-gradient(165deg, rgba(34, 24, 13, 0.88), rgba(18, 13, 8, 0.88)); color: #ffe9b0; }
+}
+~~~
+
+- [x] **Step 4: Verify the full temporal GREEN and budgets**
+
+Expected: the complete browser suite and full E2E pass; all 12 contrast samples clear 4.5:1; JavaScript remains 201,766 gzip bytes; CSS remains at or below 10,112 gzip bytes; fresh gold-state proof is clean.
+
+- [x] **Step 5: Commit the temporal repair and synchronized evidence**
 
 ### Task 2: Reconcile the jeweller's-program truth surfaces
 
@@ -213,7 +242,7 @@ Use an owned production preview and Playwright to freeze the real objective at t
 
 - [x] **Step 2: Red-team the bounded change**
 
-Verify the normal and gold endpoint contrast, pseudo-element inheritance, opacity, reduced-motion behaviour, unchanged keyframes, unchanged layout, unchanged script/style budgets, clean console, and absence of staged proof artifacts.
+Verify the normal and gold states, both complete animation iterations, pseudo-element inheritance, opacity, reduced-motion behaviour, preserved duration/iteration count, intentional step transition, unchanged layout, unchanged script/style budgets, clean console, and absence of staged proof artifacts.
 
 - [ ] **Step 3: Run the complete feature-tree gate**
 

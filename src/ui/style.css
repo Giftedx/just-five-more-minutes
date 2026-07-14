@@ -638,12 +638,12 @@ body {
 }
 
 .hud-flash {
-  animation: hudflash 0.9s ease-out 2;
+  animation: hudflash 0.9s step-end 2;
 }
 
 @keyframes hudflash {
   0% { background: rgba(232, 195, 63, 0.9); color: #1a1408; }
-  100% { background: linear-gradient(165deg, rgba(34, 24, 13, 0.88), rgba(18, 13, 8, 0.88)); color: #ffe9b0; }
+  50%, 100% { background: linear-gradient(165deg, rgba(34, 24, 13, 0.88), rgba(18, 13, 8, 0.88)); color: #ffe9b0; }
 }
 
 /* chores: mum's requests arrive as sticky notes, same paper as the wall */

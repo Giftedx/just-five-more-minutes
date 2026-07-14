@@ -10,8 +10,8 @@ Keep the objective-completion flash celebratory while making its small OBJECTIVE
 
 | Claim | Existing path | Classification | Real action |
 |---|---|---|---|
-| The objective body remains readable during its gold flash | The hudflash keyframes animate the body to dark #1a1408 on gold #e8c33f | Already satisfied | Preserve |
-| The OBJECTIVE eyebrow remains readable during the flash | The objective pseudo-element fixes the eyebrow at muted #b8954a, only 1.66:1 against the gold phase | Confirmed defect | Make the eyebrow follow the animated body colour with restrained opacity |
+| The objective body remains readable during its gold flash | The endpoints are readable, but eased foreground/background interpolation collapses to near-equal mid-tones | Confirmed coupled defect | Use two contrast-safe visual states instead of unsafe colour interpolation |
+| The OBJECTIVE eyebrow remains readable during the flash | The fixed muted colour is only 1.66:1 at the gold endpoint, and inherited eased mid-tones fall near 1.1:1 | Confirmed defect | Follow the body colour at restrained opacity and guard both iterations over time |
 | Mudwick faces, weapons, hobgoblins, and hearts still need implementation | Commits 719d385, 4c44aab, 249da15, 4f93ee3, and 2bb4fc1; current sprite tests and renderer paths | Stale documentation | Record the shipped state and preserve it |
 | Another global HUD reskin is needed | Fresh production captures show authored title, Mum, chores, pressure, PC mode, and responsive states | Already satisfied | None |
 
@@ -19,9 +19,9 @@ Baseline evidence is 18 test files / 208 tests passing and a 41,717-byte CSS art
 
 ## Approaches considered
 
-### 1. Inherit the animated colour with muted opacity — selected
+### 1. Inherit the foreground and use a two-state pulse — selected
 
-Replace the eyebrow's fixed colour with currentColor and opacity 0.7. The pseudo-element then follows both existing hudflash colour endpoints without duplicating animation timing. Against a conservative black backdrop, the translucent gold endpoint and eyebrow composite to 4.610:1; in the normal dark panel the eyebrow remains subordinate to the objective body.
+Replace the eyebrow's fixed colour with currentColor and opacity 0.7. Keep the existing 0.9-second duration and two iterations, but change the unsafe eased cross-fade to a `step-end` pulse: translucent gold with dark text for the first half, then the existing dark glass with cream text for the second. Against a conservative black backdrop, the gold state and eyebrow composite to 4.610:1; the normal gradient state remains above 7.8:1 at either stop while the eyebrow stays subordinate to body copy.
 
 ### 2. Add an eyebrow-only keyframe
 
@@ -33,7 +33,7 @@ Reduce the background change until the fixed eyebrow passes. This repairs contra
 
 ## Visual and interaction design
 
-The objective remains Mudwick's dark-glass information card with coin gold as its signal colour. The completion flash keeps its current gold field, dark body text, duration, easing, and two iterations. Only the eyebrow's colour source changes: it inherits the card's animated foreground and renders at 70% opacity.
+The objective remains Mudwick's dark-glass information card with coin gold as its signal colour. The completion feedback keeps its gold and dark-glass states, duration, and two iterations. Its easing intentionally becomes a discrete half-on/half-off pulse because interpolating those inverse colour pairs creates unreadable middle states. The eyebrow inherits the card's foreground and renders at 70% opacity.
 
 This uses hierarchy rather than a new colour. The body stays primary; the label stays quieter; both reverse together when the card flashes. No new animation, decoration, layout, copy, or interaction is introduced.
 
@@ -46,7 +46,7 @@ This uses hierarchy rather than a new colour. The body stays primary; the label 
 
 ## Constraints
 
-- Preserve hudflash duration, easing, iteration count, background endpoints, body colours, panel geometry, and responsive rules.
+- Preserve hudflash duration, iteration count, background endpoints, body colours, panel geometry, and responsive rules; replace only the unsafe easing behavior.
 - Do not raise the CSS or JavaScript artifact budgets.
 - Add no dependency, asset, runtime state, timer, event listener, or JavaScript animation.
 - Preserve normal-state hierarchy and reduced-motion behaviour.
@@ -55,9 +55,9 @@ This uses hierarchy rather than a new colour. The body stays primary; the label 
 ## Verification
 
 1. Add a browser assertion first and observe failure because the eyebrow has a fixed colour and opacity 1.
-2. Read the real `hudflash` start frame from production CSSOM, composite its translucent gold over a conservative black room backdrop, then composite the pseudo-element foreground and require at least 4.5:1 contrast.
-3. Require the pseudo-element's computed colour to match the objective's computed colour and its opacity to equal 0.7.
-4. Apply the minimal CSS repair, rerun the focused browser scenario, and recapture the 1280 by 720 objective-flash frame from the real keyframe declarations.
+2. Run the real animation on an isolated clone, pause it through WAAPI at 12 points spanning both iterations and both sides of each 450ms state boundary, and composite every translucent layer over a conservative black room backdrop.
+3. At every sample, require at least 4.5:1 contrast, require the pseudo-element's computed colour to match the objective's computed colour, and require opacity 0.7.
+4. Apply the minimal CSS repair, rerun the focused browser scenario, and recapture the 1280 by 720 gold and normal states from the real production declarations.
 5. Confirm the CSS artifact remains at or below 10,112 gzip bytes.
 6. Run the complete npm run verify gate before and after local integration.
 7. Treat the mounted build as local build evidence only; do not push or deploy.
