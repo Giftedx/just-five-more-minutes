@@ -650,13 +650,14 @@ try {
           const card = getComputedStyle(probe);
           const eyebrow = getComputedStyle(probe, '::before');
           const cardChannels = channels(card.backgroundColor);
-          // Black is the conservative room backdrop for every translucent layer.
-          const base = composite(cardChannels.slice(0, 3), [0, 0, 0], cardChannels[3] ?? 1);
+          // Dark-on-gold and light-on-glass have opposite worst cases, so test both extremes.
+          const bases = [[0, 0, 0], [255, 255, 255]]
+            .map((backdrop) => composite(cardChannels.slice(0, 3), backdrop, cardChannels[3] ?? 1));
           const stops = [...card.backgroundImage.matchAll(/rgba?\([^)]+\)/g)]
             .map((match) => channels(match[0]));
           const backgrounds = stops.length > 0
-            ? stops.map((stop) => composite(stop.slice(0, 3), base, stop[3] ?? 1))
-            : [base];
+            ? bases.flatMap((base) => stops.map((stop) => composite(stop.slice(0, 3), base, stop[3] ?? 1)))
+            : bases;
           const alpha = Number(eyebrow.opacity);
           const eyebrowChannels = channels(eyebrow.color).slice(0, 3);
           const contrast = Math.min(...backgrounds.map((background) => {

@@ -34,7 +34,7 @@
 
 **Interfaces:**
 - Consumes: the real .hud-objective element, its ::before pseudo-element, and the existing hudflash colour endpoints.
-- Produces: computed-style evidence that the pseudo-element follows the foreground at opacity 0.7 and clears 4.5:1 at 12 points spanning both animation iterations over a conservative black backdrop.
+- Produces: computed-style evidence that the pseudo-element follows the foreground at opacity 0.7 and clears 4.5:1 at 12 points spanning both animation iterations over black and white backdrop extremes.
 
 - [x] **Step 1: Add the initial failing endpoint contract (superseded by Task 1B)**
 
@@ -147,7 +147,7 @@ git commit -m "fix: preserve objective flash contrast"
 
 - [x] **Step 1: Replace the endpoint probe with a temporal browser contract**
 
-Clone the real objective element into the document as a hidden isolated probe, run its production `hudflash` animation, pause it through WAAPI at 12 points spanning both 0.9-second iterations and both sides of every 450ms boundary, and remove the clone in `finally`. At each point, composite the background colour and any gradient stop over black, composite the 0.7-opacity eyebrow, and require at least 4.5:1.
+Clone the real objective element into the document as a hidden isolated probe, run its production `hudflash` animation, pause it through WAAPI at 12 points spanning both 0.9-second iterations and both sides of every 450ms boundary, and remove the clone in `finally`. At each point, composite the background colour and any gradient stop over black and white, composite the 0.7-opacity eyebrow, and require at least 4.5:1.
 
 - [x] **Step 2: Verify the temporal contract fails against the eased cross-fade**
 
@@ -244,7 +244,7 @@ Use an owned production preview and Playwright to freeze the real objective at t
 
 Verify the normal and gold states, both complete animation iterations, pseudo-element inheritance, opacity, reduced-motion behaviour, preserved duration/iteration count, intentional step transition, unchanged layout, unchanged script/style budgets, clean console, and absence of staged proof artifacts.
 
-- [ ] **Step 3: Run the complete feature-tree gate**
+- [x] **Step 3: Run the complete feature-tree gate**
 
 Run:
 

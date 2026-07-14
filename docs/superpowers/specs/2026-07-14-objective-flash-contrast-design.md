@@ -21,7 +21,7 @@ Baseline evidence is 18 test files / 208 tests passing and a 41,717-byte CSS art
 
 ### 1. Inherit the foreground and use a two-state pulse — selected
 
-Replace the eyebrow's fixed colour with currentColor and opacity 0.7. Keep the existing 0.9-second duration and two iterations, but change the unsafe eased cross-fade to a `step-end` pulse: translucent gold with dark text for the first half, then the existing dark glass with cream text for the second. Against a conservative black backdrop, the gold state and eyebrow composite to 4.610:1; the normal gradient state remains above 7.8:1 at either stop while the eyebrow stays subordinate to body copy.
+Replace the eyebrow's fixed colour with currentColor and opacity 0.7. Keep the existing 0.9-second duration and two iterations, but change the unsafe eased cross-fade to a `step-end` pulse: translucent gold with dark text for the first half, then the existing dark glass with cream text for the second. Across black and white backdrop extremes, the gold state bottoms out at 4.610:1 and the normal gradient at 5.907:1 while the eyebrow stays subordinate to body copy.
 
 ### 2. Add an eyebrow-only keyframe
 
@@ -55,7 +55,7 @@ This uses hierarchy rather than a new colour. The body stays primary; the label 
 ## Verification
 
 1. Add a browser assertion first and observe failure because the eyebrow has a fixed colour and opacity 1.
-2. Run the real animation on an isolated clone, pause it through WAAPI at 12 points spanning both iterations and both sides of each 450ms state boundary, and composite every translucent layer over a conservative black room backdrop.
+2. Run the real animation on an isolated clone, pause it through WAAPI at 12 points spanning both iterations and both sides of each 450ms state boundary, and composite every translucent layer over both black and white backdrop extremes.
 3. At every sample, require at least 4.5:1 contrast, require the pseudo-element's computed colour to match the objective's computed colour, and require opacity 0.7.
 4. Apply the minimal CSS repair, rerun the focused browser scenario, and recapture the 1280 by 720 gold and normal states from the real production declarations.
 5. Confirm the CSS artifact remains at or below 10,112 gzip bytes.
