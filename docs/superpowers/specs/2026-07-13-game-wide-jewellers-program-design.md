@@ -6,7 +6,7 @@
 
 Carry the same exacting finish standard used on Mum's doorway vignette across every player-visible state without confusing activity with improvement. Preserve surfaces that are already authored and guarded; intervene only where live code and rendered evidence confirm a weaker finish level.
 
-The first implementation tranche is the Mudwick microfinish because it is the largest remaining fidelity mismatch and appears in three major views: the title CRT, the physical bedroom monitor, and full PC mode.
+The first implementation tranche, Mudwick microfinish, shipped across the title CRT, physical bedroom monitor, and full PC mode. The program now continues evidence-first: preserve guarded surfaces and repair only defects confirmed in current source or rendered captures.
 
 ## Subject, audience, and job
 
@@ -21,10 +21,10 @@ The subject is a runtime-generated 2004 browser MMO seen through a teenager's CR
 | Mum encounter | Authored character, hallway vignette, dialogue staging, focal-path microdetail, transform/material guards | Already satisfied | Preserve and recapture |
 | HUD and dialogue | Responsive stack, keyboard focus, semantics, compact objective/chore hierarchy, authored volume fader, authored room interaction lockup, guarded 900×400 prompt compaction | Confirmed volume, room-interaction, and short-height cascade seams repaired; CSS release headroom hardened | Preserve browser contracts and recapture |
 | Scorecard | Lined household report, filing marks, career annotation, semantic modal and short-screen reachability | Already satisfied | Preserve and recapture |
-| Mudwick action pose | `PLAYER_ATTACK_SPRITE` declares a weapon colour but contains no weapon pixels | Confirmed defect | Repair test-first |
-| Mudwick player and trader faces | Face rows contain only flat skin blocks | Missing finish | Add restrained eye cues |
-| Hobgoblin silhouette | Reuses the ordinary goblin rows with palette changes only | Missing finish | Give it a distinct armoured/tusked silhouette |
-| Mudwick HP display | Ten generic circles resemble a bank of buttons | Missing finish | Replace with full/empty pixel-heart states |
+| Mudwick action pose | Four registered target-facing weapon variants with body-topology tests | Repaired and guarded locally | Preserve |
+| Mudwick player and trader faces | Restrained eye cues with palette and dimension tests | Repaired and guarded locally | Preserve |
+| Hobgoblin silhouette | Shared armoured/tusked silhouette distinct from ordinary goblins | Repaired and guarded locally | Preserve |
+| Mudwick HP display | Matched-topology full/empty pixel hearts in the existing two-row panel | Repaired and guarded locally | Preserve |
 | Mudwick feedback | Click markers, hitsplats, particles, XP drops, coin pops, hover text, chatter, and low-HP pulse already exist | Already satisfied | Preserve timing and layering |
 | Audio and transitions | Procedural UI sounds, scene modes, pause/gate ownership, reduced-motion paths, native persisted fader | Authored and guarded | Preserve behavior; intervene only on rendered evidence |
 
@@ -137,3 +137,9 @@ After the Mudwick tranche, recapture title, bedroom, Mum, HUD, PC mode, report, 
 The follow-up cascade audit found that the 900×400 hint margin and option padding were declared before their base rules, so the browser computed `2px` and `7px 12px 7px 8px` instead of the authored compact values. The production smoke now requires `0px` and `5px 10px 5px 8px` through the exact 520px boundary, then requires the base values again at 521px. Equivalent short-height rules live under one final `max-height: 520px` boundary. The reduced-motion rule now stops CSS motion globally instead of maintaining a fragile surface list. The CSS artifact is 41,717 raw / 10,078 gzip bytes against a tightened 10,112-byte ceiling—162 bytes below the former 10 KiB limit—with identical size-gate output under local Node 24.18.0 and CI-line Node 22.23.1.
 
 Locally observed matched production captures showed zero changed pixels for title, report, blocked-device gate, pause, PC chrome, and 1280×720 dialogue UI after masking only live Canvas timing. Both locally compared 900×400 dialogue variants differed solely within the response card and its existing shadow/blur footprint, bounded at `(0,132)–(375,382)`. These ignored QA captures are local evidence rather than repository artifacts; the durable browser contract guards the intended computed styles at 520px and their base values at 521px. This is release-proof hardening, not another decorative layer.
+
+## 2026-07-14 objective-flash contrast closure
+
+Fresh production capture exposed a specific HUD regression: during the gold `hudflash` endpoint, the fixed `#b8954a` eyebrow fell to about 1.66:1 against `#e8c33f` and nearly vanished. The eyebrow now inherits the objective card's animated foreground through `currentColor` at `0.65` opacity. At the gold endpoint Chromium computes a composited 4.538:1 contrast ratio while the body copy retains the stronger hierarchy; animation timing, keyframes, panel geometry, and reduced-motion behavior are unchanged.
+
+The production build is 750,836 raw / 201,766 gzip bytes of JavaScript and 41,734 raw / 10,088 gzip bytes of CSS, inside the 204,800-byte and 10,112-byte gzip ceilings. The targeted production browser run passed 24 isolated scenarios and the full interaction E2E with zero capture-time console or page errors. The ignored 1280×720 proof is `shots/objective-flash-contrast.png`; the browser contract is the durable evidence.

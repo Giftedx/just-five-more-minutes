@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript 7, Canvas 2D, Vitest 4.1.10, Playwright 1.61.1, Vite 8.1.4
 
+**Status:** Implemented by commits 719d385, 4c44aab, and 249da15, then extended with target-facing attacks in 4f93ee3 and 2bb4fc1. The checklist below is the retained execution record; the current tree's sprite topology tests and renderer paths are authoritative.
+
 ## Global Constraints
 
 - Add no external asset, texture file, font, package, shader, filter, offscreen animation loop, event listener, timer, or simulation state.

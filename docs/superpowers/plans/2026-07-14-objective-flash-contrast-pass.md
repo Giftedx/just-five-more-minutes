@@ -36,7 +36,7 @@
 - Consumes: the real .hud-objective element, its ::before pseudo-element, and the existing hudflash colour endpoints.
 - Produces: computed-style evidence that the pseudo-element follows the animated foreground at opacity 0.65 and clears 4.5:1 during the gold phase.
 
-- [ ] **Step 1: Add the failing browser contrast contract**
+- [x] **Step 1: Add the failing browser contrast contract**
 
 After the short-screen prompt style assertions in the dialogue-staging scenario, add a style probe that temporarily freezes the existing objective element at the gold flash endpoint, restores all inline styles in a finally block, and returns computed values:
 
@@ -85,7 +85,7 @@ After the short-screen prompt style assertions in the dialogue-staging scenario,
     assert.ok(objectiveFlash.contrast >= 4.5, JSON.stringify(objectiveFlash));
 ~~~
 
-- [ ] **Step 2: Build and run the production browser gate to verify RED**
+- [x] **Step 2: Build and run the production browser gate to verify RED**
 
 Run:
 
@@ -96,7 +96,7 @@ npm run test:browser
 
 Expected: the gate stops in the dialogue-staging scenario because the current eyebrow computes to rgb(184, 149, 74), opacity 1, and about 1.66:1 contrast on the gold phase.
 
-- [ ] **Step 3: Apply the minimal CSS repair**
+- [x] **Step 3: Apply the minimal CSS repair**
 
 Replace the fixed eyebrow colour:
 
@@ -107,13 +107,13 @@ Replace the fixed eyebrow colour:
 
 Do not change the hudflash keyframes.
 
-- [ ] **Step 4: Rebuild and rerun the production browser gate to verify GREEN**
+- [x] **Step 4: Rebuild and rerun the production browser gate to verify GREEN**
 
 Run the same build and npm run test:browser commands.
 
 Expected: all isolated scenarios and the full interaction E2E pass; computed eyebrow colour equals the body colour, opacity is 0.65, and composited contrast is at least 4.5:1.
 
-- [ ] **Step 5: Verify artifact budgets**
+- [x] **Step 5: Verify artifact budgets**
 
 Run:
 
@@ -123,7 +123,7 @@ npm run size:check
 
 Expected: JavaScript gzip remains at or below 204,800 bytes and CSS gzip remains at or below 10,112 bytes.
 
-- [ ] **Step 6: Commit the tested repair**
+- [x] **Step 6: Commit the tested repair**
 
 ~~~powershell
 git add scripts/smoke.mjs src/ui/style.css
@@ -141,7 +141,7 @@ git commit -m "fix: preserve objective flash contrast"
 - Consumes: shipped commits 719d385, 4c44aab, 249da15, 4f93ee3, and 2bb4fc1 plus current source/test evidence.
 - Produces: documentation that distinguishes completed Mudwick work from the newly closed objective-flash defect.
 
-- [ ] **Step 1: Update the game-wide gap table**
+- [x] **Step 1: Update the game-wide gap table**
 
 Change the four Mudwick gap rows to repaired status:
 
@@ -154,7 +154,7 @@ Change the four Mudwick gap rows to repaired status:
 
 Append an objective-flash closure section with the failing 1.66:1 state, the currentColor/0.65 repair, final computed contrast, artifact sizes, capture path, and verification result.
 
-- [ ] **Step 2: Add a Mudwick plan status note**
+- [x] **Step 2: Add a Mudwick plan status note**
 
 After the Mudwick plan's Tech Stack line, add:
 
@@ -162,7 +162,7 @@ After the Mudwick plan's Tech Stack line, add:
 **Status:** Implemented by commits 719d385, 4c44aab, and 249da15, then extended with target-facing attacks in 4f93ee3 and 2bb4fc1. The checklist below is the retained execution record; the current tree's sprite topology tests and renderer paths are authoritative.
 ~~~
 
-- [ ] **Step 3: Mark this plan's completed steps**
+- [x] **Step 3: Mark this plan's completed steps**
 
 Change each completed checkbox in this file from - [ ] to - [x] only after its command or edit has succeeded.
 
@@ -194,7 +194,7 @@ git commit -m "docs: reconcile jeweller's program status"
 - Consumes: the production build and existing audit capture tooling.
 - Produces: a fresh flash-state frame, full release-gate evidence, and a locally integrated clean master.
 
-- [ ] **Step 1: Capture the repaired flash state**
+- [x] **Step 1: Capture the repaired flash state**
 
 Use an owned production preview and Playwright to freeze the real objective at the gold endpoint, then save shots/objective-flash-contrast.png at 1280 by 720. Reject the result if the eyebrow is invisible, the body hierarchy reverses, the panel geometry changes, or the flash no longer reads as gold.
 
