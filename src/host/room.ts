@@ -68,14 +68,25 @@ function lambert(color: number, opts: { emissive?: number; emissiveIntensity?: n
   return m;
 }
 
-function makePaintGeometry(width: number, height: number): THREE.PlaneGeometry {
-  const geometry = new THREE.PlaneGeometry(width, height, 4, 3);
+function makeShellGeometry(
+  width: number,
+  height: number,
+  base: number,
+  opts: { widthSegments?: number; heightSegments?: number; vertical?: number; corner?: number; grain?: number } = {},
+): THREE.PlaneGeometry {
+  const widthSegments = opts.widthSegments ?? 8;
+  const heightSegments = opts.heightSegments ?? 5;
+  const geometry = new THREE.PlaneGeometry(width, height, widthSegments, heightSegments);
   const position = geometry.getAttribute('position');
   const colors = new Float32Array(position.count * 3);
+  const baseColor = new THREE.Color(base);
   for (let i = 0; i < position.count; i++) {
-    const lightnessOffset = (((i * 17) % 11) - 5) * 0.0025;
-    const color = new THREE.Color(0x8a7560).offsetHSL(0, 0, lightnessOffset);
-    color.toArray(colors, i * 3);
+    const xNorm = width === 0 ? 0 : Math.abs(position.getX(i)) / (width / 2);
+    const yNorm = height === 0 ? 0 : (position.getY(i) + height / 2) / height;
+    const cornerShade = (xNorm ** 1.7) * (opts.corner ?? -0.025);
+    const verticalShade = (0.5 - yNorm) * (opts.vertical ?? 0.055);
+    const grain = ((((i * 37) % 17) - 8) / 8) * (opts.grain ?? 0.012);
+    baseColor.clone().offsetHSL(0, 0, cornerShade + verticalShade + grain).toArray(colors, i * 3);
   }
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   return geometry;
@@ -749,7 +760,10 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   scene.add(floor);
   scene.add(makeContactShadows());
 
-  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(5, 4), lambert(0x7a6a58));
+  const ceiling = new THREE.Mesh(
+    makeShellGeometry(5, 4, 0x7a6a58, { vertical: 0.035, corner: -0.018, grain: 0.01 }),
+    new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
+  );
   ceiling.name = 'room-ceiling';
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.y = 2.6;
@@ -765,7 +779,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     ry: number,
   ): THREE.Mesh => {
     const m = new THREE.Mesh(
-      makePaintGeometry(w, h),
+      makeShellGeometry(w, h, 0x8a7560),
       new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }),
     );
     m.name = name;
