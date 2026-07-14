@@ -100,6 +100,26 @@ function sculptedDuvetGeometry(side: Side): THREE.BufferGeometry {
   return source;
 }
 
+function sculptedFoldGeometry(side: Side): THREE.BufferGeometry {
+  const sign = side === 'left' ? -1 : 1;
+  const source = new THREE.BoxGeometry(0.17, 0.035, 0.18, 2, 1, 2).toNonIndexed();
+  const position = source.getAttribute('position');
+  for (let index = 0; index < position.count; index++) {
+    const x = position.getX(index);
+    const y = position.getY(index);
+    const z = position.getZ(index);
+    if (y > 0) {
+      const crown = (1 - Math.abs(x) / 0.09) * (1 - Math.abs(z) / 0.095);
+      position.setY(index, y + Math.max(0, crown) * 0.018 + sign * x * 0.025);
+    }
+  }
+  position.needsUpdate = true;
+  source.computeVertexNormals();
+  source.computeBoundingBox();
+  source.computeBoundingSphere();
+  return source;
+}
+
 export function makeDuvetTug(side: Side): THREE.Group {
   const sign = side === 'left' ? -1 : 1;
   const tug = named(new THREE.Group(), `room-duvet-tug-${side}`);
@@ -107,7 +127,11 @@ export function makeDuvetTug(side: Side): THREE.Group {
   body.rotation.y = sign * 0.08;
   tug.add(body);
 
-  const fold = named(box(0.17, 0.035, 0.18, lambert(side === 'left' ? 0x9270ad : 0x84609f), sign * 0.045, 0.06, 0.025), 'room-duvet-tug-fold');
+  const fold = named(
+    new THREE.Mesh(sculptedFoldGeometry(side), lambert(side === 'left' ? 0x9270ad : 0x84609f)),
+    'room-duvet-tug-fold',
+  );
+  fold.position.set(sign * 0.045, 0.06, 0.025);
   fold.rotation.z = sign * 0.14;
   fold.rotation.y = -sign * 0.1;
   tug.add(fold);
@@ -144,7 +168,12 @@ export function makeCurtainTug(side: Side): THREE.Group {
   band.position.y = -0.035;
   tug.add(band);
 
-  const tail = named(box(0.045, 0.22, 0.078, highlight, -0.018, -0.27, sign * 0.065), 'room-curtain-tug-tail');
+  const tail = named(
+    new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.058, 0.22, 5), highlight),
+    'room-curtain-tug-tail',
+  );
+  tail.scale.set(0.65, 1, 0.82);
+  tail.position.set(-0.018, -0.27, sign * 0.065);
   tail.rotation.x = sign * 0.22;
   tail.rotation.z = -0.08;
   tug.add(tail);

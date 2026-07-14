@@ -70,6 +70,7 @@ describe('night-specific household prop factories', () => {
         expect(root.getObjectByName(name)?.name).toBe(name);
       }
       expect((root.getObjectByName('room-duvet-tug-body') as THREE.Mesh).geometry.type).not.toBe('BoxGeometry');
+      expect((root.getObjectByName('room-duvet-tug-fold') as THREE.Mesh).geometry.type).not.toBe('BoxGeometry');
       expect(root.userData.interact).toBeUndefined();
     }
     expect(left.getObjectByName('room-duvet-tug-fold')?.rotation.z).toBeLessThan(0);
@@ -95,6 +96,7 @@ describe('night-specific household prop factories', () => {
         expect(root.getObjectByName(name)?.name).toBe(name);
       }
       expect((root.getObjectByName('room-curtain-tug-pleats') as THREE.InstancedMesh).count).toBe(3);
+      expect((root.getObjectByName('room-curtain-tug-tail') as THREE.Mesh).geometry.type).not.toBe('BoxGeometry');
       expect(root.userData.interact).toBeUndefined();
     }
     expect(curtainLeft.getObjectByName('room-curtain-tug-tail')?.rotation.x).toBeLessThan(0);
