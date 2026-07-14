@@ -96,6 +96,22 @@ describe('night-specific household prop factories', () => {
         expect(root.getObjectByName(name)?.name).toBe(name);
       }
       expect((root.getObjectByName('room-curtain-tug-pleats') as THREE.InstancedMesh).count).toBe(3);
+      const body = root.getObjectByName('room-curtain-tug-body') as THREE.Mesh;
+      const pleats = root.getObjectByName('room-curtain-tug-pleats') as THREE.InstancedMesh;
+      expect(body.geometry.type).not.toBe('CylinderGeometry');
+      expect((body.material as THREE.MeshLambertMaterial).vertexColors).toBe(true);
+      expect(body.geometry.getAttribute('color')).toBeDefined();
+      expect(new Set(Array.from(body.geometry.getAttribute('position').array)
+        .filter((_, index) => index % 3 === 0)
+        .map((value) => Number(value.toFixed(4)))).size).toBeGreaterThanOrEqual(3);
+      const positions = body.geometry.getAttribute('position');
+      const topY = Math.max(...Array.from({ length: positions.count }, (_, index) => positions.getY(index)));
+      const topDepths = Array.from({ length: positions.count }, (_, index) => index)
+        .filter((index) => positions.getY(index) === topY)
+        .map((index) => positions.getX(index));
+      expect(Math.min(...topDepths)).toBeGreaterThan(-0.03);
+      expect(pleats.geometry.type).not.toBe('BoxGeometry');
+      expect(root.getObjectByName('room-curtain-tug-band')?.position.x).toBeLessThan(-0.04);
       expect((root.getObjectByName('room-curtain-tug-tail') as THREE.Mesh).geometry.type).not.toBe('BoxGeometry');
       expect(root.userData.interact).toBeUndefined();
     }

@@ -2,8 +2,8 @@ import * as THREE from 'three';
 
 type Side = 'left' | 'right';
 
-function lambert(color: number): THREE.MeshLambertMaterial {
-  return new THREE.MeshLambertMaterial({ color });
+function lambert(color: number, options: THREE.MeshLambertMaterialParameters = {}): THREE.MeshLambertMaterial {
+  return new THREE.MeshLambertMaterial({ color, ...options });
 }
 
 function box(
@@ -139,11 +139,55 @@ export function makeDuvetTug(side: Side): THREE.Group {
   return tug;
 }
 
+function sculptedCurtainGatherGeometry(side: Side): THREE.BufferGeometry {
+  const rows = [0.25, 0.13, -0.02, -0.14, -0.25] as const;
+  const halfWidths = [0.15, 0.13, 0.09, 0.115, 0.13] as const;
+  const depths = [-0.058, -0.076, -0.048, -0.076, -0.058] as const;
+  const palette = side === 'left'
+    ? [0x603c7d, 0x78529a, 0x684386, 0x755094, 0x573270]
+    : [0x573270, 0x704991, 0x79569a, 0x644080, 0x5d3978];
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+
+  for (let row = 0; row < rows.length; row++) {
+    const seamInset = row === 0 ? 0.056 : row === 1 ? 0.02 : 0;
+    for (let column = 0; column < depths.length; column++) {
+      const horizontal = column / (depths.length - 1);
+      positions.push(
+        depths[column]! + seamInset,
+        rows[row]!,
+        THREE.MathUtils.lerp(-halfWidths[row]!, halfWidths[row]!, horizontal),
+      );
+      const color = new THREE.Color(row === rows.length - 1 ? 0x4d2d63 : palette[column]!);
+      colors.push(color.r, color.g, color.b);
+    }
+  }
+  for (let row = 0; row < rows.length - 1; row++) {
+    for (let column = 0; column < depths.length - 1; column++) {
+      const a = row * depths.length + column;
+      const b = a + 1;
+      const d = a + depths.length;
+      const c = d + 1;
+      indices.push(a, d, b, b, d, c);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
 function makePleats(material: THREE.Material): THREE.InstancedMesh {
-  const pleats = new THREE.InstancedMesh(new THREE.BoxGeometry(0.018, 0.34, 0.025), material, 3);
+  const pleats = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.009, 0.013, 0.2, 5), material, 3);
   const matrix = new THREE.Matrix4();
   for (let index = 0; index < 3; index++) {
-    matrix.makeTranslation(-0.052, 0.045, (index - 1) * 0.065);
+    matrix.makeTranslation(-0.082, 0.09, (index - 1) * 0.066);
     pleats.setMatrixAt(index, matrix);
   }
   pleats.instanceMatrix.needsUpdate = true;
@@ -153,29 +197,28 @@ function makePleats(material: THREE.Material): THREE.InstancedMesh {
 export function makeCurtainTug(side: Side): THREE.Group {
   const sign = side === 'left' ? -1 : 1;
   const tug = named(new THREE.Group(), `room-curtain-tug-${side}`);
-  const fabric = lambert(side === 'left' ? 0x744c92 : 0x684084);
-  const highlight = lambert(side === 'left' ? 0x906bb0 : 0x825ca4);
+  const fabric = lambert(0xffffff, { vertexColors: true, side: THREE.DoubleSide });
+  const highlight = lambert(side === 'left' ? 0x75518f : 0x6e4988);
 
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.145, 0.46, 8), fabric);
+  const body = new THREE.Mesh(sculptedCurtainGatherGeometry(side), fabric);
   body.name = 'room-curtain-tug-body';
-  body.scale.set(0.38, 1, 0.88);
   tug.add(body);
   tug.add(makePleats(highlight));
 
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.148, 0.148, 0.068, 8), lambert(0xb58a5a));
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.102, 0.102, 0.035, 8), lambert(0x806548));
   band.name = 'room-curtain-tug-band';
-  band.scale.set(0.38, 1, 0.88);
-  band.position.y = -0.035;
+  band.scale.set(0.4, 1, 1);
+  band.position.set(-0.05, -0.035, 0);
   tug.add(band);
 
   const tail = named(
-    new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.058, 0.22, 5), highlight),
+    new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.05, 0.2, 5), highlight),
     'room-curtain-tug-tail',
   );
-  tail.scale.set(0.65, 1, 0.82);
-  tail.position.set(-0.018, -0.27, sign * 0.065);
-  tail.rotation.x = sign * 0.22;
-  tail.rotation.z = -0.08;
+  tail.scale.set(0.58, 1, 0.75);
+  tail.position.set(-0.052, -0.22, sign * 0.058);
+  tail.rotation.x = sign * 0.18;
+  tail.rotation.z = -0.05;
   tug.add(tail);
   return tug;
 }
