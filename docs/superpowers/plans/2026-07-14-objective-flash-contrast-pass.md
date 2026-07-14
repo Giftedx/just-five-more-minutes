@@ -34,7 +34,7 @@
 
 **Interfaces:**
 - Consumes: the real .hud-objective element, its ::before pseudo-element, and the existing hudflash colour endpoints.
-- Produces: computed-style evidence that the pseudo-element follows the animated foreground at opacity 0.65 and clears 4.5:1 during the gold phase.
+- Produces: computed-style evidence that the pseudo-element follows the animated foreground at opacity 0.7 and clears 4.5:1 during the translucent gold phase over a conservative black backdrop.
 
 - [x] **Step 1: Add the failing browser contrast contract**
 
@@ -48,12 +48,19 @@ After the short-screen prompt style assertions in the dialogue-staging scenario,
         color: element.style.color,
       };
       try {
+        const keyframes = Array.from(document.styleSheets)
+          .flatMap((sheet) => Array.from(sheet.cssRules))
+          .find((rule) => rule.type === CSSRule.KEYFRAMES_RULE && rule.name === 'hudflash');
+        const startFrame = keyframes
+          ? Array.from(keyframes.cssRules).find((rule) => rule.keyText === '0%' || rule.keyText === 'from')
+          : null;
+        if (!startFrame) throw new Error('hudflash start frame is missing');
         element.style.animation = 'none';
-        element.style.background = '#e8c33f';
-        element.style.color = '#1a1408';
+        element.style.background = startFrame.style.background;
+        element.style.color = startFrame.style.color;
         const card = getComputedStyle(element);
         const eyebrow = getComputedStyle(element, '::before');
-        const channels = (value) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+        const channels = (value) => (value.match(/[\d.]+/g) ?? []).map(Number);
         const composite = (foreground, background, alpha) =>
           foreground.map((channel, index) =>
             Math.round(channel * alpha + (background[index] ?? 0) * (1 - alpha)));
@@ -65,11 +72,15 @@ After the short-screen prompt style assertions in the dialogue-staging scenario,
           return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
         };
         const alpha = Number(eyebrow.opacity);
-        const foreground = composite(channels(eyebrow.color), channels(card.backgroundColor), alpha);
-        const background = channels(card.backgroundColor);
+        const cardChannels = channels(card.backgroundColor);
+        const cardAlpha = cardChannels[3] ?? 1;
+        // Black is the conservative room backdrop for this translucent gold flash.
+        const background = cardChannels.slice(0, 3).map((channel) => Math.round(channel * cardAlpha));
+        const foreground = composite(channels(eyebrow.color).slice(0, 3), background, alpha);
         const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
         return {
           bodyColor: card.color,
+          flashBackground: card.backgroundColor,
           eyebrowColor: eyebrow.color,
           eyebrowOpacity: eyebrow.opacity,
           contrast: ((values[0] ?? 0) + 0.05) / ((values[1] ?? 0) + 0.05),
@@ -81,8 +92,8 @@ After the short-screen prompt style assertions in the dialogue-staging scenario,
       }
     });
     assert.equal(objectiveFlash.eyebrowColor, objectiveFlash.bodyColor);
-    assert.equal(objectiveFlash.eyebrowOpacity, '0.65');
     assert.ok(objectiveFlash.contrast >= 4.5, JSON.stringify(objectiveFlash));
+    assert.equal(objectiveFlash.eyebrowOpacity, '0.7');
 ~~~
 
 - [x] **Step 2: Build and run the production browser gate to verify RED**
@@ -102,7 +113,7 @@ Replace the fixed eyebrow colour:
 
 ~~~css
   color: currentColor;
-  opacity: 0.65;
+  opacity: 0.7;
 ~~~
 
 Do not change the hudflash keyframes.
@@ -111,7 +122,9 @@ Do not change the hudflash keyframes.
 
 Run the same build and npm run test:browser commands.
 
-Expected: all isolated scenarios and the full interaction E2E pass; computed eyebrow colour equals the body colour, opacity is 0.65, and composited contrast is at least 4.5:1.
+Expected: all isolated scenarios and the full interaction E2E pass; computed eyebrow colour equals the body colour, opacity is 0.7, and worst-case composited contrast is at least 4.5:1.
+
+Red-team note: the first green check used an opaque-gold surrogate and overstated contrast. Reading the real 90%-alpha keyframe exposed a 4.065:1 dark-backdrop failure at opacity 0.65; the hardened 0.7 contract computes 4.610:1.
 
 - [x] **Step 5: Verify artifact budgets**
 
@@ -152,7 +165,7 @@ Change the four Mudwick gap rows to repaired status:
 | Mudwick HP display | Matched-topology full/empty pixel hearts in the existing two-row panel | Repaired and guarded locally | Preserve |
 ~~~
 
-Append an objective-flash closure section with the failing 1.66:1 state, the currentColor/0.65 repair, final computed contrast, artifact sizes, capture path, and verification result.
+Append an objective-flash closure section with the failing 1.66:1 state, the currentColor/0.7 repair, final computed contrast, artifact sizes, capture path, and verification result.
 
 - [x] **Step 2: Add a Mudwick plan status note**
 
@@ -166,7 +179,7 @@ After the Mudwick plan's Tech Stack line, add:
 
 Change each completed checkbox in this file from - [ ] to - [x] only after its command or edit has succeeded.
 
-- [ ] **Step 4: Self-review and commit**
+- [x] **Step 4: Self-review and commit**
 
 Run:
 
@@ -198,7 +211,7 @@ git commit -m "docs: reconcile jeweller's program status"
 
 Use an owned production preview and Playwright to freeze the real objective at the gold endpoint, then save shots/objective-flash-contrast.png at 1280 by 720. Reject the result if the eyebrow is invisible, the body hierarchy reverses, the panel geometry changes, or the flash no longer reads as gold.
 
-- [ ] **Step 2: Red-team the bounded change**
+- [x] **Step 2: Red-team the bounded change**
 
 Verify the normal and gold endpoint contrast, pseudo-element inheritance, opacity, reduced-motion behaviour, unchanged keyframes, unchanged layout, unchanged script/style budgets, clean console, and absence of staged proof artifacts.
 

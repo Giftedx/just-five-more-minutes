@@ -21,7 +21,7 @@ Baseline evidence is 18 test files / 208 tests passing and a 41,717-byte CSS art
 
 ### 1. Inherit the animated colour with muted opacity — selected
 
-Replace the eyebrow's fixed colour with currentColor and opacity 0.65. The pseudo-element then follows both existing hudflash colour endpoints without duplicating animation timing. At the gold endpoint, the composited eyebrow clears 4.5:1; in the normal dark panel it remains subordinate to the objective body while clearing 6.8:1.
+Replace the eyebrow's fixed colour with currentColor and opacity 0.7. The pseudo-element then follows both existing hudflash colour endpoints without duplicating animation timing. Against a conservative black backdrop, the translucent gold endpoint and eyebrow composite to 4.610:1; in the normal dark panel the eyebrow remains subordinate to the objective body.
 
 ### 2. Add an eyebrow-only keyframe
 
@@ -33,7 +33,7 @@ Reduce the background change until the fixed eyebrow passes. This repairs contra
 
 ## Visual and interaction design
 
-The objective remains Mudwick's dark-glass information card with coin gold as its signal colour. The completion flash keeps its current gold field, dark body text, duration, easing, and two iterations. Only the eyebrow's colour source changes: it inherits the card's animated foreground and renders at 65% opacity.
+The objective remains Mudwick's dark-glass information card with coin gold as its signal colour. The completion flash keeps its current gold field, dark body text, duration, easing, and two iterations. Only the eyebrow's colour source changes: it inherits the card's animated foreground and renders at 70% opacity.
 
 This uses hierarchy rather than a new colour. The body stays primary; the label stays quieter; both reverse together when the card flashes. No new animation, decoration, layout, copy, or interaction is introduced.
 
@@ -55,9 +55,9 @@ This uses hierarchy rather than a new colour. The body stays primary; the label 
 ## Verification
 
 1. Add a browser assertion first and observe failure because the eyebrow has a fixed colour and opacity 1.
-2. Freeze the real objective card at the gold flash endpoint, read the objective and pseudo-element computed styles, alpha-composite the pseudo-element foreground over its background, and require at least 4.5:1 contrast.
-3. Require the pseudo-element's computed colour to match the objective's computed colour and its opacity to equal 0.65.
-4. Apply the one-declaration CSS repair, rerun the focused browser scenario, and recapture the 1280 by 720 objective-flash frame.
+2. Read the real `hudflash` start frame from production CSSOM, composite its translucent gold over a conservative black room backdrop, then composite the pseudo-element foreground and require at least 4.5:1 contrast.
+3. Require the pseudo-element's computed colour to match the objective's computed colour and its opacity to equal 0.7.
+4. Apply the minimal CSS repair, rerun the focused browser scenario, and recapture the 1280 by 720 objective-flash frame from the real keyframe declarations.
 5. Confirm the CSS artifact remains at or below 10,112 gzip bytes.
 6. Run the complete npm run verify gate before and after local integration.
 7. Treat the mounted build as local build evidence only; do not push or deploy.
