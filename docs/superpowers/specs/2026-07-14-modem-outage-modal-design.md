@@ -37,7 +37,7 @@ The subject is a 2004 school-night MMO session interrupted by a shared dial-up p
 - Bevel highlight `#ffffff`
 - Bevel midtone `#808080`
 - Bevel shadow `#404040`
-- Failure red `#a82020`
+- Failure red `#981818`
 
 The existing Canvas monospace remains the only typeface. Bold 7-pixel title text, 8-pixel body copy, and 6-pixel status labels create the hierarchy.
 

@@ -39,21 +39,21 @@
 - Consumes: renderer time in milliseconds and the existing `MudwickSim.isLoggedOut` state.
 - Produces: `disconnectFrame(now: number): { retryLabel: string; activeSegments: number }`, with one-to-three dots at 400ms cadence and one-to-six active segments at 200ms cadence.
 
-- [ ] **Step 1: Write the failing unit contract**
+- [x] **Step 1: Write the failing unit contract**
 
 Create `src/mmo/render/renderer.test.ts` with exact checks that `disconnectFrame(0)`, `disconnectFrame(399)`, `disconnectFrame(400)`, `disconnectFrame(800)`, and `disconnectFrame(1200)` return the specified retry copy and that segment counts advance at 200ms before looping after six segments.
 
-- [ ] **Step 2: Run the focused test to verify RED**
+- [x] **Step 2: Run the focused test to verify RED**
 
 Run `npm test -- src/mmo/render/renderer.test.ts`.
 
 Expected: FAIL because `disconnectFrame` is not exported.
 
-- [ ] **Step 3: Add the failing production-browser contract**
+- [x] **Step 3: Add the failing production-browser contract**
 
 Add an isolated scenario named `modem outage modal stays authored and bounded` to `scripts/smoke.mjs`. Enter PC mode, force `host.mmo.sim.setConnected(false)`, render a known frame, and inspect `host.mmo.canvas`. Assert the logged-out state; `320×240` canvas; navy title-bar, classic-shell, red failure-icon, and dim-world anchor pixels inside `x < 240`; an unchanged non-modal side-panel anchor at `x >= 240`; and no console/page errors.
 
-- [ ] **Step 4: Build and run the browser scenario to verify RED**
+- [x] **Step 4: Build and run the browser scenario to verify RED**
 
 Run `npm run build` and `npm run test:browser`.
 
@@ -69,29 +69,29 @@ Expected: the new scenario fails because the current floating-text overlay has n
 - Consumes: `disconnectFrame(now)` and the existing Canvas 2D context.
 - Produces: a modal wholly inside the `240×240` world viewport while the `80×240` side panel remains visible.
 
-- [ ] **Step 1: Implement the minimum pure frame model**
+- [x] **Step 1: Implement the minimum pure frame model**
 
 Return `retryLabel: 'Retrying' + '.'.repeat(1 + Math.floor(now / 400) % 3)` and `activeSegments: 1 + Math.floor(now / 200) % 6`. Do not add a timer or mutable state.
 
-- [ ] **Step 2: Draw the modal and correct render order**
+- [x] **Step 2: Draw the modal and correct render order**
 
 Replace the floating text with an opaque classic-shell dialog over the existing dim fill. Use the palette and hierarchy in the design spec; draw a broken phone-line icon, distinct `Connection to server lost.` copy, retry label, six-segment meter, `PHONE LINE  BUSY`, and `Someone is on the phone.` Move `drawDisconnected(now)` after the normal Canvas HUD, chat, panel, and modal layers so those layers cannot cross the outage dialog; keep its fill limited to `VIEW_W`.
 
-- [ ] **Step 3: Run focused unit and browser checks to verify GREEN**
+- [x] **Step 3: Run focused unit and browser checks to verify GREEN**
 
 Run `npm test -- src/mmo/render/renderer.test.ts`, `npm run build`, and `npm run test:browser`.
 
 Expected: the focused temporal tests pass; every isolated browser scenario and the full interaction E2E pass; the new anchors prove the modal and preserved side panel.
 
-- [ ] **Step 4: Capture three real production phases**
+- [x] **Step 4: Capture three real production phases**
 
 Capture 1440×900 PC-mode outage frames at renderer times representing one, three, and six active segments. Save them under ignored `shots/`. Compare text wrapping, one-pixel bevels, icon read, retry cadence, chat occlusion, side-panel continuity, outer toast, and Mum subtitle.
 
-- [ ] **Step 5: Perform the restraint edit**
+- [x] **Step 5: Perform the restraint edit**
 
 Remove any line, border, or glyph that does not improve state recognition. Do not add CRT noise, glow, rounded web-card geometry, a fake actionable button, or another colour family. Rerun every focused check invalidated by the edit.
 
-- [ ] **Step 6: Verify artifact budgets and commit**
+- [x] **Step 6: Verify artifact budgets and commit**
 
 Run `npm run size:check` and `git diff --check`.
 
@@ -110,21 +110,21 @@ Commit `src/mmo/render/renderer.ts`, `src/mmo/render/renderer.test.ts`, and `scr
 - Consumes: final captures, browser/unit evidence, artifact sizes, and feature commit.
 - Produces: current program truth, a verified feature tree, and a clean locally integrated master.
 
-- [ ] **Step 1: Record the confirmed closure**
+- [x] **Step 1: Record the confirmed closure**
 
 Append a dated closure to the game-wide program describing the original floating-text/layering defect, the selected modal, retry cadence, preserved contracts, final artifact sizes, test counts, browser scenario count, and ignored proof paths.
 
-- [ ] **Step 2: Mark only completed checklist items**
+- [x] **Step 2: Mark only completed checklist items**
 
 Change each successful `- [ ]` in this plan to `- [x]`. Retain any failed or skipped item unchecked with an explanation.
 
-- [ ] **Step 3: Self-review the documents and diff**
+- [x] **Step 3: Self-review the documents and diff**
 
 Run `rg -n "[T]BD|[T]ODO|[F]IXME" docs/superpowers/specs/2026-07-14-modem-outage-modal-design.md docs/superpowers/plans/2026-07-14-modem-outage-modal-pass.md`, `git diff --check`, and `git status --short`.
 
 Expected: no placeholders, whitespace defects, or staged proof artifacts.
 
-- [ ] **Step 4: Run the complete feature-tree gate**
+- [x] **Step 4: Run the complete feature-tree gate**
 
 Run `npm run verify`.
 
