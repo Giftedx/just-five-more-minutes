@@ -21,6 +21,12 @@ The east-wall window is now surrounded by authored sky, frame, sill, radiator, p
 - No changes to `makeCurtainTug`, tug IDs, prompts, world anchors, raycast behavior, completion transforms, chore scheduling, or scoring.
 - No textures, external assets, dependencies, CSS, shaders, lights, colliders, or interactables.
 
+## Proof-driven scope amendment
+
+The first production close-up rejected the preservation assumption for the Thursday tug descendants. Their root anchors and gameplay contracts were sound, but the existing compressed-cylinder bodies and bright box pleats read as detached plastic bundles once the permanent panels were authored. The accepted calibration therefore extends this pass to `makeCurtainTug`'s visual descendants only.
+
+The amendment permits replacing the tug body, pleat, band, and tail geometry/material treatment while preserving every stable child name, both root names, exact world anchors, interaction metadata, interactable membership, recursive raycast behavior, completion transform, chore scheduling, and scoring. It adds 48 Thursday triangles in total, no draw calls, geometries, textures, lights, colliders, or dependencies. Release evidence must include the real Thursday raycast-plus-E exercise after this calibration and an overlay-free close proof of the joined seam.
+
 ## Evidence and gap classification
 
 | Claim | Analogous existing path | Classification | Real action |
@@ -99,7 +105,7 @@ The factory contains no interaction metadata. The existing Thursday tug roots re
 1. Direct Vitest coverage pins the root/child names, exact mesh and instance counts, vertex-colour fabric, pleat depth range, tapered inner edges, mirrored bounds, exact instance culling spheres, and all resource/material budgets.
 2. Production-browser smoke finds the real root at the exact anchor, proves zero interaction/collider side effects, preserves Thursday tug presence/contracts, renders the close camera, and enforces the 128-call room ceiling.
 3. The existing real Thursday raycast-plus-E exercise remains green.
-4. Production screenshots inspect the default room, a close neutral-night window, and Thursday with both tug bundles at 1400 by 900.
+4. Overlay-free production screenshots inspect the default room, a close neutral-night window, and Thursday with both tug bundles at 1400 by 900.
 5. Matched baseline/candidate live-frame windows and renderer metrics confirm the saved submission and cadence parity.
 6. `npm run verify` passes on the feature branch and merged local `master`, including standalone and mounted builds.
 

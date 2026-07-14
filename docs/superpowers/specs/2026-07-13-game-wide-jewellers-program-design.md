@@ -17,7 +17,7 @@ The subject is a runtime-generated 2004 browser MMO seen through a teenager's CR
 | Surface | Existing authored path | Classification | Program action |
 |---|---|---|---|
 | Title | Split-screen incident card, live CRT, school-week strip, short-height and reduced-motion browser guards | Already satisfied | Preserve and recapture |
-| Bedroom | Filmic Lambert response, authored vertex-coloured shell finish, contact grounding, hero furniture microfinish, authored carry targets, night-specific phone/duvet/curtain props, environment storytelling, woven rug | Shell material, hero furniture, carry-target, and later-night household-prop gaps repaired and browser-guarded locally | Preserve geometry/texture budgets and recapture |
+| Bedroom | Filmic Lambert response, authored vertex-coloured shell finish, contact grounding, hero furniture microfinish, authored carry targets, permanent window dressing, night-specific phone/duvet/curtain props, environment storytelling, woven rug | Shell material, hero furniture, carry-target, permanent-curtain, and later-night household-prop gaps repaired and browser-guarded locally | Preserve geometry/texture budgets and recapture |
 | Mum encounter | Authored character, hallway vignette, dialogue staging, focal-path microdetail, transform/material guards | Already satisfied | Preserve and recapture |
 | HUD and dialogue | Responsive stack, keyboard focus, semantics, compact objective/chore hierarchy, authored volume fader, authored room interaction lockup | Confirmed volume and room interaction seams repaired | Preserve browser contracts and recapture |
 | Scorecard | Lined household report, filing marks, career annotation, semantic modal and short-screen reachability | Already satisfied | Preserve and recapture |

@@ -1624,6 +1624,32 @@ try {
         const host = window.__game.host;
         const rootNames = ['room-curtain-tug-left', 'room-curtain-tug-right'];
         const roots = rootNames.map((name) => host.room.scene.getObjectByName(name));
+        const permanentFabric = host.room.scene.getObjectByName('room-curtain-fabric');
+        permanentFabric?.updateWorldMatrix(true, false);
+        permanentFabric?.geometry.computeBoundingBox();
+        const permanentBounds = permanentFabric?.geometry.boundingBox?.clone().applyMatrix4(permanentFabric.matrixWorld);
+        const seams = roots.map((root) => {
+          const body = root?.getObjectByName('room-curtain-tug-body');
+          body?.updateWorldMatrix(true, false);
+          body?.geometry.computeBoundingBox();
+          const bodyBounds = body?.geometry.boundingBox?.clone().applyMatrix4(body.matrixWorld);
+          const position = body?.geometry.attributes.position;
+          if (!permanentBounds || !bodyBounds || !position) return null;
+          let topY = -Infinity;
+          for (let index = 0; index < position.count; index++) topY = Math.max(topY, position.getY(index));
+          const point = body.position.clone();
+          let topMinWorldX = Infinity;
+          for (let index = 0; index < position.count; index++) {
+            if (position.getY(index) !== topY) continue;
+            point.set(position.getX(index), position.getY(index), position.getZ(index));
+            point.applyMatrix4(body.matrixWorld);
+            topMinWorldX = Math.min(topMinWorldX, point.x);
+          }
+          return {
+            overlapsPermanent: permanentBounds.intersectsBox(bodyBounds),
+            topDepthMargin: topMinWorldX - permanentBounds.min.x,
+          };
+        });
         return {
           permanentCount: (() => {
             let count = 0;
@@ -1633,6 +1659,7 @@ try {
           positions: roots.map((root) => root?.position.toArray()),
           contracts: roots.map((root) => root?.userData.interact),
           memberships: roots.map((root) => host.room.interactables.filter((item) => item === root).length),
+          seams,
         };
       });
       assert.equal(thursday.permanentCount, 1);
@@ -1642,6 +1669,10 @@ try {
         { type: 'tug', itemId: 'curt1', chore: 'wrappers', name: 'curtain', action: 'Throw the curtains open' },
       ]);
       assert.deepEqual(thursday.memberships, [1, 1]);
+      for (const seam of thursday.seams) {
+        assert.equal(seam?.overlapsPermanent, true);
+        assert.ok(seam && seam.topDepthMargin >= 0.02, `curtain gather seam detached: ${JSON.stringify(thursday.seams)}`);
+      }
       assert.deepEqual(consoleProblems, []);
     },
   );

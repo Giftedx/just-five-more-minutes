@@ -129,6 +129,8 @@ Warm the WebGL process before saving the first proof image and use fresh browser
 
 Reject panels that still read as slabs, noisy striped folds, floating rings, disconnected top edges, hidden moon/plant/radiator, or detached Thursday bundles. For a mechanical defect, add the smallest assertion that fails for the observed reason, run RED, change only the factory, rerun focused/full unit checks, rebuild, and recapture.
 
+**Proof-driven deviation:** The first close Thursday capture proved that the preserved tug descendants themselves were the detached-bundle defect: compressed cylinders, bright box pleats, and a buried tie band. The accepted correction may therefore change `src/host/night-props.ts` and its direct test, but only for the body/pleat/band/tail visual descendants. It must preserve stable names, roots, anchors, metadata, membership, raycasting, completion transforms, chores, and scoring; spend no new draw calls, geometries, textures, lights, colliders, or dependencies; and add no more than the measured 48 Thursday triangles. Add a production-scene seam overlap/depth guard and rerun the real Thursday raycast-plus-E exercise after calibration.
+
 - [ ] **Step 3: Measure baseline/candidate cost**
 
 Compare distinct baseline/candidate build hashes on unique owned ports. Record full-scene calls/triangles/textures at default and close cameras plus four 240-frame live cadence windows. Confirm at least one saved permanent draw call, no new texture, identical median/p95 cadence within the 5% threshold, and CSS gzip remains exactly `10236` bytes.
