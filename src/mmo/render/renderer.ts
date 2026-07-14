@@ -67,6 +67,18 @@ export const DISCONNECT_COLORS = {
   failure: '#981818',
   footer: '#c0c0c0',
 } as const;
+export const DOUBLE_XP_COLORS = {
+  backdrop: '#161008',
+  gold: '#f2c94c',
+  parchment: '#fff0a8',
+  ember: '#c76b2a',
+  moss: '#6e8f45',
+} as const;
+export const DOUBLE_XP_COPY = {
+  badge: '2×',
+  label: 'DOUBLE XP',
+  detail: 'FRIDAY EVENT',
+} as const;
 
 export interface DisconnectFrame {
   retryLabel: string;
@@ -157,6 +169,11 @@ function skillLabel(skill: SkillName): string {
     case 'fishing':
       return 'Fishing';
   }
+}
+
+export function xpDropLabel(baseAmount: number, skill: SkillName, multiplier: 1 | 2): string {
+  const suffix = multiplier === 2 ? ' · 2×' : '';
+  return `+${baseAmount * multiplier} ${skillLabel(skill)}${suffix}`;
 }
 
 interface MenuState {
@@ -377,7 +394,12 @@ export class MmoRenderer {
             this.hitsplats.push({ x: d.x + 8, y: d.y + 8, dmg: ev.damage, until: now + 700 });
           }
           this.swingUntil = now + 220;
-          if (ev.damage > 0) this.xpDrops.push({ text: `+${ev.damage * 8} Attack`, until: now + 1300 });
+          if (ev.damage > 0) {
+            this.xpDrops.push({
+              text: xpDropLabel(ev.damage * 8, 'attack', this.sim.xpMultiplier),
+              until: now + 1300,
+            });
+          }
           break;
         }
         case 'goblinSwing': {
@@ -391,8 +413,12 @@ export class MmoRenderer {
         case 'goblinDied': {
           const bonus = ev.streakBonus > 0 ? ` (+${ev.streakBonus}gp streak!)` : '';
           this.postMessage(`The goblin drops ${ev.coins} coins.${bonus}`, now);
-          this.xpDrops.push({ text: '+12 Attack', until: now + 1300 });
           const g = this.sim.goblinById(ev.goblinId);
+          const killXp = g?.tier === 'hobgoblin' ? 20 : 12;
+          this.xpDrops.push({
+            text: xpDropLabel(killXp, 'attack', this.sim.xpMultiplier),
+            until: now + 1300,
+          });
           if (g) {
             const d = this.disp.get(ev.goblinId) ?? { x: g.pos.x * TILE, y: g.pos.y * TILE };
             this.coinPops.push({
@@ -436,12 +462,18 @@ export class MmoRenderer {
         case 'fishCaught': {
           const d = this.disp.get('player');
           if (d) this.spawnBurst(d.x + 8, d.y + 10, ['#d88a8a', '#cfe0ff'], 4, now, 500);
-          this.xpDrops.push({ text: '+10 Fishing', until: now + 1300 });
+          this.xpDrops.push({
+            text: xpDropLabel(10, 'fishing', this.sim.xpMultiplier),
+            until: now + 1300,
+          });
           this.postMessage('You catch some shrimp.', now);
           break;
         }
         case 'shrimpCooked':
-          this.xpDrops.push({ text: '+5 Fishing', until: now + 1300 });
+          this.xpDrops.push({
+            text: xpDropLabel(5, 'fishing', this.sim.xpMultiplier),
+            until: now + 1300,
+          });
           this.postMessage('You cook the shrimp. Nailed it.', now);
           break;
         case 'shrimpBurnt':
@@ -495,11 +527,17 @@ export class MmoRenderer {
         case 'flax': {
           const d = this.disp.get('player');
           if (d) this.spawnBurst(d.x + 8, d.y + 10, ['#7fa8e8', '#cfe0ff'], 4, now, 500);
-          this.xpDrops.push({ text: '+9 Foraging', until: now + 1300 });
+          this.xpDrops.push({
+            text: xpDropLabel(9, 'foraging', this.sim.xpMultiplier),
+            until: now + 1300,
+          });
           break;
         }
         case 'log':
-          this.xpDrops.push({ text: '+25 Woodcutting', until: now + 1300 });
+          this.xpDrops.push({
+            text: xpDropLabel(25, 'woodcutting', this.sim.xpMultiplier),
+            until: now + 1300,
+          });
           this.postMessage('You get some logs.', now);
           break;
         case 'levelUp':
@@ -821,6 +859,7 @@ export class MmoRenderer {
     this.drawObjectiveBanner(now);
     this.drawAwayPlanChips();
     this.drawChat(now);
+    this.drawDoubleXpBanner();
     this.drawXpDrops(now);
     this.drawHoverText();
     // A disconnect owns the world viewport; stale menus must not leak into the stats panel.
@@ -1334,10 +1373,11 @@ export class MmoRenderer {
     const ctx = this.ctx;
     ctx.font = '7px monospace';
     ctx.textBaseline = 'top';
+    const bannerOffset = this.sim.xpMultiplier === 2 ? 12 : 0;
     for (let i = 0; i < this.chat.length; i++) {
       const line = this.chat[this.chat.length - 1 - i];
       if (!line) continue;
-      const y = CANVAS_H - 24 - i * 10;
+      const y = CANVAS_H - 24 - bannerOffset - i * 10;
       const fade = Math.min(1, (line.until - now) / 700);
       const w = ctx.measureText(line.text).width + 6;
       ctx.globalAlpha = fade;
@@ -1347,6 +1387,36 @@ export class MmoRenderer {
       ctx.fillText(line.text, 3, y + 2);
       ctx.globalAlpha = 1;
     }
+  }
+
+  /** Friday's server event owns one permanent line in Mudwick's chat chrome. */
+  private drawDoubleXpBanner(): void {
+    if (this.sim.xpMultiplier !== 2) return;
+    const ctx = this.ctx;
+    const y = CANVAS_H - 24;
+
+    ctx.fillStyle = DOUBLE_XP_COLORS.backdrop;
+    ctx.fillRect(0, y, VIEW_W, 11);
+    ctx.fillStyle = DOUBLE_XP_COLORS.gold;
+    ctx.fillRect(0, y, VIEW_W, 1);
+
+    ctx.fillStyle = DOUBLE_XP_COLORS.ember;
+    ctx.fillRect(3, y + 2, 17, 7);
+    ctx.fillStyle = DOUBLE_XP_COLORS.parchment;
+    ctx.fillRect(4, y + 3, 15, 5);
+    ctx.fillStyle = DOUBLE_XP_COLORS.backdrop;
+    ctx.font = 'bold 6px monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(DOUBLE_XP_COPY.badge, 7, y + 2);
+
+    ctx.fillStyle = DOUBLE_XP_COLORS.gold;
+    ctx.font = 'bold 7px monospace';
+    ctx.fillText(DOUBLE_XP_COPY.label, 25, y + 3);
+    ctx.fillStyle = DOUBLE_XP_COLORS.moss;
+    ctx.fillRect(73, y + 2, 1, 7);
+    ctx.fillStyle = DOUBLE_XP_COLORS.parchment;
+    ctx.font = '6px monospace';
+    ctx.fillText(DOUBLE_XP_COPY.detail, 79, y + 4);
   }
 
   /** XP drops rise from the top-right corner of the world viewport. */

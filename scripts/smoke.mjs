@@ -2489,6 +2489,61 @@ try {
     assert.deepEqual(consoleProblems, []);
   });
 
+  await scenario(
+    'Friday double XP presentation is persistent and truthful',
+    { viewport: { width: 1000, height: 700 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+
+      const capture = async (night) => {
+        await gotoOk(page, { skipTitle: 1, night, seed: 317 });
+        await page.waitForFunction(() => window.__game?.host?.mmo?.canvas);
+        return page.evaluate(() => {
+          const host = window.__game.host;
+          const canvas = host.mmo.canvas;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Mudwick canvas context is missing');
+          host.mmo.renderer.render(800, 0);
+          const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          const pixel = (x, y) => {
+            const index = (y * canvas.width + x) * 4;
+            return Array.from(pixels.slice(index, index + 4));
+          };
+          return {
+            multiplier: host.mmo.sim.xpMultiplier,
+            gold: pixel(0, 216),
+            backdrop: pixel(220, 220),
+            ember: pixel(3, 218),
+            parchment: pixel(4, 219),
+            moss: pixel(73, 219),
+            objective: pixel(0, 229),
+            panel: pixel(300, 180),
+          };
+        });
+      };
+
+      const monday = await capture(0);
+      const friday = await capture(4);
+      assert.equal(monday.multiplier, 1);
+      assert.equal(friday.multiplier, 2);
+      assert.notDeepEqual(monday.gold, [242, 201, 76, 255]);
+      assert.deepEqual(friday.gold, [242, 201, 76, 255]);
+      assert.deepEqual(friday.backdrop, [22, 16, 8, 255]);
+      assert.deepEqual(friday.ember, [199, 107, 42, 255]);
+      assert.deepEqual(friday.parchment, [255, 240, 168, 255]);
+      assert.deepEqual(friday.moss, [110, 143, 69, 255]);
+      assert.deepEqual(friday.objective, monday.objective);
+      assert.deepEqual(friday.panel, monday.panel);
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
   await scenario('room-mode MMO render cadence is capped', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await gotoOk(page, { skipTitle: 1, seed: 6 });
     await page.waitForFunction(() => {

@@ -434,6 +434,8 @@ describe('career character injection', () => {
   it('doubles xp on double-xp nights', () => {
     const plain = new MudwickSim({ seed: 33 });
     const double = new MudwickSim({ seed: 33, doubleXp: true });
+    expect(plain.xpMultiplier).toBe(1);
+    expect(double.xpMultiplier).toBe(2);
     for (const sim of [plain, double]) {
       const tree = sim.trees.find((t) => t.kind === 'normal');
       if (!tree) throw new Error('no tree');

@@ -229,6 +229,10 @@ export class MudwickSim {
     return this.bridgePassHeld;
   }
 
+  get xpMultiplier(): 1 | 2 {
+    return this.doubleXp ? 2 : 1;
+  }
+
   get connected(): boolean {
     return !this.loggedOut && !this.pendingLogout;
   }
