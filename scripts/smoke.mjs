@@ -1555,6 +1555,9 @@ try {
           'room-chair-seat',
           'room-chair-back',
           'room-chair-base',
+          'room-chair-seat-stitch',
+          'room-chair-back-stitch',
+          'room-chair-back-handle',
         ];
         const bedChildren = [
           'room-bed-frame',
@@ -1562,6 +1565,9 @@ try {
           'room-bed-headboard',
           'room-bed-duvet',
           'room-bed-pillow',
+          'room-bed-headboard-lip',
+          'room-bed-pillow-seam',
+          'room-bed-foot-throw',
         ];
 
         return {
@@ -1598,18 +1604,24 @@ try {
         'room-chair-seat',
         'room-chair-back',
         'room-chair-base',
+        'room-chair-seat-stitch',
+        'room-chair-back-stitch',
+        'room-chair-back-handle',
         'room-bed-frame',
         'room-bed-mattress',
         'room-bed-headboard',
         'room-bed-duvet',
         'room-bed-pillow',
+        'room-bed-headboard-lip',
+        'room-bed-pillow-seam',
+        'room-bed-foot-throw',
       ]);
       assert.equal(state.chairInteraction, 'pc');
       assert.equal(state.chairInteractableMembers, 1);
       assert.equal(state.bedInteractableMembers, 0);
-      assert.ok(state.meshCount >= 12 && state.meshCount <= 18, `furniture mesh budget exceeded: ${state.meshCount}`);
-      assert.ok(state.instanceCount <= 32, `furniture instance budget exceeded: ${state.instanceCount}`);
-      assert.ok(state.triangles <= 1200, `furniture triangle budget exceeded: ${state.triangles}`);
+      assert.ok(state.meshCount >= 18 && state.meshCount <= 22, `furniture mesh budget exceeded: ${state.meshCount}`);
+      assert.ok(state.instanceCount <= 36, `furniture instance budget exceeded: ${state.instanceCount}`);
+      assert.ok(state.triangles <= 1500, `furniture triangle budget exceeded: ${state.triangles}`);
       assert.equal(state.textures, 0);
       assert.equal(state.lights, 0);
       assert.equal(state.casters, 0);
