@@ -1315,6 +1315,84 @@ try {
   );
 
   await scenario(
+    'bedroom shell materials stay authored and bounded',
+    { viewport: { width: 1000, height: 700 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.['host']?.room?.scene);
+
+      const state = await page.evaluate(() => {
+        const host = window.__game['host'];
+        const scene = host.room.scene;
+        const inspect = (name) => {
+          const mesh = scene.getObjectByName(name);
+          const color = mesh?.geometry?.attributes?.color;
+          const position = mesh?.geometry?.attributes?.position;
+          const index = mesh?.geometry?.index;
+          const channelRange = (channel) => {
+            if (!color) return 0;
+            let min = Infinity;
+            let max = -Infinity;
+            for (let i = 0; i < color.count; i++) {
+              const value = channel === 0 ? color.getX(i) : channel === 1 ? color.getY(i) : color.getZ(i);
+              min = Math.min(min, value);
+              max = Math.max(max, value);
+            }
+            return Number((max - min).toFixed(5));
+          };
+          const materials = Array.isArray(mesh?.material) ? mesh.material : [mesh?.material];
+          return {
+            name: mesh?.name,
+            vertices: position?.count ?? 0,
+            triangles: index ? Math.floor(index.count / 3) : Math.floor((position?.count ?? 0) / 3),
+            hasColor: Boolean(color),
+            colorRanges: [channelRange(0), channelRange(1), channelRange(2)],
+            vertexColors: materials.every((material) => material?.vertexColors === true),
+            textures: materials.filter((material) => material?.map).length,
+            casters: mesh?.castShadow === true,
+            interactions: Boolean(mesh?.userData?.interact),
+          };
+        };
+        const shellNames = [
+          'room-wall-north',
+          'room-wall-west',
+          'room-wall-east',
+          'room-wall-south-left',
+          'room-wall-south-right',
+          'room-wall-south-header',
+          'room-ceiling',
+        ];
+        return {
+          shells: shellNames.map(inspect),
+          rendererTextures: host.renderer.info.memory.textures,
+        };
+      });
+
+      for (const shell of state.shells) {
+        assert.equal(shell.hasColor, true, `${shell.name} has no vertex colors`);
+        assert.equal(shell.vertexColors, true, `${shell.name} material ignores vertex colors`);
+        assert.ok(shell.vertices > 20, `${shell.name} is still too coarse: ${shell.vertices}`);
+        assert.ok(shell.vertices <= 99, `${shell.name} vertex budget exceeded: ${shell.vertices}`);
+        assert.ok(shell.triangles <= 160, `${shell.name} triangle budget exceeded: ${shell.triangles}`);
+        assert.ok(Math.max(...shell.colorRanges) >= 0.045, `${shell.name} material range too flat: ${shell.colorRanges}`);
+        assert.ok(Math.max(...shell.colorRanges) <= 0.16, `${shell.name} material range too noisy: ${shell.colorRanges}`);
+        assert.equal(shell.textures, 0, `${shell.name} unexpectedly allocated a texture`);
+        assert.equal(shell.casters, false, `${shell.name} unexpectedly casts shadows`);
+        assert.equal(shell.interactions, false, `${shell.name} unexpectedly became interactable`);
+      }
+      assert.ok(state.rendererTextures <= 12, `renderer texture budget exceeded: ${state.rendererTextures}`);
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
+  await scenario(
     'bedroom environment details stay authored and bounded',
     { viewport: { width: 1000, height: 700 } },
     async (page) => {
