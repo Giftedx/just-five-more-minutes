@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { ChoreId } from '../director/director';
+import { makeChoreBin, makeChoreTray, makeLaundryBasket } from './chore-targets';
 import { makeEnvironmentDetails } from './environment-details';
 import { makeBed, makeDeskChair } from './hero-furniture';
 import { makeMumDoorway } from './mum-doorway';
@@ -1031,26 +1032,14 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   scene.add(poster);
 
   // ---- tray by the door
-  const tray = new THREE.Group();
-  tray.add(box(0.56, 0.03, 0.36, lambert(0xa88a58), 0, 0.015, 0));
-  tray.add(box(0.56, 0.05, 0.03, lambert(0x8a6c3c), 0, 0.04, 0.18));
-  tray.add(box(0.56, 0.05, 0.03, lambert(0x8a6c3c), 0, 0.04, -0.18));
-  tray.add(box(0.03, 0.05, 0.36, lambert(0x8a6c3c), 0.28, 0.04, 0));
-  tray.add(box(0.03, 0.05, 0.36, lambert(0x8a6c3c), -0.28, 0.04, 0));
+  const tray = makeChoreTray();
   tray.position.set(0.05, 0, 1.72);
   scene.add(tray);
   tagInteract(tray, { type: 'target', target: 'tray', accepts: 'mugs', name: 'tray' });
   interactables.push(tray);
 
   // ---- bin (beside desk)
-  const bin = new THREE.Group();
-  const binMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.34, 12, 1, true), lambert(0x5a6a72));
-  (binMesh.material as THREE.Material).side = THREE.DoubleSide;
-  binMesh.position.y = 0.17;
-  const binBottom = new THREE.Mesh(new THREE.CircleGeometry(0.13, 12), lambert(0x4a565c));
-  binBottom.rotation.x = -Math.PI / 2;
-  binBottom.position.y = 0.005;
-  bin.add(binMesh, binBottom);
+  const bin = makeChoreBin();
   bin.position.set(1.95, 0, -1.1);
   scene.add(bin);
   tagInteract(bin, { type: 'target', target: 'bin', accepts: 'wrappers', name: 'bin' });
@@ -1058,13 +1047,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   colliders.push(colliderAt(1.95, -1.1, 0.36, 0.36, 0.4));
 
   // ---- laundry basket (south-west corner)
-  const basket = new THREE.Group();
-  const bw = 0.5;
-  basket.add(box(bw, 0.05, bw, lambert(0x8a6c3c), 0, 0.025, 0));
-  basket.add(box(bw, 0.3, 0.04, lambert(0xa88a58), 0, 0.17, bw / 2));
-  basket.add(box(bw, 0.3, 0.04, lambert(0xa88a58), 0, 0.17, -bw / 2));
-  basket.add(box(0.04, 0.3, bw, lambert(0xa88a58), bw / 2, 0.17, 0));
-  basket.add(box(0.04, 0.3, bw, lambert(0xa88a58), -bw / 2, 0.17, 0));
+  const basket = makeLaundryBasket();
   basket.position.set(-1.85, 0, 1.55);
   scene.add(basket);
   tagInteract(basket, { type: 'target', target: 'basket', accepts: 'laundry', name: 'laundry basket' });

@@ -1757,6 +1757,18 @@ try {
             roots[2]?.getObjectByName('room-chore-basket-slats')?.count,
             roots[2]?.getObjectByName('room-chore-basket-rim')?.count,
           ],
+          basketRimBounds: (() => {
+            const rim = roots[2]?.getObjectByName('room-chore-basket-rim');
+            return rim?.boundingSphere?.radius;
+          })(),
+          binMouthBatch: (() => {
+            const mouth = roots[1]?.getObjectByName('room-chore-bin-mouth');
+            return {
+              name: mouth?.name,
+              vertexColors: mouth?.material?.vertexColors,
+              hasColors: Boolean(mouth?.geometry?.attributes?.color),
+            };
+          })(),
           meshCount,
           instanceCount,
           triangles,
@@ -1787,7 +1799,13 @@ try {
       ]);
       assert.deepEqual(state.interactableMembership, [1, 1, 1]);
       assert.deepEqual(state.instanceCounts, [4, 12, 4]);
-      assert.equal(state.meshCount, 9);
+      assert.ok(state.basketRimBounds <= 0.4, `basket rim culling bounds are inflated: ${state.basketRimBounds}`);
+      assert.deepEqual(state.binMouthBatch, {
+        name: 'room-chore-bin-mouth',
+        vertexColors: true,
+        hasColors: true,
+      });
+      assert.equal(state.meshCount, 8);
       assert.ok(state.instanceCount <= 26, `target instance budget exceeded: ${state.instanceCount}`);
       assert.ok(state.triangles <= 500, `target triangle budget exceeded: ${state.triangles}`);
       assert.equal(state.textures, 0);
