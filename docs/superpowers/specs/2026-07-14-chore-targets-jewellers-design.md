@@ -82,10 +82,10 @@ Target budget: 3 meshes, 6 instances, 72 triangles.
 Root: `room-chore-bin`
 
 - `room-chore-bin-shell`: the existing tapered, open, double-sided 12-segment cylinder.
-- `room-chore-bin-interior`: one dark horizontal disc below the lip so the opening reads as depth rather than a flat cap.
-- `room-chore-bin-rim`: one restrained low-segment torus around the mouth.
+- `room-chore-bin-mouth`: one vertex-coloured batch combining a dark horizontal disc below the lip with a restrained low-segment torus, so the opening reads as depth without adding a third draw call.
+- `room-chore-bin-interior` and `room-chore-bin-rim`: named diagnostic anchors preserving the two batched part locations.
 
-Target budget: 3 meshes, 3 instances, no more than 200 triangles.
+Target budget: 2 meshes, 2 instances, no more than 200 triangles.
 
 ### Laundry basket
 
@@ -101,13 +101,15 @@ Target budget: 3 meshes, 17 instances, 204 triangles.
 
 ### Combined budget
 
-- Meshes: exactly 9, down from 12.
-- Instances: no more than 26.
+- Meshes: exactly 8, down from 12.
+- Instances: no more than 25.
 - Triangles: no more than 500.
 - Textures: 0.
 - Lights: 0.
 - Shadow casters: 0.
 - Room draw calls: no more than the existing hard ceiling of 128.
+
+Every non-uniform box instance batch derives its culling sphere from its exact aggregate bounding box. This avoids Three's inflated default sphere for thin rails and keeps the basket rim out of the unrelated Mum doorway render without hiding or deleting geometry.
 
 ## Architecture and integration
 

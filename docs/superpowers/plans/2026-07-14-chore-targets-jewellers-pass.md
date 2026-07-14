@@ -15,7 +15,7 @@
 - Preserve target world positions exactly: tray `[0.05, 0, 1.72]`, bin `[1.95, 0, -1.1]`, basket `[-1.85, 0, 1.55]`.
 - Preserve target ids, accepted chore slots, prompt names, placement slots, and bin/basket colliders.
 - Keep target textures, lights, and shadow casters at zero.
-- Keep the combined target footprint at exactly 9 meshes, no more than 26 instances, no more than 500 triangles, and no more than 128 room draw calls.
+- Keep the combined target footprint at exactly 8 meshes, no more than 25 instances, no more than 500 triangles, and no more than 128 room draw calls.
 - Do not modify Mudwick, Mum, title, scorecard, HUD, rug, shell, furniture, audio, or input systems.
 
 ---
@@ -132,8 +132,8 @@ Insert the scenario immediately after `bedroom hero furniture preserves gameplay
       ]);
       assert.deepEqual(state.interactableMembership, [1, 1, 1]);
       assert.deepEqual(state.instanceCounts, [4, 12, 4]);
-      assert.equal(state.meshCount, 9);
-      assert.ok(state.instanceCount <= 26, `target instance budget exceeded: ${state.instanceCount}`);
+      assert.equal(state.meshCount, 8);
+      assert.ok(state.instanceCount <= 25, `target instance budget exceeded: ${state.instanceCount}`);
       assert.ok(state.triangles <= 500, `target triangle budget exceeded: ${state.triangles}`);
       assert.equal(state.textures, 0);
       assert.equal(state.lights, 0);
@@ -310,6 +310,8 @@ export function makeLaundryBasket(): THREE.Group {
 }
 ```
 
+> **Verified implementation deviation:** Production-browser diagnosis found that the three-mesh bin raised the 1200×800 room composition from 128 to 129 calls, while Three's default non-uniform instance sphere raised the Mum doorway composition from 55 to 56. The shipped implementation therefore merges the bin interior and rim into one vertex-coloured `room-chore-bin-mouth` mesh while retaining named part anchors, and derives every instance-batch sphere from its exact aggregate box. The browser contract pins the resulting eight-mesh target set, 0.4-or-tighter basket-rim sphere, and both existing render ceilings.
+
 - [ ] **Step 2: Replace only the inline target construction**
 
 Add this import to `src/host/room.ts`:
@@ -356,7 +358,7 @@ $node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\n
 & $node .\scripts\run-browser-checks.mjs
 ```
 
-Expected: size budgets pass, all browser checks pass, the target scenario reports 9 meshes, 26 or fewer instances, 500 or fewer triangles, and the existing room draw-call ceiling remains green.
+Expected: size budgets pass, all browser checks pass, the target scenario reports 8 meshes, 25 or fewer instances, 500 or fewer triangles, and the existing room draw-call ceiling remains green.
 
 - [ ] **Step 4: Run unit and type checks**
 
