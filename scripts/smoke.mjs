@@ -1690,6 +1690,123 @@ try {
   );
 
   await scenario(
+    'bedroom chore targets stay authored, functional, and bounded',
+    { viewport: { width: 1200, height: 800 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.host?.room?.scene);
+
+      const state = await page.evaluate(() => {
+        const host = window.__game.host;
+        const scene = host.room.scene;
+        const roots = [
+          scene.getObjectByName('room-chore-tray'),
+          scene.getObjectByName('room-chore-bin'),
+          scene.getObjectByName('room-chore-basket'),
+        ];
+        const childNames = [
+          ['room-chore-tray-bed', 'room-chore-tray-inset', 'room-chore-tray-rim'],
+          ['room-chore-bin-shell', 'room-chore-bin-interior', 'room-chore-bin-rim'],
+          ['room-chore-basket-base', 'room-chore-basket-slats', 'room-chore-basket-rim'],
+        ];
+        const textures = new Set();
+        let meshCount = 0;
+        let instanceCount = 0;
+        let triangles = 0;
+        let lights = 0;
+        let casters = 0;
+        for (const root of roots.filter(Boolean)) {
+          root.traverse((object) => {
+            if (object.isMesh) {
+              meshCount++;
+              const multiplier = object.isInstancedMesh ? object.count : 1;
+              instanceCount += multiplier;
+              const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
+              triangles += Math.floor(primitives / 3) * multiplier;
+              if (object.castShadow) casters++;
+              const materials = Array.isArray(object.material) ? object.material : [object.material];
+              for (const material of materials) if (material?.map) textures.add(material.map.uuid);
+            }
+            if (object.isLight) lights++;
+          });
+        }
+        const collider = (min, max) => host.room.colliders.some((box) => (
+          Math.abs(box.min.x - min[0]) < 1e-6
+          && Math.abs(box.min.y - min[1]) < 1e-6
+          && Math.abs(box.min.z - min[2]) < 1e-6
+          && Math.abs(box.max.x - max[0]) < 1e-6
+          && Math.abs(box.max.y - max[1]) < 1e-6
+          && Math.abs(box.max.z - max[2]) < 1e-6
+        ));
+        host.renderer.render(host.room.scene, host.camera);
+        return {
+          rootNames: roots.map((root) => root?.name),
+          positions: roots.map((root) => root?.position.toArray()),
+          childNames: roots.map((root, index) => childNames[index].map((name) => root?.getObjectByName(name)?.name)),
+          targetContracts: roots.map((root) => root?.userData.interact),
+          interactableMembership: roots.map((root) => host.room.interactables.filter((item) => item === root).length),
+          instanceCounts: [
+            roots[0]?.getObjectByName('room-chore-tray-rim')?.count,
+            roots[2]?.getObjectByName('room-chore-basket-slats')?.count,
+            roots[2]?.getObjectByName('room-chore-basket-rim')?.count,
+          ],
+          meshCount,
+          instanceCount,
+          triangles,
+          textures: textures.size,
+          lights,
+          casters,
+          binCollider: collider([1.77, 0, -1.28], [2.13, 0.4, -0.92]),
+          basketCollider: collider([-2.15, 0, 1.25], [-1.55, 0.4, 1.85]),
+          slots: Object.fromEntries(Object.entries(host.room.slots).map(([key, values]) => (
+            [key, values.map((value) => value.toArray())]
+          ))),
+          roomCalls: host.renderer.info.render.calls,
+          rendererTextures: host.renderer.info.memory.textures,
+        };
+      });
+
+      assert.deepEqual(state.rootNames, ['room-chore-tray', 'room-chore-bin', 'room-chore-basket']);
+      assert.deepEqual(state.positions, [[0.05, 0, 1.72], [1.95, 0, -1.1], [-1.85, 0, 1.55]]);
+      assert.deepEqual(state.childNames, [
+        ['room-chore-tray-bed', 'room-chore-tray-inset', 'room-chore-tray-rim'],
+        ['room-chore-bin-shell', 'room-chore-bin-interior', 'room-chore-bin-rim'],
+        ['room-chore-basket-base', 'room-chore-basket-slats', 'room-chore-basket-rim'],
+      ]);
+      assert.deepEqual(state.targetContracts, [
+        { type: 'target', target: 'tray', accepts: 'mugs', name: 'tray' },
+        { type: 'target', target: 'bin', accepts: 'wrappers', name: 'bin' },
+        { type: 'target', target: 'basket', accepts: 'laundry', name: 'laundry basket' },
+      ]);
+      assert.deepEqual(state.interactableMembership, [1, 1, 1]);
+      assert.deepEqual(state.instanceCounts, [4, 12, 4]);
+      assert.equal(state.meshCount, 9);
+      assert.ok(state.instanceCount <= 26, `target instance budget exceeded: ${state.instanceCount}`);
+      assert.ok(state.triangles <= 500, `target triangle budget exceeded: ${state.triangles}`);
+      assert.equal(state.textures, 0);
+      assert.equal(state.lights, 0);
+      assert.equal(state.casters, 0);
+      assert.equal(state.binCollider, true);
+      assert.equal(state.basketCollider, true);
+      assert.deepEqual(state.slots, {
+        tray: [[-0.13, 0.035, 1.72], [0.05, 0.035, 1.72], [0.23, 0.035, 1.72]],
+        bin: [[1.95, 0.1, -1.1], [1.93, 0.16, -1.12], [1.97, 0.22, -1.08], [1.95, 0.28, -1.1]],
+        basket: [[-1.85, 0.08, 1.55], [-1.83, 0.16, 1.53], [-1.87, 0.24, 1.57]],
+      });
+      assert.ok(state.roomCalls <= 128, `room draw-call budget exceeded: ${state.roomCalls}`);
+      assert.ok(state.rendererTextures <= 12, `room texture budget exceeded: ${state.rendererTextures}`);
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
+  await scenario(
     'bedroom rug stays authored, inert, and bounded',
     { viewport: { width: 1000, height: 700 } },
     async (page) => {
