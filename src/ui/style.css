@@ -743,7 +743,6 @@ body {
 .hud-dialogue-stack {
   position: fixed;
   inset: auto 18px clamp(54px, 8vh, 72px);
-  width: auto;
   display: grid;
   grid-template-columns: minmax(300px, 340px) minmax(320px, 360px);
   grid-template-areas:
@@ -759,7 +758,6 @@ body {
 .hud-subtitle {
   grid-area: subtitle;
   width: 100%;
-  max-width: none;
   justify-self: stretch;
   background: linear-gradient(165deg, rgba(30, 22, 13, 0.92), rgba(14, 10, 6, 0.92));
   backdrop-filter: blur(6px);
@@ -1015,7 +1013,9 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 0;
   transition: transform 0.4s ease-out;
+  will-change: transform;
 }
 
 .title-lamp {
@@ -1077,6 +1077,7 @@ body {
 }
 
 .title-card > * {
+  position: relative;
   animation: titlein 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
@@ -1084,6 +1085,7 @@ body {
 .title-card > *:nth-child(2) { animation-delay: 0.1s; }
 .title-card > *:nth-child(3) { animation-delay: 0.16s; }
 .title-card > *:nth-child(4) { animation-delay: 0.22s; }
+.title-card > *:nth-child(5) { animation-delay: 0.28s; }
 @keyframes titlein {
   from { transform: translateY(12px); opacity: 0; }
 }
@@ -1159,7 +1161,6 @@ body {
 
 .title-word:nth-child(1) { animation-delay: 0.12s; }
 .title-word:nth-child(2) { animation-delay: 0.2s; }
-.title-card > *:nth-child(5),
 .title-word:nth-child(3) { animation-delay: 0.28s; }
 .title-word:nth-child(4) { animation-delay: 0.36s; }
 
@@ -1284,8 +1285,7 @@ body {
 
 .title-crt-brand {
   position: absolute;
-  bottom: 4px;
-  left: 14px;
+  inset: auto auto 4px 14px;
   font: 800 6px 'Segoe UI', system-ui, sans-serif;
   letter-spacing: 1px;
   color: #7a7060;
@@ -1865,6 +1865,7 @@ body {
 }
 
 .mobile-gate-card {
+  position: relative;
   width: min(720px, 100%);
   display: grid;
   grid-template-columns: minmax(210px, 0.8fr) minmax(260px, 1.2fr);
