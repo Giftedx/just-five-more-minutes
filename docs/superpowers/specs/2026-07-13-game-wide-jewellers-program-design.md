@@ -19,7 +19,7 @@ The subject is a runtime-generated 2004 browser MMO seen through a teenager's CR
 | Title | Split-screen incident card, live CRT, school-week strip, short-height and reduced-motion browser guards | Already satisfied | Preserve and recapture |
 | Bedroom | Filmic Lambert response, authored vertex-coloured shell finish, contact grounding, hero furniture microfinish, authored carry targets, permanent window dressing, night-specific phone/duvet/curtain props, environment storytelling, woven rug | Shell material, hero furniture, carry-target, permanent-curtain, and later-night household-prop gaps repaired and browser-guarded locally | Preserve geometry/texture budgets and recapture |
 | Mum encounter | Authored character, hallway vignette, dialogue staging, focal-path microdetail, transform/material guards | Already satisfied | Preserve and recapture |
-| HUD and dialogue | Responsive stack, keyboard focus, semantics, compact objective/chore hierarchy, authored volume fader, authored room interaction lockup | Confirmed volume and room interaction seams repaired | Preserve browser contracts and recapture |
+| HUD and dialogue | Responsive stack, keyboard focus, semantics, compact objective/chore hierarchy, authored volume fader, authored room interaction lockup, guarded 900×400 prompt compaction | Confirmed volume, room-interaction, and short-height cascade seams repaired; CSS release headroom hardened | Preserve browser contracts and recapture |
 | Scorecard | Lined household report, filing marks, career annotation, semantic modal and short-screen reachability | Already satisfied | Preserve and recapture |
 | Mudwick action pose | `PLAYER_ATTACK_SPRITE` declares a weapon colour but contains no weapon pixels | Confirmed defect | Repair test-first |
 | Mudwick player and trader faces | Face rows contain only flat skin blocks | Missing finish | Add restrained eye cues |
@@ -131,3 +131,9 @@ The deliberate aesthetic risk is exaggeration at tiny scale. A weapon and hobgob
 ## Program continuation rule
 
 After the Mudwick tranche, recapture title, bedroom, Mum, HUD, PC mode, report, blocked-device, pause, and reduced-motion states. A later tranche is allowed only for a defect visible in those fresh captures or a missing contract confirmed in source. “Everywhere” is a quality bar, not a requirement to churn already-finished surfaces.
+
+## 2026-07-14 short-screen and release-headroom closure
+
+The follow-up cascade audit found that the 900×400 hint margin and option padding were declared before their base rules, so the browser computed `2px` and `7px 12px 7px 8px` instead of the authored compact values. The production smoke now requires `0px` and `5px 10px 5px 8px`. Equivalent short-height rules live under one final `max-height: 520px` boundary, and the CSS artifact is 41,928 raw / 10,106 gzip bytes against a tightened 10,112-byte ceiling—134 bytes below the former 10 KiB limit.
+
+Matched production captures prove zero changed pixels for title, report, blocked-device gate, pause, PC chrome, and 1280×720 dialogue UI after masking only live Canvas timing. Both 900×400 dialogue variants differ solely within the response card and its existing shadow/blur footprint, bounded at `(0,132)–(375,382)`. This is release-proof hardening, not another decorative layer.
