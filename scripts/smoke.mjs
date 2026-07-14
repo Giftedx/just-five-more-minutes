@@ -1709,6 +1709,7 @@ try {
           const roots = rootNames.map((name) => host.room.scene.getObjectByName(name));
           const textures = new Set();
           let meshes = 0;
+          let drawCalls = 0;
           let triangles = 0;
           let lights = 0;
           let casters = 0;
@@ -1723,6 +1724,7 @@ try {
               const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
               triangles += Math.floor(primitives / 3) * multiplier;
               const materials = Array.isArray(object.material) ? object.material : [object.material];
+              drawCalls += materials.length;
               for (const material of materials) {
                 if (material?.map) textures.add(material.map.uuid);
                 if (material?.isMeshStandardMaterial || material?.isMeshPhysicalMaterial) {
@@ -1742,7 +1744,15 @@ try {
             positions: roots.map((root) => root?.position.toArray()),
             contracts: roots.map((root) => root?.userData.interact),
             memberships: roots.map((root) => host.room.interactables.filter((item) => item === root).length),
+            stablePresence: [
+              'room-wall-phone',
+              'room-duvet-tug-left',
+              'room-duvet-tug-right',
+              'room-curtain-tug-left',
+              'room-curtain-tug-right',
+            ].map((name) => Boolean(host.room.scene.getObjectByName(name))),
             meshes,
+            drawCalls,
             triangles,
             textures: textures.size,
             lights,
@@ -1750,6 +1760,55 @@ try {
             forbiddenMaterials,
           };
         }, names);
+      };
+
+      const exerciseTugs = async (night, chore, targets) => {
+        await gotoOk(page, { skipTitle: 1, night, t: 179, seed: 313 });
+        await page.waitForFunction(() => window.__game?.host?.room?.scene);
+        const settled = [];
+        for (const target of targets) {
+          await page.evaluate(({ stand, look }) => {
+            const host = window.__game.host;
+            host.player.pos.set(stand[0], 0, stand[1]);
+            const dx = look[0] - stand[0];
+            const dz = look[2] - stand[1];
+            const dy = look[1] - 1.55;
+            host.player.yaw = Math.atan2(-dx, -dz);
+            host.player.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+          }, target);
+          await page.waitForFunction(
+            ({ itemId, label }) => {
+              const host = window.__game.host;
+              const resolved = host.interact['resolveTarget'](host.camera).action?.interact;
+              return host.interact.tracker.item(itemId)?.state === 'world'
+                && resolved?.type === 'tug'
+                && resolved.itemId === itemId
+                && host.prompt?.actionable === true
+                && host.prompt.label === label;
+            },
+            { itemId: target.itemId, label: target.label },
+            { timeout: 5_000, polling: 'raf' },
+          );
+          const before = await page.evaluate((name) => {
+            const root = window.__game.host.room.scene.getObjectByName(name);
+            return { scaleY: root.scale.y, positionY: root.position.y };
+          }, target.name);
+          await page.keyboard.press('e');
+          await page.waitForFunction(
+            (itemId) => window.__game.host.interact.tracker.item(itemId)?.state === 'placed',
+            target.itemId,
+            { timeout: 5_000, polling: 'raf' },
+          );
+          const after = await page.evaluate((name) => {
+            const root = window.__game.host.room.scene.getObjectByName(name);
+            return { scaleY: root.scale.y, positionY: root.position.y };
+          }, target.name);
+          settled.push({ before, after });
+        }
+        return {
+          settled,
+          completed: await page.evaluate((id) => window.__game.host.interact.tracker.isCompleted(id), chore),
+        };
       };
 
       const bedNames = ['room-duvet-tug-left', 'room-duvet-tug-right'];
@@ -1760,6 +1819,7 @@ try {
 
       assert.deepEqual(tuesday.names, bedNames);
       assert.deepEqual(tuesday.namedCounts, [1, 1]);
+      assert.deepEqual(tuesday.stablePresence, [false, true, true, false, false]);
       assert.deepEqual(tuesday.positions, [[-1.68, 0.46, 0.42], [-2.22, 0.46, 0.32]]);
       assert.deepEqual(tuesday.contracts, [
         { type: 'tug', itemId: 'bed0', chore: 'wrappers', name: 'duvet corner', action: 'Tug the duvet straight' },
@@ -1769,6 +1829,7 @@ try {
 
       assert.deepEqual(wednesday.names, ['room-wall-phone', ...bedNames]);
       assert.deepEqual(wednesday.namedCounts, [1, 1, 1]);
+      assert.deepEqual(wednesday.stablePresence, [true, true, true, false, false]);
       assert.deepEqual(wednesday.positions, [[0.35, 1.35, 1.97], [-1.68, 0.46, 0.42], [-2.22, 0.46, 0.32]]);
       assert.equal(wednesday.contracts[0], undefined);
       assert.equal(wednesday.memberships[0], 0);
@@ -1776,6 +1837,7 @@ try {
 
       assert.deepEqual(thursday.names, curtainNames);
       assert.deepEqual(thursday.namedCounts, [1, 1]);
+      assert.deepEqual(thursday.stablePresence, [false, false, false, true, true]);
       assert.deepEqual(thursday.positions, [[2.33, 1.35, -0.05], [2.33, 1.35, 0.85]]);
       assert.deepEqual(thursday.contracts, [
         { type: 'tug', itemId: 'curt0', chore: 'wrappers', name: 'curtain', action: 'Throw the curtains open' },
@@ -1784,12 +1846,29 @@ try {
       assert.deepEqual(thursday.memberships, [1, 1]);
 
       for (const state of [tuesday, wednesday, thursday]) {
-        assert.ok(state.meshes <= 18, `night prop draw-call proxy exceeded: ${state.meshes}`);
+        assert.ok(state.meshes <= 18, `night prop mesh budget exceeded: ${state.meshes}`);
+        assert.ok(state.drawCalls <= 18, `night prop draw-call budget exceeded: ${state.drawCalls}`);
         assert.ok(state.triangles <= 1500, `night prop triangle budget exceeded: ${state.triangles}`);
         assert.equal(state.textures, 0);
         assert.equal(state.lights, 0);
         assert.equal(state.casters, 0);
         assert.deepEqual(state.forbiddenMaterials, []);
+      }
+
+      const bedExercise = await exerciseTugs(1, 'wrappers', [
+        { name: 'room-duvet-tug-left', itemId: 'bed0', label: 'E — Tug the duvet straight', stand: [-0.9, 0.42], look: [-1.68, 0.46, 0.42] },
+        { name: 'room-duvet-tug-right', itemId: 'bed1', label: 'E — Tug the duvet straight', stand: [-0.9, 0.62], look: [-2.22, 0.46, 0.32] },
+      ]);
+      const curtainExercise = await exerciseTugs(3, 'wrappers', [
+        { name: 'room-curtain-tug-left', itemId: 'curt0', label: 'E — Throw the curtains open', stand: [1.35, -0.05], look: [2.33, 1.35, -0.05] },
+        { name: 'room-curtain-tug-right', itemId: 'curt1', label: 'E — Throw the curtains open', stand: [1.35, 0.85], look: [2.33, 1.35, 0.85] },
+      ]);
+      for (const exercise of [bedExercise, curtainExercise]) {
+        assert.equal(exercise.completed, true);
+        for (const { before, after } of exercise.settled) {
+          assert.equal(after.scaleY, before.scaleY * 0.25);
+          assert.ok(Math.abs(after.positionY - (before.positionY - 0.02)) <= 1e-9);
+        }
       }
       assert.deepEqual(consoleProblems, []);
     },
