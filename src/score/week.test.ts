@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NightReportSummary } from './career';
-import { gradeFor, weekVerdict } from './week';
+import { ENDING_ARCHIVE, endingGallery, gradeFor, weekVerdict } from './week';
 
 function night(
   mmo: number,
@@ -69,5 +69,33 @@ describe('weekVerdict matrix', () => {
     const verdict = weekVerdict(week(10, 24, { total: 70 }), 0, 0);
     expect(verdict.grades).toEqual(['B', 'B', 'B', 'B', 'B']);
     expect(verdict.weekTotal).toBe(350);
+  });
+});
+
+describe('ending archive', () => {
+  it('keeps every ending in one stable unique archive', () => {
+    expect(ENDING_ARCHIVE.map((ending) => ending.endingId)).toEqual([
+      'lostWeek',
+      'goblinWidow',
+      'groundedWorthIt',
+      'quietDecline',
+      'negotiator',
+      'doubleAgent',
+      'employeeOfTheMonth',
+      'responsibleOne',
+      'timeWizard',
+      'groundedForNothing',
+    ]);
+    expect(new Set(ENDING_ARCHIVE.map((ending) => ending.endingId)).size).toBe(ENDING_ARCHIVE.length);
+    expect(ENDING_ARCHIVE.every((ending) => ending.title.length > 0 && ending.blurb.length > 0)).toBe(true);
+  });
+
+  it('projects known endings once and ignores unknown persisted ids', () => {
+    const gallery = endingGallery(['timeWizard', 'timeWizard', 'lostWeek', 'legacyMystery']);
+    expect(gallery).toHaveLength(10);
+    expect(gallery.filter((slot) => slot.collected).map((slot) => slot.id)).toEqual([
+      'lostWeek',
+      'timeWizard',
+    ]);
   });
 });

@@ -24,6 +24,69 @@ export function gradeFor(total: number): string {
 
 type Band = 'low' | 'mid' | 'high';
 
+type Ending = { endingId: string; title: string; blurb: string };
+
+export interface EndingGallerySlot {
+  id: string;
+  title: string;
+  collected: boolean;
+}
+
+const LOST_WEEK = {
+  endingId: 'lostWeek', title: 'The Lost Week', blurb: 'Neither world improved. Bold.',
+} as const;
+const GOBLIN_WIDOW = {
+  endingId: 'goblinWidow', title: 'Goblin Widow', blurb: 'The goblins know you better than we do.',
+} as const;
+const GROUNDED_WORTH_IT = {
+  endingId: 'groundedWorthIt', title: 'Grounded (Worth It)', blurb: "You regret nothing. That's the problem.",
+} as const;
+const QUIET_DECLINE = {
+  endingId: 'quietDecline', title: 'Quiet Decline', blurb: 'Attendance: yes. Participation: debatable.',
+} as const;
+const NEGOTIATOR = {
+  endingId: 'negotiator', title: 'The Negotiator', blurb: 'Everyone got something. Nobody got everything.',
+} as const;
+const DOUBLE_AGENT = {
+  endingId: 'doubleAgent', title: 'Double Agent', blurb: 'Two lives, adequately led.',
+} as const;
+const EMPLOYEE_OF_THE_MONTH = {
+  endingId: 'employeeOfTheMonth',
+  title: 'Employee of the Month (This House)',
+  blurb: 'The fridge gets your photo.',
+} as const;
+const RESPONSIBLE_ONE = {
+  endingId: 'responsibleOne', title: 'The Responsible One', blurb: 'Suspiciously functional.',
+} as const;
+const TIME_WIZARD = {
+  endingId: 'timeWizard',
+  title: 'Time Wizard',
+  blurb: 'We checked the clocks. Nothing was wrong with the clocks.',
+} as const;
+const GROUNDED_FOR_NOTHING = {
+  endingId: 'groundedForNothing',
+  title: 'Grounded (For Nothing)',
+  blurb: 'All that suspicion, and not even a fortune to show for it.',
+} as const;
+
+export const ENDING_ARCHIVE = [
+  LOST_WEEK,
+  GOBLIN_WIDOW,
+  GROUNDED_WORTH_IT,
+  QUIET_DECLINE,
+  NEGOTIATOR,
+  DOUBLE_AGENT,
+  EMPLOYEE_OF_THE_MONTH,
+  RESPONSIBLE_ONE,
+  TIME_WIZARD,
+  GROUNDED_FOR_NOTHING,
+] as const;
+
+export function endingGallery(ids: readonly string[]): EndingGallerySlot[] {
+  const collected = new Set(ids);
+  return ENDING_ARCHIVE.map(({ endingId: id, title }) => ({ id, title, collected: collected.has(id) }));
+}
+
 function houseBand(avg: number): Band {
   if (avg < 15) return 'low';
   if (avg < 24) return 'mid';
@@ -36,53 +99,21 @@ function mudwickBand(avg: number): Band {
   return 'high';
 }
 
-const MATRIX: Record<Band, Record<Band, { endingId: string; title: string; blurb: string }>> = {
+const MATRIX: Record<Band, Record<Band, Ending>> = {
   low: {
-    low: { endingId: 'lostWeek', title: 'The Lost Week', blurb: 'Neither world improved. Bold.' },
-    mid: {
-      endingId: 'goblinWidow',
-      title: 'Goblin Widow',
-      blurb: 'The goblins know you better than we do.',
-    },
-    high: {
-      endingId: 'groundedWorthIt',
-      title: 'Grounded (Worth It)',
-      blurb: "You regret nothing. That's the problem.",
-    },
+    low: LOST_WEEK,
+    mid: GOBLIN_WIDOW,
+    high: GROUNDED_WORTH_IT,
   },
   mid: {
-    low: {
-      endingId: 'quietDecline',
-      title: 'Quiet Decline',
-      blurb: 'Attendance: yes. Participation: debatable.',
-    },
-    mid: {
-      endingId: 'negotiator',
-      title: 'The Negotiator',
-      blurb: 'Everyone got something. Nobody got everything.',
-    },
-    high: {
-      endingId: 'doubleAgent',
-      title: 'Double Agent',
-      blurb: 'Two lives, adequately led.',
-    },
+    low: QUIET_DECLINE,
+    mid: NEGOTIATOR,
+    high: DOUBLE_AGENT,
   },
   high: {
-    low: {
-      endingId: 'employeeOfTheMonth',
-      title: 'Employee of the Month (This House)',
-      blurb: 'The fridge gets your photo.',
-    },
-    mid: {
-      endingId: 'responsibleOne',
-      title: 'The Responsible One',
-      blurb: 'Suspiciously functional.',
-    },
-    high: {
-      endingId: 'timeWizard',
-      title: 'Time Wizard',
-      blurb: 'We checked the clocks. Nothing was wrong with the clocks.',
-    },
+    low: EMPLOYEE_OF_THE_MONTH,
+    mid: RESPONSIBLE_ONE,
+    high: TIME_WIZARD,
   },
 };
 
@@ -104,11 +135,7 @@ export function weekVerdict(
   if (fridaySuspicion >= 8) {
     ending = mBand === 'high'
       ? MATRIX.low.high // Grounded (Worth It)
-      : {
-        endingId: 'groundedForNothing',
-        title: 'Grounded (For Nothing)',
-        blurb: 'All that suspicion, and not even a fortune to show for it.',
-      };
+      : GROUNDED_FOR_NOTHING;
   }
 
   const stamps: string[] = [];
