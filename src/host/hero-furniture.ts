@@ -148,7 +148,22 @@ export function makeDeskChair(): THREE.Group {
   back.scale.set(1.08, 1, 0.18);
   chair.add(back);
 
-  chair.add(box(0.055, 0.34, 0.055, darkMetal, 0, 0.59, 0.17));
+  const stitchMat = lambert(0x2f3038);
+  const seatStitch = box(0.36, 0.012, 0.018, stitchMat, 0, 0.507, -0.105);
+  seatStitch.name = 'room-chair-seat-stitch';
+  chair.add(seatStitch);
+
+  const backStitch = box(0.25, 0.012, 0.018, stitchMat, 0, 0.83, 0.235);
+  backStitch.name = 'room-chair-back-stitch';
+  chair.add(backStitch);
+
+  const backHandle = instances(new THREE.BoxGeometry(1, 1, 1), darkMetal, [
+    { position: [0, -0.33, -0.07], scale: [0.055, 0.34, 0.055] },
+    { position: [0, 0, 0], scale: [0.18, 0.035, 0.018] },
+  ]);
+  backHandle.name = 'room-chair-back-handle';
+  backHandle.position.set(0, 0.92, 0.24);
+  chair.add(backHandle);
 
   const base = new THREE.Group();
   base.name = 'room-chair-base';
@@ -178,20 +193,17 @@ export function makeBed(): THREE.Group {
   const wood = lambert(0x5c421f);
   const frame = new THREE.Group();
   frame.name = 'room-bed-frame';
-  const rails = instances(new THREE.BoxGeometry(1, 1, 1), wood, [
+  const frameMembers = instances(new THREE.BoxGeometry(1, 1, 1), wood, [
     { position: [-0.445, 0.22, 0], scale: [0.08, 0.24, 1.92] },
     { position: [0.445, 0.22, 0], scale: [0.08, 0.24, 1.92] },
     { position: [0, 0.22, -0.96], scale: [0.95, 0.24, 0.08] },
     { position: [0, 0.22, 0.96], scale: [0.95, 0.24, 0.08] },
-  ]);
-  frame.add(rails);
-  const legs = instances(new THREE.BoxGeometry(1, 1, 1), wood, [
     { position: [-0.41, 0.09, -0.92], scale: [0.08, 0.18, 0.08] },
     { position: [0.41, 0.09, -0.92], scale: [0.08, 0.18, 0.08] },
     { position: [-0.41, 0.09, 0.92], scale: [0.08, 0.18, 0.08] },
     { position: [0.41, 0.09, 0.92], scale: [0.08, 0.18, 0.08] },
   ]);
-  frame.add(legs);
+  frame.add(frameMembers);
   bed.add(frame);
 
   const mattress = box(0.86, 0.16, 1.82, lambert(0xcab694), 0, 0.34, 0);
@@ -202,11 +214,19 @@ export function makeBed(): THREE.Group {
   headboard.name = 'room-bed-headboard';
   bed.add(headboard);
 
+  const headboardLip = box(0.98, 0.055, 0.085, wood, 0, 0.79, -1.0);
+  headboardLip.name = 'room-bed-headboard-lip';
+  bed.add(headboardLip);
+
   const duvet = new THREE.Mesh(makeDuvetGeometry(), lambert(0xffffff, true));
   duvet.name = 'room-bed-duvet';
   duvet.position.set(0, 0.445, 0.31);
   duvet.rotation.x = -Math.PI / 2;
   bed.add(duvet);
+
+  const footThrow = box(0.82, 0.045, 0.18, lambert(0x5a3a72), 0, 0.505, 0.83);
+  footThrow.name = 'room-bed-foot-throw';
+  bed.add(footThrow);
 
   const drapeMaterial = lambert(0x68447f);
   drapeMaterial.side = THREE.DoubleSide;
@@ -220,6 +240,11 @@ export function makeBed(): THREE.Group {
   pillow.rotation.y = -0.08;
   pillow.scale.set(0.72, 0.12, 0.34);
   bed.add(pillow);
+
+  const pillowSeam = box(0.58, 0.012, 0.018, lambert(0xcfc6b6), 0, 0.54, -0.52);
+  pillowSeam.name = 'room-bed-pillow-seam';
+  pillowSeam.rotation.y = -0.08;
+  bed.add(pillowSeam);
 
   return bed;
 }
