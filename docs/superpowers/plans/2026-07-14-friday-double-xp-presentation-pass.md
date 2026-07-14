@@ -41,7 +41,7 @@
 - Consumes: the existing `MudwickSim` constructor option `doubleXp?: boolean` and base skill XP amount.
 - Produces: `MudwickSim.xpMultiplier: 1 | 2` and `xpDropLabel(baseAmount: number, skill: SkillName, multiplier: 1 | 2): string`.
 
-- [ ] **Step 1: Write the failing simulation seam contract**
+- [x] **Step 1: Write the failing simulation seam contract**
 
 Extend the existing Double XP test in `src/mmo/sim/sim.depth.test.ts` with:
 
@@ -50,7 +50,7 @@ expect(normal.xpMultiplier).toBe(1);
 expect(double.xpMultiplier).toBe(2);
 ```
 
-- [ ] **Step 2: Write the failing renderer-copy contract**
+- [x] **Step 2: Write the failing renderer-copy contract**
 
 Import `xpDropLabel` from `./renderer` and assert:
 
@@ -60,13 +60,13 @@ expect(xpDropLabel(10, 'fishing', 2)).toBe('+20 Fishing · 2×');
 expect(xpDropLabel(25, 'woodcutting', 2)).toBe('+50 Woodcutting · 2×');
 ```
 
-- [ ] **Step 3: Run focused tests to verify RED**
+- [x] **Step 3: Run focused tests to verify RED**
 
 Run `npm test -- src/mmo/sim/sim.depth.test.ts src/mmo/render/renderer.test.ts`.
 
 Expected: FAIL because `xpMultiplier` and `xpDropLabel` do not exist.
 
-- [ ] **Step 4: Implement the minimum read-only seam**
+- [x] **Step 4: Implement the minimum read-only seam**
 
 Add to `MudwickSim` without changing `grantSkillXp`:
 
@@ -76,7 +76,7 @@ get xpMultiplier(): 1 | 2 {
 }
 ```
 
-- [ ] **Step 5: Implement and adopt the pure formatter**
+- [x] **Step 5: Implement and adopt the pure formatter**
 
 Add to `renderer.ts`:
 
@@ -89,7 +89,7 @@ export function xpDropLabel(baseAmount: number, skill: SkillName, multiplier: 1 
 
 Route every Attack, Fishing, Foraging, and Woodcutting XP-drop creation through the helper with `this.sim.xpMultiplier`; do not change simulation awards or event shapes.
 
-- [ ] **Step 6: Run focused tests to verify GREEN**
+- [x] **Step 6: Run focused tests to verify GREEN**
 
 Run `npm test -- src/mmo/sim/sim.depth.test.ts src/mmo/render/renderer.test.ts`.
 
@@ -106,7 +106,7 @@ Expected: both files pass, including existing progression and modem presentation
 - Consumes: `this.sim.xpMultiplier`, the existing Canvas context, transient chat array, and objective baseline.
 - Produces: `DOUBLE_XP_COLORS`, `drawDoubleXpBanner()`, a 12-pixel Friday chat offset, and production-browser Monday/Friday assertions.
 
-- [ ] **Step 1: Add the failing palette and contrast contract**
+- [x] **Step 1: Add the failing palette and contrast contract**
 
 Export:
 
@@ -122,35 +122,35 @@ export const DOUBLE_XP_COLORS = {
 
 Before implementing the export, add tests that require the object and prove `parchment` against `backdrop` and `gold` against `backdrop` both meet a 4.5:1 contrast floor.
 
-- [ ] **Step 2: Add the failing production-browser contract**
+- [x] **Step 2: Add the failing production-browser contract**
 
 Add an isolated `Friday double XP presentation is persistent and truthful` scenario to `scripts/smoke.mjs`. At a fixed render time, create Monday and Friday games, enter PC mode, and inspect `host.mmo.canvas`. Assert Monday reports `xpMultiplier === 1` and has no event-strip anchor; Friday reports `xpMultiplier === 2`, has the lamp-black, old-gold, parchment, and ember anchors within `x < 240` and `y = 216..227`, preserves the objective bar below `y = 229`, preserves a side-panel pixel at `x >= 240`, and produces no console/page errors.
 
-- [ ] **Step 3: Build and run browser checks to verify RED**
+- [x] **Step 3: Build and run browser checks to verify RED**
 
 Run `npm run build` and `npm run test:browser`.
 
 Expected: the new scenario fails because Friday has no event-strip pixels.
 
-- [ ] **Step 4: Draw the event strip and reserve its chat line**
+- [x] **Step 4: Draw the event strip and reserve its chat line**
 
 When `this.sim.xpMultiplier === 2`, draw an opaque `240×11` strip at `y = 216`, a hard-edged `2×` medallion, `DOUBLE XP`, a one-pixel divider, and `FRIDAY EVENT` using the approved palette. Change the transient chat base from `CANVAS_H - 24` to `CANVAS_H - 36` only while the strip is active. Draw the strip after transient chat and before XP drops; leave `drawDisconnected(now)` last so the outage still owns the viewport.
 
-- [ ] **Step 5: Run focused unit and browser checks to verify GREEN**
+- [x] **Step 5: Run focused unit and browser checks to verify GREEN**
 
 Run `npm test -- src/mmo/sim/sim.depth.test.ts src/mmo/render/renderer.test.ts`, `npm run build`, and `npm run test:browser`.
 
 Expected: focused tests pass; every isolated browser scenario and the full interaction E2E pass; the Friday scenario proves the strip and preserved regions.
 
-- [ ] **Step 6: Capture and critique real production frames**
+- [x] **Step 6: Capture and critique real production frames**
 
 Capture 1440×900 Friday PC-mode frames while idle and with a visible XP drop under ignored `shots/`. Compare chat clearance, objective separation, medallion legibility, reward truthfulness, side-panel continuity, and visual weight against the captured Thursday inspection.
 
-- [ ] **Step 7: Perform the restraint edit**
+- [x] **Step 7: Perform the restraint edit**
 
 Remove any stroke, glyph, colour, or word that does not improve rule recognition. Do not add animation, glow, rounded cards, a countdown, a second banner, or marketing copy. Rerun every focused check invalidated by the edit.
 
-- [ ] **Step 8: Verify artifact budgets and commit**
+- [x] **Step 8: Verify artifact budgets and commit**
 
 Run `npm run size:check` and `git diff --check`.
 
@@ -169,21 +169,21 @@ Commit `src/mmo/sim/sim.ts`, `src/mmo/sim/sim.depth.test.ts`, `src/mmo/render/re
 - Consumes: final captures, unit/browser evidence, artifact sizes, and the feature commit.
 - Produces: current program truth, a verified feature tree, and a clean locally integrated master.
 
-- [ ] **Step 1: Record the confirmed closure**
+- [x] **Step 1: Record the confirmed closure**
 
 Append a dated closure to the game-wide program describing the absent Friday presentation, inaccurate base-value drops, selected event strip, chat reservation, multiplier seam, preserved contracts, final artifact sizes, test counts, browser scenario count, and ignored proof paths.
 
-- [ ] **Step 2: Mark only completed checklist items**
+- [x] **Step 2: Mark only completed checklist items**
 
 Change each successful `- [ ]` in this plan to `- [x]`. Retain any failed or skipped item unchecked with an explanation.
 
-- [ ] **Step 3: Self-review the documents and diff**
+- [x] **Step 3: Self-review the documents and diff**
 
 Run `rg -n "[T]BD|[T]ODO|[F]IXME" docs/superpowers/specs/2026-07-14-friday-double-xp-presentation-design.md docs/superpowers/plans/2026-07-14-friday-double-xp-presentation-pass.md`, `git diff --check`, and `git status --short`.
 
 Expected: no placeholders, whitespace defects, or staged proof artifacts.
 
-- [ ] **Step 4: Run the complete feature-tree gate**
+- [x] **Step 4: Run the complete feature-tree gate**
 
 Run `npm run verify`.
 
