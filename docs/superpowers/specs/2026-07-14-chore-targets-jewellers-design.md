@@ -58,6 +58,7 @@ These are ordinary 2004-bedroom tidying targets, not fantasy loot containers. Ea
 - Basket wicker: `#B28A55`, dark structure: `#725034`, rim: `#8E673C`.
 
 No new global colour family is introduced. All materials remain matte Lambert materials under the existing bedroom lighting.
+Repeated wooden members use three restrained per-instance tone multipliers so adjacent rails separate under warm room lighting without adding materials, textures, or draw calls.
 
 ### Signature
 

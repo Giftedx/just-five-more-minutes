@@ -310,7 +310,7 @@ export function makeLaundryBasket(): THREE.Group {
 }
 ```
 
-> **Verified implementation deviation:** Production-browser diagnosis found that the three-mesh bin raised the 1200×800 room composition from 128 to 129 calls, while Three's default non-uniform instance sphere raised the Mum doorway composition from 55 to 56. The shipped implementation therefore merges the bin interior and rim into one vertex-coloured `room-chore-bin-mouth` mesh while retaining named part anchors, and derives every instance-batch sphere from its exact aggregate box. The browser contract pins the resulting eight-mesh target set, 0.4-or-tighter basket-rim sphere, and both existing render ceilings.
+> **Verified implementation deviation:** Production-browser diagnosis found that the three-mesh bin raised the 1200×800 room composition from 128 to 129 calls, while Three's default non-uniform instance sphere raised the Mum doorway composition from 55 to 56. The shipped implementation therefore merges the bin interior and rim into one vertex-coloured `room-chore-bin-mouth` mesh while retaining named part anchors, derives every instance-batch sphere from its exact aggregate box, and adds three draw-call-free instance tones to repeated wooden members after visual proof exposed excessive uniformity. The browser contract pins the resulting eight-mesh target set, three-tone batches, 0.4-or-tighter basket-rim sphere, and both existing render ceilings.
 
 - [ ] **Step 2: Replace only the inline target construction**
 

@@ -1757,6 +1757,20 @@ try {
             roots[2]?.getObjectByName('room-chore-basket-slats')?.count,
             roots[2]?.getObjectByName('room-chore-basket-rim')?.count,
           ],
+          instancePaletteSizes: [
+            roots[0]?.getObjectByName('room-chore-tray-rim'),
+            roots[2]?.getObjectByName('room-chore-basket-slats'),
+            roots[2]?.getObjectByName('room-chore-basket-rim'),
+          ].map((batch) => {
+            if (!batch?.instanceColor) return 0;
+            const color = batch.material.color.clone();
+            const palette = new Set();
+            for (let index = 0; index < batch.count; index++) {
+              batch.getColorAt(index, color);
+              palette.add(color.getHexString());
+            }
+            return palette.size;
+          }),
           basketRimBounds: (() => {
             const rim = roots[2]?.getObjectByName('room-chore-basket-rim');
             return rim?.boundingSphere?.radius;
@@ -1799,6 +1813,7 @@ try {
       ]);
       assert.deepEqual(state.interactableMembership, [1, 1, 1]);
       assert.deepEqual(state.instanceCounts, [4, 12, 4]);
+      assert.deepEqual(state.instancePaletteSizes, [3, 3, 3]);
       assert.ok(state.basketRimBounds <= 0.4, `basket rim culling bounds are inflated: ${state.basketRimBounds}`);
       assert.deepEqual(state.binMouthBatch, {
         name: 'room-chore-bin-mouth',

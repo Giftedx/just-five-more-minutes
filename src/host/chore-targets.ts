@@ -46,9 +46,15 @@ function batchedMarker(name: string, y: number): THREE.Group {
   return marker;
 }
 
-function instances(material: THREE.Material, transforms: readonly InstanceTransform[]): THREE.InstancedMesh {
+function instances(
+  material: THREE.Material,
+  transforms: readonly InstanceTransform[],
+  tints?: readonly number[],
+): THREE.InstancedMesh {
+  if (tints && tints.length !== transforms.length) throw new Error('Instance tint count must match transforms');
   const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, transforms.length);
   const matrix = new THREE.Matrix4();
+  const tint = new THREE.Color();
   for (let index = 0; index < transforms.length; index++) {
     const transform = transforms[index]!;
     matrix.compose(
@@ -57,8 +63,10 @@ function instances(material: THREE.Material, transforms: readonly InstanceTransf
       new THREE.Vector3(...transform.scale),
     );
     mesh.setMatrixAt(index, matrix);
+    if (tints) mesh.setColorAt(index, tint.setHex(tints[index]!));
   }
   mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.computeBoundingBox();
   if (mesh.boundingBox) {
     // Three's default sphere scales the unit cube by each instance's longest
@@ -80,12 +88,16 @@ export function makeChoreTray(): THREE.Group {
   inset.name = 'room-chore-tray-inset';
   tray.add(inset);
 
-  const rim = instances(lambert(0xb28757), [
-    { position: [-0.265, 0.055, 0], scale: [0.03, 0.07, 0.36] },
-    { position: [0.265, 0.055, 0], scale: [0.03, 0.07, 0.36] },
-    { position: [0, 0.055, -0.165], scale: [0.5, 0.07, 0.03] },
-    { position: [0, 0.055, 0.165], scale: [0.5, 0.07, 0.03] },
-  ]);
+  const rim = instances(
+    lambert(0xb28757),
+    [
+      { position: [-0.265, 0.055, 0], scale: [0.03, 0.07, 0.36] },
+      { position: [0.265, 0.055, 0], scale: [0.03, 0.07, 0.36] },
+      { position: [0, 0.055, -0.165], scale: [0.5, 0.07, 0.03] },
+      { position: [0, 0.055, 0.165], scale: [0.5, 0.07, 0.03] },
+    ],
+    [0xffffff, 0xf2e6d8, 0xe6d2bc, 0xffffff],
+  );
   rim.name = 'room-chore-tray-rim';
   tray.add(rim);
   return tray;
@@ -137,16 +149,28 @@ export function makeLaundryBasket(): THREE.Group {
       { position: [0.235, 0.17, offset], scale: [0.025, 0.29, 0.055] },
     );
   }
-  const slatMesh = instances(lambert(0xb28a55), slats);
+  const slatMesh = instances(
+    lambert(0xb28a55),
+    slats,
+    [
+      0xffffff, 0xf0ddc6, 0xe4c8aa, 0xffffff,
+      0xf0ddc6, 0xe4c8aa, 0xffffff, 0xf0ddc6,
+      0xe4c8aa, 0xffffff, 0xf0ddc6, 0xe4c8aa,
+    ],
+  );
   slatMesh.name = 'room-chore-basket-slats';
   basket.add(slatMesh);
 
-  const rim = instances(lambert(0x8e673c), [
-    { position: [-0.235, 0.33, 0], scale: [0.055, 0.055, 0.5] },
-    { position: [0.235, 0.33, 0], scale: [0.055, 0.055, 0.5] },
-    { position: [0, 0.33, -0.235], scale: [0.5, 0.055, 0.055] },
-    { position: [0, 0.33, 0.235], scale: [0.5, 0.055, 0.055] },
-  ]);
+  const rim = instances(
+    lambert(0x8e673c),
+    [
+      { position: [-0.235, 0.33, 0], scale: [0.055, 0.055, 0.5] },
+      { position: [0.235, 0.33, 0], scale: [0.055, 0.055, 0.5] },
+      { position: [0, 0.33, -0.235], scale: [0.5, 0.055, 0.055] },
+      { position: [0, 0.33, 0.235], scale: [0.5, 0.055, 0.055] },
+    ],
+    [0xffffff, 0xedd9c2, 0xe2c5a5, 0xffffff],
+  );
   rim.name = 'room-chore-basket-rim';
   basket.add(rim);
   return basket;
