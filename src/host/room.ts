@@ -4,6 +4,7 @@ import { makeChoreBin, makeChoreTray, makeLaundryBasket } from './chore-targets'
 import { makeEnvironmentDetails } from './environment-details';
 import { makeBed, makeDeskChair } from './hero-furniture';
 import { makeMumDoorway } from './mum-doorway';
+import { makeCurtainTug, makeDuvetTug, makeWallPhone } from './night-props';
 import { makeWovenRug } from './woven-rug';
 
 export type Interactable =
@@ -1096,18 +1097,14 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
         break;
       case 'bed': {
         // Rumpled duvet corners at the foot of the bed; a tug settles them.
-        const rumple = (tint: number): THREE.Mesh =>
-          box(0.2, 0.12, 0.2, lambert(tint), 0, 0, 0);
-        addTug('bed0', slot, 'duvet corner', 'Tug the duvet straight', rumple(0x7e5a9c), -1.68, 0.46, 0.42);
-        addTug('bed1', slot, 'duvet corner', 'Tug the duvet straight', rumple(0x5e3a7c), -2.22, 0.46, 0.32);
+        addTug('bed0', slot, 'duvet corner', 'Tug the duvet straight', makeDuvetTug('left'), -1.68, 0.46, 0.42);
+        addTug('bed1', slot, 'duvet corner', 'Tug the duvet straight', makeDuvetTug('right'), -2.22, 0.46, 0.32);
         break;
       }
       case 'curtains': {
         // Bunched curtain gathers on each panel; a tug throws them open.
-        const gather = (tint: number): THREE.Mesh =>
-          box(0.09, 0.5, 0.3, lambert(tint), 0, 0, 0);
-        addTug('curt0', slot, 'curtain', 'Throw the curtains open', gather(0x7e5a9c), 2.33, 1.35, -0.05);
-        addTug('curt1', slot, 'curtain', 'Throw the curtains open', gather(0x7e5a9c), 2.33, 1.35, 0.85);
+        addTug('curt0', slot, 'curtain', 'Throw the curtains open', makeCurtainTug('left'), 2.33, 1.35, -0.05);
+        addTug('curt1', slot, 'curtain', 'Throw the curtains open', makeCurtainTug('right'), 2.33, 1.35, 0.85);
         break;
       }
     }
@@ -1119,11 +1116,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
 
   // ---- the landline (Wednesdays): a wall phone by the door, all Mum's
   if (config.phone) {
-    const phone = new THREE.Group();
-    const body = box(0.09, 0.2, 0.05, lambert(0xd8d0c0), 0, 0, 0);
-    phone.add(body);
-    phone.add(box(0.07, 0.08, 0.02, lambert(0x3a3630), 0, 0.03, -0.032)); // handset window
-    phone.add(box(0.05, 0.015, 0.02, lambert(0xb8b0a0), 0, -0.055, -0.033)); // hook
+    const phone = makeWallPhone();
     phone.position.set(0.35, 1.35, 1.97);
     scene.add(phone);
   }

@@ -1690,6 +1690,112 @@ try {
   );
 
   await scenario(
+    'night-specific household props stay authored, functional, and bounded',
+    { viewport: { width: 1200, height: 800 } },
+    async (page) => {
+      const consoleProblems = [];
+      page.on('console', (message) => {
+        if (message.type() === 'warning' || message.type() === 'error') {
+          consoleProblems.push(`${message.type()}: ${message.text()}`);
+        }
+      });
+      page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+
+      const inspectNight = async (night, names) => {
+        await gotoOk(page, { skipTitle: 1, night, seed: 313 });
+        await page.waitForFunction(() => window.__game?.host?.room?.scene);
+        return page.evaluate((rootNames) => {
+          const host = window.__game.host;
+          const roots = rootNames.map((name) => host.room.scene.getObjectByName(name));
+          const textures = new Set();
+          let meshes = 0;
+          let triangles = 0;
+          let lights = 0;
+          let casters = 0;
+          const forbiddenMaterials = [];
+          for (const root of roots.filter(Boolean)) {
+            root.traverse((object) => {
+              if (object.isLight) lights++;
+              if (!object.isMesh) return;
+              meshes++;
+              if (object.castShadow) casters++;
+              const multiplier = object.isInstancedMesh ? object.count : 1;
+              const primitives = object.geometry.index?.count ?? object.geometry.attributes.position?.count ?? 0;
+              triangles += Math.floor(primitives / 3) * multiplier;
+              const materials = Array.isArray(object.material) ? object.material : [object.material];
+              for (const material of materials) {
+                if (material?.map) textures.add(material.map.uuid);
+                if (material?.isMeshStandardMaterial || material?.isMeshPhysicalMaterial) {
+                  forbiddenMaterials.push(material.type);
+                }
+              }
+            });
+          }
+          host.renderer.render(host.room.scene, host.camera);
+          return {
+            names: roots.map((root) => root?.name),
+            namedCounts: rootNames.map((name) => {
+              let count = 0;
+              host.room.scene.traverse((object) => { if (object.name === name) count++; });
+              return count;
+            }),
+            positions: roots.map((root) => root?.position.toArray()),
+            contracts: roots.map((root) => root?.userData.interact),
+            memberships: roots.map((root) => host.room.interactables.filter((item) => item === root).length),
+            meshes,
+            triangles,
+            textures: textures.size,
+            lights,
+            casters,
+            forbiddenMaterials,
+          };
+        }, names);
+      };
+
+      const bedNames = ['room-duvet-tug-left', 'room-duvet-tug-right'];
+      const curtainNames = ['room-curtain-tug-left', 'room-curtain-tug-right'];
+      const tuesday = await inspectNight(1, bedNames);
+      const wednesday = await inspectNight(2, ['room-wall-phone', ...bedNames]);
+      const thursday = await inspectNight(3, curtainNames);
+
+      assert.deepEqual(tuesday.names, bedNames);
+      assert.deepEqual(tuesday.namedCounts, [1, 1]);
+      assert.deepEqual(tuesday.positions, [[-1.68, 0.46, 0.42], [-2.22, 0.46, 0.32]]);
+      assert.deepEqual(tuesday.contracts, [
+        { type: 'tug', itemId: 'bed0', chore: 'wrappers', name: 'duvet corner', action: 'Tug the duvet straight' },
+        { type: 'tug', itemId: 'bed1', chore: 'wrappers', name: 'duvet corner', action: 'Tug the duvet straight' },
+      ]);
+      assert.deepEqual(tuesday.memberships, [1, 1]);
+
+      assert.deepEqual(wednesday.names, ['room-wall-phone', ...bedNames]);
+      assert.deepEqual(wednesday.namedCounts, [1, 1, 1]);
+      assert.deepEqual(wednesday.positions, [[0.35, 1.35, 1.97], [-1.68, 0.46, 0.42], [-2.22, 0.46, 0.32]]);
+      assert.equal(wednesday.contracts[0], undefined);
+      assert.equal(wednesday.memberships[0], 0);
+      assert.deepEqual(wednesday.memberships.slice(1), [1, 1]);
+
+      assert.deepEqual(thursday.names, curtainNames);
+      assert.deepEqual(thursday.namedCounts, [1, 1]);
+      assert.deepEqual(thursday.positions, [[2.33, 1.35, -0.05], [2.33, 1.35, 0.85]]);
+      assert.deepEqual(thursday.contracts, [
+        { type: 'tug', itemId: 'curt0', chore: 'wrappers', name: 'curtain', action: 'Throw the curtains open' },
+        { type: 'tug', itemId: 'curt1', chore: 'wrappers', name: 'curtain', action: 'Throw the curtains open' },
+      ]);
+      assert.deepEqual(thursday.memberships, [1, 1]);
+
+      for (const state of [tuesday, wednesday, thursday]) {
+        assert.ok(state.meshes <= 18, `night prop draw-call proxy exceeded: ${state.meshes}`);
+        assert.ok(state.triangles <= 1500, `night prop triangle budget exceeded: ${state.triangles}`);
+        assert.equal(state.textures, 0);
+        assert.equal(state.lights, 0);
+        assert.equal(state.casters, 0);
+        assert.deepEqual(state.forbiddenMaterials, []);
+      }
+      assert.deepEqual(consoleProblems, []);
+    },
+  );
+
+  await scenario(
     'bedroom chore targets stay authored, functional, and bounded',
     { viewport: { width: 1200, height: 800 } },
     async (page) => {
