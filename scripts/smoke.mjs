@@ -590,7 +590,7 @@ try {
     assertDialogueGeometry(shortGeometry);
     assert.equal(shortGeometry.chorePromptOverlap, 0, JSON.stringify(shortGeometry));
     assert.ok(shortGeometry.chorePromptGap >= 8, JSON.stringify(shortGeometry));
-    const compactPromptStyles = await page.evaluate(() => {
+    const readPromptStyles = () => page.evaluate(() => {
       const hint = document.querySelector('.hud-prompt-hint');
       const option = document.querySelector('.hud-prompt-option');
       if (!(hint instanceof HTMLElement)) throw new Error('Expected a prompt hint');
@@ -607,8 +607,19 @@ try {
         ],
       };
     });
+    const compactPromptStyles = await readPromptStyles();
     assert.equal(compactPromptStyles.hintMarginBottom, '0px');
     assert.deepEqual(compactPromptStyles.optionPadding, ['5px', '10px', '5px', '8px']);
+
+    await page.setViewportSize({ width: 900, height: 520 });
+    await page.waitForTimeout(100);
+    assert.deepEqual(await readPromptStyles(), compactPromptStyles);
+
+    await page.setViewportSize({ width: 900, height: 521 });
+    await page.waitForTimeout(100);
+    const boundaryPromptStyles = await readPromptStyles();
+    assert.equal(boundaryPromptStyles.hintMarginBottom, '2px');
+    assert.deepEqual(boundaryPromptStyles.optionPadding, ['7px', '12px', '7px', '8px']);
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.waitForTimeout(100);
@@ -1028,6 +1039,7 @@ try {
       await page.mouse.move(900, 600);
       const state = await page.evaluate(() => {
         const atmosphere = document.querySelector('.title-atmosphere');
+        const card = document.querySelector('.title-card');
         const flicker = document.querySelector('.title-crt-flicker');
         const canvas = document.querySelector('.title-crt');
         const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
@@ -1040,11 +1052,13 @@ try {
         }
         return {
           transform: atmosphere.style.transform,
+          cardCursor: getComputedStyle(card).cursor,
           flickerDisplay: getComputedStyle(flicker).display,
           painted,
         };
       });
       assert.equal(state.transform, before, 'reduced-motion title parallax changed');
+      assert.equal(state.cardCursor, 'auto', 'title card inherited the screen-wide start cursor');
       assert.equal(state.flickerDisplay, 'none');
       assert.equal(state.painted, true, 'reduced-motion CRT had no painted pixels');
     },

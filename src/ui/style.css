@@ -1060,6 +1060,7 @@ body {
 .title-card {
   position: relative;
   z-index: 2;
+  cursor: auto;
   width: min(680px, 100%);
   max-height: min(94vh, 880px);
   overflow-y: auto;
@@ -1513,12 +1514,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.hud, .title-screen, .scorecard),
-  :is(.hud, .title-screen, .scorecard)::before,
-  :is(.hud, .title-screen, .scorecard)::after,
-  :is(.hud, .title-screen, .scorecard) *,
-  :is(.hud, .title-screen, .scorecard) *::before,
-  :is(.hud, .title-screen, .scorecard) *::after {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
     transition: none !important;
   }
