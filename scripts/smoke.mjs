@@ -1569,6 +1569,28 @@ try {
           'room-bed-pillow-seam',
           'room-bed-foot-throw',
         ];
+        const detailNames = [
+          'room-chair-seat-stitch',
+          'room-chair-back-stitch',
+          'room-chair-back-handle',
+          'room-bed-headboard-lip',
+          'room-bed-pillow-seam',
+          'room-bed-foot-throw',
+        ];
+        const round = (value) => Number(value.toFixed(3));
+        const instanceTransforms = (object) => {
+          if (!object?.isInstancedMesh) return null;
+          const values = Array.from(object.instanceMatrix.array);
+          return Array.from({ length: object.count }, (_, index) => {
+            const offset = index * 16;
+            return {
+              position: [values[offset + 12], values[offset + 13], values[offset + 14]].map(round),
+              scale: [values[offset], values[offset + 5], values[offset + 10]].map(round),
+            };
+          });
+        };
+        const handle = chair?.getObjectByName('room-chair-back-handle');
+        const frameBatch = bed?.getObjectByName('room-bed-frame')?.children.find((object) => object.isInstancedMesh);
 
         return {
           chairName: chair?.name,
@@ -1577,6 +1599,17 @@ try {
             ...chairChildren.map((name) => chair?.getObjectByName(name)?.name),
             ...bedChildren.map((name) => bed?.getObjectByName(name)?.name),
           ],
+          detailStates: detailNames.map((name) => {
+            const object = chair?.getObjectByName(name) ?? bed?.getObjectByName(name);
+            return {
+              name: object?.name,
+              isMesh: object?.isMesh,
+              position: object?.position.toArray().map(round),
+              rotationY: object ? round(object.rotation.y) : null,
+            };
+          }),
+          handleInstances: instanceTransforms(handle),
+          frameInstances: instanceTransforms(frameBatch),
           chairInteraction: chair?.userData.interact?.type,
           chairInteractableMembers: chair
             ? host.room.interactables.filter((object) => belongsTo(object, chair)).length
@@ -1615,6 +1648,28 @@ try {
         'room-bed-headboard-lip',
         'room-bed-pillow-seam',
         'room-bed-foot-throw',
+      ]);
+      assert.deepEqual(state.detailStates, [
+        { name: 'room-chair-seat-stitch', isMesh: true, position: [0, 0.507, -0.105], rotationY: 0 },
+        { name: 'room-chair-back-stitch', isMesh: true, position: [0, 0.83, 0.235], rotationY: 0 },
+        { name: 'room-chair-back-handle', isMesh: true, position: [0, 0.92, 0.24], rotationY: 0 },
+        { name: 'room-bed-headboard-lip', isMesh: true, position: [0, 0.79, -1], rotationY: 0 },
+        { name: 'room-bed-pillow-seam', isMesh: true, position: [0, 0.54, -0.52], rotationY: -0.08 },
+        { name: 'room-bed-foot-throw', isMesh: true, position: [0, 0.505, 0.83], rotationY: 0 },
+      ]);
+      assert.deepEqual(state.handleInstances, [
+        { position: [0, -0.33, -0.07], scale: [0.055, 0.34, 0.055] },
+        { position: [0, 0, 0], scale: [0.18, 0.035, 0.018] },
+      ]);
+      assert.deepEqual(state.frameInstances, [
+        { position: [-0.445, 0.22, 0], scale: [0.08, 0.24, 1.92] },
+        { position: [0.445, 0.22, 0], scale: [0.08, 0.24, 1.92] },
+        { position: [0, 0.22, -0.96], scale: [0.95, 0.24, 0.08] },
+        { position: [0, 0.22, 0.96], scale: [0.95, 0.24, 0.08] },
+        { position: [-0.41, 0.09, -0.92], scale: [0.08, 0.18, 0.08] },
+        { position: [0.41, 0.09, -0.92], scale: [0.08, 0.18, 0.08] },
+        { position: [-0.41, 0.09, 0.92], scale: [0.08, 0.18, 0.08] },
+        { position: [0.41, 0.09, 0.92], scale: [0.08, 0.18, 0.08] },
       ]);
       assert.equal(state.chairInteraction, 'pc');
       assert.equal(state.chairInteractableMembers, 1);

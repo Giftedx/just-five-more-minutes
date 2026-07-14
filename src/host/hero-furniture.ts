@@ -158,10 +158,11 @@ export function makeDeskChair(): THREE.Group {
   chair.add(backStitch);
 
   const backHandle = instances(new THREE.BoxGeometry(1, 1, 1), darkMetal, [
-    { position: [0, 0.59, 0.17], scale: [0.055, 0.34, 0.055] },
-    { position: [0, 0.92, 0.24], scale: [0.18, 0.035, 0.018] },
+    { position: [0, -0.33, -0.07], scale: [0.055, 0.34, 0.055] },
+    { position: [0, 0, 0], scale: [0.18, 0.035, 0.018] },
   ]);
   backHandle.name = 'room-chair-back-handle';
+  backHandle.position.set(0, 0.92, 0.24);
   chair.add(backHandle);
 
   const base = new THREE.Group();
