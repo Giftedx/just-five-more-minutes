@@ -63,6 +63,23 @@ export const CANVAS_W = 320;
 export const CANVAS_H = 240;
 export const VIEW_W = 240; // world viewport width; right 80px is the side panel
 export const PANEL_W = CANVAS_W - VIEW_W;
+export const DISCONNECT_COLORS = {
+  failure: '#981818',
+  footer: '#c0c0c0',
+} as const;
+
+export interface DisconnectFrame {
+  retryLabel: string;
+  activeSegments: number;
+}
+
+/** Pure presentation state: animation follows the renderer clock and needs no timer. */
+export function disconnectFrame(now: number): DisconnectFrame {
+  return {
+    retryLabel: `Retrying${'.'.repeat(1 + (Math.floor(now / 400) % 3))}`,
+    activeSegments: 1 + (Math.floor(now / 200) % 6),
+  };
+}
 
 interface Hitsplat {
   x: number;
@@ -801,33 +818,105 @@ export class MmoRenderer {
     ctx.restore();
 
     if (this.vignette) ctx.drawImage(this.vignette, 0, 0);
-    if (this.sim.isLoggedOut) this.drawDisconnected(now);
     this.drawObjectiveBanner(now);
     this.drawAwayPlanChips();
     this.drawChat(now);
     this.drawXpDrops(now);
     this.drawHoverText();
+    // A disconnect owns the world viewport; stale menus must not leak into the stats panel.
+    if (this.sim.isLoggedOut) this.dismissOverlays();
     this.drawPanel();
     if (this.tradeOpen) this.drawTradeDialog();
     if (this.menu) this.drawMenu();
     this.drawLowHpPulse(now);
+    if (this.sim.isLoggedOut) this.drawDisconnected(now);
   }
 
   /** The landline has won. Period-perfect despair. */
   private drawDisconnected(now: number): void {
     const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(6,10,26,0.86)';
+    const frame = disconnectFrame(now);
+    const x = 22;
+    const y = 58;
+    const w = 196;
+    const h = 122;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(6,10,26,0.78)';
     ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
-    ctx.fillStyle = '#c8d4f0';
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Connection lost.', VIEW_W / 2, CANVAS_H / 2 - 10);
-    ctx.font = '8px monospace';
-    ctx.fillStyle = '#8a9ac0';
-    const dots = '.'.repeat(1 + (Math.floor(now / 500) % 3));
-    ctx.fillText(`Please wait${dots}`, VIEW_W / 2, CANVAS_H / 2 + 6);
-    ctx.fillText('(someone is on the phone)', VIEW_W / 2, CANVAS_H / 2 + 20);
+
+    // Windows-classic shell and hard bevels: familiar in 2004, never web-card soft.
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(x + 3, y + 3, w, h);
+    ctx.fillStyle = '#d4d0c8';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x, y, w - 1, 1);
+    ctx.fillRect(x, y, 1, h - 1);
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(x + 1, y + h - 2, w - 2, 1);
+    ctx.fillRect(x + w - 2, y + 1, 1, h - 2);
+    ctx.fillStyle = '#404040';
+    ctx.fillRect(x, y + h - 1, w, 1);
+    ctx.fillRect(x + w - 1, y, 1, h);
+
+    // Application title bar.
+    ctx.fillStyle = '#0a246a';
+    ctx.fillRect(25, 61, 190, 15);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'left';
+    ctx.fillText('Mudwick Online', 29, 71);
+
+    // A broken phone-line glyph rather than a generic alert triangle.
+    ctx.fillStyle = DISCONNECT_COLORS.failure;
+    ctx.fillRect(35, 88, 18, 18);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(38, 95, 6, 3);
+    ctx.fillRect(41, 92, 3, 3);
+    ctx.fillRect(46, 98, 4, 3);
+    ctx.fillRect(46, 95, 3, 3);
+    ctx.fillRect(43, 96, 1, 1);
+    ctx.fillRect(49, 101, 2, 2);
+
+    ctx.fillStyle = '#000000';
+    ctx.font = '8px monospace';
+    ctx.fillText('Connection to server lost.', 62, 93);
+    ctx.fillStyle = '#404040';
+    ctx.font = '6px monospace';
+    ctx.fillText('Your character is safely logged out.', 62, 105);
+    ctx.fillStyle = '#000000';
+    ctx.font = '7px monospace';
+    ctx.fillText(frame.retryLabel, 62, 119);
+
+    // Recessed activity meter. It loops rather than pretending to show elapsed time.
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(62, 125, 140, 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(63, 126, 138, 8);
+    ctx.fillStyle = '#404040';
+    ctx.fillRect(64, 127, 136, 6);
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = i < frame.activeSegments ? '#0a246a' : '#a8a8a0';
+      ctx.fillRect(66 + i * 22, 128, 19, 4);
+    }
+
+    // The footer makes the cause part of this bedroom's story, not generic networking.
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(31, 143, 178, 31);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(32, 144, 176, 29);
+    ctx.fillStyle = DISCONNECT_COLORS.footer;
+    ctx.fillRect(33, 145, 174, 27);
+    ctx.fillStyle = '#404040';
+    ctx.font = 'bold 6px monospace';
+    ctx.fillText('PHONE LINE', 38, 154);
+    ctx.fillStyle = DISCONNECT_COLORS.failure;
+    ctx.fillText('BUSY', 183, 154);
+    ctx.fillStyle = '#000000';
+    ctx.font = '7px monospace';
+    ctx.fillText('Someone is on the phone.', 38, 166);
+    ctx.restore();
   }
 
   /** Standing orders row, top-right of the world view. */

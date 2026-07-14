@@ -2432,6 +2432,63 @@ try {
     },
   );
 
+  await scenario('modem outage modal stays authored and bounded', { viewport: { width: 1000, height: 700 } }, async (page) => {
+    const consoleProblems = [];
+    page.on('console', (message) => {
+      if (message.type() === 'warning' || message.type() === 'error') {
+        consoleProblems.push(`${message.type()}: ${message.text()}`);
+      }
+    });
+    page.on('pageerror', (error) => consoleProblems.push(`pageerror: ${error.message}`));
+    await gotoOk(page, { skipTitle: 1, night: 2, seed: 313 });
+    await page.waitForFunction(() => window.__game?.host?.mmo?.canvas);
+
+    const state = await page.evaluate(() => {
+      const host = window.__game.host;
+      const canvas = host.mmo.canvas;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Mudwick canvas context is missing');
+      host.mmo.renderer.openMenu(239, 160, [{ label: 'Walk here', act: { kind: 'none' } }]);
+      host.mmo.renderer.tradeOpen = true;
+      host.mmo.sim.setConnected(false);
+      host.mmo.renderer.render(800, 0);
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const pixel = (x, y) => {
+        const index = (y * canvas.width + x) * 4;
+        return Array.from(pixels.slice(index, index + 4));
+      };
+
+      return {
+        width: canvas.width,
+        height: canvas.height,
+        loggedOut: host.mmo.sim.isLoggedOut,
+        menuOpen: host.mmo.renderer.menu !== null,
+        tradeOpen: host.mmo.renderer.tradeOpen,
+        after: {
+          world: pixel(8, 180),
+          panel: pixel(300, 180),
+          panelMenuEdge: pixel(250, 165),
+          titleBar: pixel(210, 65),
+          shell: pixel(28, 81),
+          failureIcon: pixel(36, 89),
+        },
+      };
+    });
+
+    assert.equal(state.width, 320);
+    assert.equal(state.height, 240);
+    assert.equal(state.loggedOut, true);
+    assert.equal(state.menuOpen, false);
+    assert.equal(state.tradeOpen, false);
+    assert.ok(state.after.world.slice(0, 3).every((channel) => channel < 50), JSON.stringify(state.after.world));
+    assert.deepEqual(state.after.panel, [200, 176, 136, 255]);
+    assert.deepEqual(state.after.panelMenuEdge, [200, 176, 136, 255]);
+    assert.deepEqual(state.after.titleBar, [10, 36, 106, 255]);
+    assert.deepEqual(state.after.shell, [212, 208, 200, 255]);
+    assert.deepEqual(state.after.failureIcon, [152, 24, 24, 255]);
+    assert.deepEqual(consoleProblems, []);
+  });
+
   await scenario('room-mode MMO render cadence is capped', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await gotoOk(page, { skipTitle: 1, seed: 6 });
     await page.waitForFunction(() => {
