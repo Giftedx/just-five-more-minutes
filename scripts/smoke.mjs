@@ -628,12 +628,19 @@ try {
         color: element.style.color,
       };
       try {
+        const keyframes = Array.from(document.styleSheets)
+          .flatMap((sheet) => Array.from(sheet.cssRules))
+          .find((rule) => rule.type === CSSRule.KEYFRAMES_RULE && rule.name === 'hudflash');
+        const startFrame = keyframes
+          ? Array.from(keyframes.cssRules).find((rule) => rule.keyText === '0%' || rule.keyText === 'from')
+          : null;
+        if (!startFrame) throw new Error('hudflash start frame is missing');
         element.style.animation = 'none';
-        element.style.background = '#e8c33f';
-        element.style.color = '#1a1408';
+        element.style.background = startFrame.style.background;
+        element.style.color = startFrame.style.color;
         const card = getComputedStyle(element);
         const eyebrow = getComputedStyle(element, '::before');
-        const channels = (value) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+        const channels = (value) => (value.match(/[\d.]+/g) ?? []).map(Number);
         const composite = (foreground, background, alpha) =>
           foreground.map((channel, index) =>
             Math.round(channel * alpha + (background[index] ?? 0) * (1 - alpha)));
@@ -645,11 +652,15 @@ try {
           return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
         };
         const alpha = Number(eyebrow.opacity);
-        const foreground = composite(channels(eyebrow.color), channels(card.backgroundColor), alpha);
-        const background = channels(card.backgroundColor);
+        const cardChannels = channels(card.backgroundColor);
+        const cardAlpha = cardChannels[3] ?? 1;
+        // Black is the conservative room backdrop for this translucent gold flash.
+        const background = cardChannels.slice(0, 3).map((channel) => Math.round(channel * cardAlpha));
+        const foreground = composite(channels(eyebrow.color).slice(0, 3), background, alpha);
         const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
         return {
           bodyColor: card.color,
+          flashBackground: card.backgroundColor,
           eyebrowColor: eyebrow.color,
           eyebrowOpacity: eyebrow.opacity,
           contrast: ((values[0] ?? 0) + 0.05) / ((values[1] ?? 0) + 0.05),
@@ -661,8 +672,8 @@ try {
       }
     });
     assert.equal(objectiveFlash.eyebrowColor, objectiveFlash.bodyColor);
-    assert.equal(objectiveFlash.eyebrowOpacity, '0.65');
     assert.ok(objectiveFlash.contrast >= 4.5, JSON.stringify(objectiveFlash));
+    assert.equal(objectiveFlash.eyebrowOpacity, '0.7');
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.waitForTimeout(100);
