@@ -341,6 +341,122 @@ try {
     },
   );
 
+  await scenario(
+    'room interaction lockup exposes authored target states',
+    { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' },
+    async (page) => {
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.['host']?.mode === 'room');
+
+      const aimAt = async (position, target, promptPattern) => {
+        await page.evaluate(({ position, target }) => {
+          const host = window.__game['host'];
+          const player = host.player;
+          player.pos.set(position[0], position[1], position[2]);
+          const dx = target[0] - position[0];
+          const dy = target[1] - 1.55;
+          const dz = target[2] - position[2];
+          player.yaw = Math.atan2(-dx, -dz);
+          player.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+          player['apply']();
+        }, { position, target });
+        await page.waitForFunction(
+          (pattern) => {
+            const prompt = window.__game?.['host']?.prompt;
+            return prompt?.label && new RegExp(pattern).test(prompt.label);
+          },
+          promptPattern,
+        );
+        await page.waitForFunction(
+          (pattern) => new RegExp(pattern).test(document.querySelector('.hud-interact')?.textContent ?? ''),
+          promptPattern.replace(/^E . /, ''),
+        );
+      };
+
+      const readLockup = () => page.evaluate(() => {
+        const prompt = document.querySelector('.hud-interact');
+        const crosshair = document.querySelector('.hud-crosshair');
+        const fader = document.querySelector('.volume-control');
+        const promptRect = prompt.getBoundingClientRect();
+        const crosshairRect = crosshair.getBoundingClientRect();
+        const faderRect = fader.getBoundingClientRect();
+        const style = getComputedStyle(crosshair);
+        const overlapArea = (a, b) => (
+          Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+          * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+        );
+        return {
+          promptDisplay: getComputedStyle(prompt).display,
+          promptText: prompt.textContent,
+          promptPassive: prompt.classList.contains('hud-interact-passive'),
+          crosshairDisplay: style.display,
+          target: crosshair.classList.contains('hud-crosshair-target'),
+          passive: crosshair.classList.contains('hud-crosshair-passive'),
+          crosshairWidth: crosshairRect.width,
+          crosshairHeight: crosshairRect.height,
+          borderColor: style.borderColor,
+          background: style.backgroundColor,
+          promptBounds: {
+            left: promptRect.left,
+            top: promptRect.top,
+            right: promptRect.right,
+            bottom: promptRect.bottom,
+          },
+          viewport: { width: innerWidth, height: innerHeight },
+          faderOverlap: overlapArea(promptRect, faderRect),
+        };
+      });
+
+      let state = await readLockup();
+      assert.equal(state.promptDisplay, 'none');
+      assert.equal(state.target, false);
+      assert.equal(state.passive, false);
+      assert.equal(state.crosshairDisplay, 'block');
+
+      await aimAt([0.28, 0, -0.8], [0.28, 0.82, -1.42], 'Pick up mug');
+      state = await readLockup();
+      assert.equal(state.promptDisplay, 'flex');
+      assert.equal(state.promptText, 'EPick up mug');
+      assert.equal(state.promptPassive, false);
+      assert.equal(state.target, true);
+      assert.equal(state.passive, false);
+      assert.ok(state.crosshairWidth >= 17 && state.crosshairHeight >= 17, JSON.stringify(state));
+      assert.match(state.borderColor, /232, 195, 63|255, 220, 120/);
+
+      await aimAt([0.05, 0, 1.1], [0.05, 0.05, 1.72], 'tray');
+      state = await readLockup();
+      assert.equal(state.promptDisplay, 'flex');
+      assert.match(state.promptText, /tray/);
+      assert.equal(state.promptPassive, true);
+      assert.equal(state.target, false);
+      assert.equal(state.passive, true);
+
+      await page.evaluate(() => window.__game['hud'].openPrompt(performance.now(), 4000));
+      state = await readLockup();
+      assert.equal(state.promptDisplay, 'none');
+      assert.equal(state.target, false);
+      assert.equal(state.passive, false);
+
+      await page.evaluate(() => window.__game['hud'].closePrompt());
+      await aimAt([0.9, 0, -0.9], [0.9, 0.99, -1.72], 'Use computer');
+      await page.keyboard.press('KeyE');
+      await page.waitForFunction(() => window.__game?.['host']?.mode === 'pc');
+      state = await readLockup();
+      assert.equal(state.promptDisplay, 'none');
+      assert.equal(state.crosshairDisplay, 'none');
+
+      await page.setViewportSize({ width: 900, height: 400 });
+      await page.evaluate(() => window.__game['host'].exitPc());
+      await aimAt([0.28, 0, -0.8], [0.28, 0.82, -1.42], 'Pick up mug');
+      state = await readLockup();
+      assert.equal(state.promptDisplay, 'flex');
+      assert.ok(state.promptBounds.left >= 8 && state.promptBounds.top >= 8, JSON.stringify(state));
+      assert.ok(state.promptBounds.right <= state.viewport.width - 8, JSON.stringify(state));
+      assert.ok(state.promptBounds.bottom <= state.viewport.height - 8, JSON.stringify(state));
+      assert.equal(state.faderOverlap, 0, JSON.stringify(state));
+    },
+  );
+
   await scenario('dialogue staging keeps Mum visible and controls separated', { viewport: { width: 900, height: 600 } }, async (page) => {
     await gotoOk(page, { speed: 1, t: 37, skipTitle: 1, seed: 3 });
     await page.waitForFunction(() => {
