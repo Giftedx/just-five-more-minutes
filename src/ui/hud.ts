@@ -209,18 +209,26 @@ export class Hud {
     return this.promptDeadline !== null;
   }
 
+  private setCrosshairState(state: 'idle' | 'target' | 'passive'): void {
+    this.crosshairEl.classList.toggle('hud-crosshair-target', state === 'target');
+    this.crosshairEl.classList.toggle('hud-crosshair-passive', state === 'passive');
+  }
+
   setInteractLabel(label: string | null, actionable = true): void {
     // While the 1-4 prompt is up it owns that part of the screen; the
     // interact pill would overlap it (it's refreshed every frame, so it
     // reappears the moment the prompt closes).
     if (label === null || this.promptDeadline !== null) {
       this.interactEl.style.display = 'none';
+      this.interactEl.classList.remove('hud-interact-passive');
+      this.setCrosshairState('idle');
       return;
     }
     this.interactEl.style.display = 'flex';
     this.interactEl.classList.toggle('hud-interact-passive', !actionable);
+    this.setCrosshairState(actionable ? 'target' : 'passive');
     // Actionable labels arrive as "E — do the thing": render the E as a keycap.
-    const keyed = label.match(/^E — (.*)$/);
+    const keyed = label.match(/^E [—-] (.*)$/);
     this.interactEl.innerHTML = '';
     if (keyed) {
       const key = document.createElement('span');

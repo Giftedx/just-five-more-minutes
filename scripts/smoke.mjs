@@ -396,6 +396,7 @@ try {
           crosshairHeight: crosshairRect.height,
           borderColor: style.borderColor,
           background: style.backgroundColor,
+          backgroundImage: style.backgroundImage,
           promptBounds: {
             left: promptRect.left,
             top: promptRect.top,
@@ -422,6 +423,8 @@ try {
       assert.equal(state.passive, false);
       assert.ok(state.crosshairWidth >= 17 && state.crosshairHeight >= 17, JSON.stringify(state));
       assert.match(state.borderColor, /232, 195, 63|255, 220, 120/);
+      assert.notEqual(state.backgroundImage, 'none');
+      const actionableBorder = state.borderColor;
 
       await aimAt([0.05, 0, 1.1], [0.05, 0.05, 1.72], 'tray');
       state = await readLockup();
@@ -430,6 +433,7 @@ try {
       assert.equal(state.promptPassive, true);
       assert.equal(state.target, false);
       assert.equal(state.passive, true);
+      assert.notEqual(state.borderColor, actionableBorder);
 
       await page.evaluate(() => window.__game['hud'].openPrompt(performance.now(), 4000));
       state = await readLockup();
@@ -438,12 +442,14 @@ try {
       assert.equal(state.passive, false);
 
       await page.evaluate(() => window.__game['hud'].closePrompt());
-      await aimAt([0.9, 0, -0.9], [0.9, 0.99, -1.72], 'Use computer');
+      await aimAt([0.9, 0, -0.9], [0.9, 0.99, -1.72], 'Sit down');
       await page.keyboard.press('KeyE');
       await page.waitForFunction(() => window.__game?.['host']?.mode === 'pc');
       state = await readLockup();
       assert.equal(state.promptDisplay, 'none');
       assert.equal(state.crosshairDisplay, 'none');
+      assert.equal(state.target, false);
+      assert.equal(state.passive, false);
 
       await page.setViewportSize({ width: 900, height: 400 });
       await page.evaluate(() => window.__game['host'].exitPc());
