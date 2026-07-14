@@ -254,10 +254,10 @@ npm run verify
 
 Expected: 18 test files / 208 tests, standalone build, both size budgets, all isolated browser scenarios, full interaction E2E, and mounted build pass.
 
-- [ ] **Step 4: Integrate locally and verify again**
+- [x] **Step 4: Integrate locally and verify again**
 
 Fast-forward the verified feature branch onto master and rerun npm run verify. Do not pull, push, or deploy.
 
-- [ ] **Step 5: Clean up and reflect**
+- [x] **Step 5: Clean up and reflect**
 
 Remove only the task-owned worktree and merged feature branch. Append one valid JSON line with keys date, task, outcome, surprise, and next-time to C:\Users\aggis\.Codex\memory\reflections.jsonl using apply_patch, then parse every line to validate the JSONL file.
