@@ -202,6 +202,30 @@ try {
         assert.deepEqual(await rgbaAt(x + 2, 11), [48, 51, 40, 255]);
       }
       assert.deepEqual(await rgbaAt(240, 12), panelBefore, 'strip entered the stats panel');
+
+      await gotoOk(page, { skipTitle: 1, seed: 13 });
+      await page.waitForFunction(() => window.__game?.host?.mmo?.canvas);
+      const changedStripPixels = await page.evaluate(() => {
+        const mmo = window.__game.host.mmo;
+        const ctx = mmo.canvas.getContext('2d');
+        if (!ctx) throw new Error('Mudwick canvas has no 2D context');
+        mmo.renderer.render(1_600, 0);
+        const before = ctx.getImageData(131, 1, 108, 22).data;
+        mmo.renderer.consumeEvents([{ type: 'log' }], 800);
+        mmo.renderer.render(1_600, 0);
+        const after = ctx.getImageData(131, 1, 108, 22).data;
+        let changed = 0;
+        for (let index = 0; index < before.length; index += 4) {
+          if (
+            before[index] !== after[index]
+            || before[index + 1] !== after[index + 1]
+            || before[index + 2] !== after[index + 2]
+            || before[index + 3] !== after[index + 3]
+          ) changed++;
+        }
+        return changed;
+      });
+      assert.equal(changedStripPixels, 0, 'XP drop overwrote the away plan strip');
     },
   );
 

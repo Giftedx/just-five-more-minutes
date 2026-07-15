@@ -1474,7 +1474,8 @@ export class MmoRenderer {
       const d = this.xpDrops[i];
       if (!d) continue;
       const t = 1 - (d.until - now) / 1300;
-      const y = 26 - t * 14 + i * 9;
+      const stripClearY = AWAY_PLAN_UI.plate.y + AWAY_PLAN_UI.plate.h + 1;
+      const y = stripClearY + (1 - t) * 8 + i * 9;
       ctx.globalAlpha = Math.min(1, (d.until - now) / 400);
       ctx.fillStyle = '#241a06';
       ctx.fillText(d.text, VIEW_W - 5, y + 1);
