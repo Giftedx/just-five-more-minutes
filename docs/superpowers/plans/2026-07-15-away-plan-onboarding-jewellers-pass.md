@@ -41,7 +41,7 @@
 - Consumes: existing `freshCareer()`, `loadCareer()`, `saveCareer()`, `recordNight()`, and `completeWeek()`.
 - Produces: failing contracts for `career.tutorials.awayPlanSeen: boolean` and absent-field migration.
 
-- [ ] **Step 1: Pin the fresh and round-trip defaults**
+- [x] **Step 1: Pin the fresh and round-trip defaults**
 
 Extend the fresh-career test with:
 
@@ -57,7 +57,7 @@ expect(saveCareer(storage, c)).toBe(true);
 expect(loadCareer(storage)).toEqual(c);
 ```
 
-- [ ] **Step 2: Add the legacy absent-field migration contract**
+- [x] **Step 2: Add the legacy absent-field migration contract**
 
 Add:
 
@@ -72,7 +72,7 @@ it('migrates a legacy v1 career with no tutorial block', () => {
 });
 ```
 
-- [ ] **Step 3: Add strict malformed-block coverage**
+- [x] **Step 3: Add strict malformed-block coverage**
 
 Add this case to the existing malformed-career table:
 
@@ -85,7 +85,7 @@ Add this case to the existing malformed-career table:
 
 The expected result remains `freshCareer()`, proving that only absence migrates and malformed present data does not.
 
-- [ ] **Step 4: Pin preservation across both career folds**
+- [x] **Step 4: Pin preservation across both career folds**
 
 Add:
 
@@ -99,13 +99,13 @@ it('preserves tutorial progress across nights and completed weeks', () => {
 });
 ```
 
-- [ ] **Step 5: Run the focused test to verify RED**
+- [x] **Step 5: Run the focused test to verify RED**
 
 Run `npm test -- src/score/career.test.ts`.
 
 Expected: FAIL because fresh and loaded careers have no `tutorials` block.
 
-- [ ] **Step 6: Commit the red persistence contract**
+- [x] **Step 6: Commit the red persistence contract**
 
 Run `git diff --check`, then commit `src/score/career.test.ts` with `test: expose missing tutorial persistence`.
 
@@ -119,7 +119,7 @@ Run `git diff --check`, then commit `src/score/career.test.ts` with `test: expos
 - Consumes: Task 1's failing contracts.
 - Produces: `CareerTutorials`, `Career.tutorials`, and legacy-compatible parsing.
 
-- [ ] **Step 1: Add the in-memory tutorial shape and fresh default**
+- [x] **Step 1: Add the in-memory tutorial shape and fresh default**
 
 Add:
 
@@ -144,7 +144,7 @@ In `freshCareer()` add:
 tutorials: { awayPlanSeen: false },
 ```
 
-- [ ] **Step 2: Parse absence as legacy and presence strictly**
+- [x] **Step 2: Parse absence as legacy and presence strictly**
 
 Add:
 
@@ -167,13 +167,13 @@ if (!character || !week || !tutorials) return undefined;
 
 Return `tutorials` in the fresh parsed object. Do not change the version or storage key.
 
-- [ ] **Step 3: Run focused tests to verify GREEN**
+- [x] **Step 3: Run focused tests to verify GREEN**
 
 Run `npm test -- src/score/career.test.ts`.
 
 Expected: all career tests pass, including legacy migration, malformed-present rejection, and fold preservation.
 
-- [ ] **Step 4: Fan out every Career producer and fixture**
+- [x] **Step 4: Fan out every Career producer and fixture**
 
 Run:
 
@@ -183,7 +183,7 @@ rg -n "version: 1|freshCareer\(|Career\b|j5mm-career-v1" src scripts --glob "*.t
 
 Every handwritten Career fixture must either include `tutorials` or intentionally omit it to test legacy migration. Existing object spreads from a full Career need no edit. Use `npm run typecheck` to catch missed producers.
 
-- [ ] **Step 5: Commit the compatible persistence seam**
+- [x] **Step 5: Commit the compatible persistence seam**
 
 Run `git diff --check`, then commit `src/score/career.ts` and any compiler-required fixture edits with `feat: persist tutorial progress`.
 
@@ -197,7 +197,7 @@ Run `git diff --check`, then commit `src/score/career.ts` and any compiler-requi
 - Consumes: `Career.tutorials.awayPlanSeen` from Task 2, the real chair interaction, `HostApp` mode callbacks, and existing HUD toast semantics.
 - Produces: failing authored-copy and production-browser lifecycle contracts.
 
-- [ ] **Step 1: Add the authored tutorial contract test**
+- [x] **Step 1: Add the authored tutorial contract test**
 
 In `src/game.test.ts`, import `AWAY_PLAN_TUTORIAL` from `./game` and add:
 
@@ -213,7 +213,7 @@ describe('away plan onboarding copy', () => {
 });
 ```
 
-- [ ] **Step 2: Add a reusable real-chair transition inside the browser scenario**
+- [x] **Step 2: Add a reusable real-chair transition inside the browser scenario**
 
 Add an isolated scenario named `Monday first stand-up teaches the away plan once` at `{ viewport: { width: 900, height: 400 }, reducedMotion: 'reduce' }`. Inside it define:
 
@@ -238,7 +238,7 @@ const sitAtCrt = async () => {
 };
 ```
 
-- [ ] **Step 3: Assert initial silence, first-show semantics, and geometry**
+- [x] **Step 3: Assert initial silence, first-show semantics, and geometry**
 
 Navigate with `await gotoOk(page, { skipTitle: 1, night: 0, seed: 71 })`, wait for room mode, and require the toast to be hidden. Call `sitAtCrt()`, then create realistic competing lanes before standing:
 
@@ -275,7 +275,7 @@ assert.equal(overlapArea(state.toast, state.prompt), 0, JSON.stringify(state));
 assert.equal(overlapArea(state.toast, state.subtitle), 0, JSON.stringify(state));
 ```
 
-- [ ] **Step 4: Prove no second-show, reload-show, or Tuesday-show**
+- [x] **Step 4: Prove no second-show, reload-show, or Tuesday-show**
 
 Expire the first toast without sleeping:
 
@@ -290,13 +290,13 @@ assert.equal(await page.locator('.hud-toast').evaluate((toast) => getComputedSty
 
 Call `window.__game.host.enterPc()` and `exitPc()` for a second transition and require the toast to stay hidden. Reload Monday, perform the same direct PC-to-room transition, and require it to stay hidden. Remove `j5mm-career-v1`, navigate to `{ skipTitle: 1, night: 1, seed: 72 }`, perform PC-to-room, and require it to stay hidden with `awayPlanSeen === false` in memory.
 
-- [ ] **Step 5: Run tests and browser checks to verify RED**
+- [x] **Step 5: Run tests and browser checks to verify RED**
 
 Run `npm test -- src/game.test.ts`, `npm run build`, and `npm run test:browser`.
 
 Expected: the unit test fails because `AWAY_PLAN_TUTORIAL` is absent; after the browser contract can build, it fails because no first-stand-up toast or persisted seen flag exists.
 
-- [ ] **Step 6: Commit the red experience contract**
+- [x] **Step 6: Commit the red experience contract**
 
 Run `git diff --check`, then commit `src/game.test.ts` and `scripts/smoke.mjs` with `test: expose missing away plan onboarding`.
 
@@ -311,7 +311,7 @@ Run `git diff --check`, then commit `src/game.test.ts` and `scripts/smoke.mjs` w
 - Consumes: `Career.tutorials.awayPlanSeen`, `saveCareer()`, `HostApp.hooks.onModeChange`, and the existing neutral `Hud.showToast()` lane.
 - Produces: exported `AWAY_PLAN_TUTORIAL` and the persisted Monday PC-to-room behavior.
 
-- [ ] **Step 1: Define the authored contract once**
+- [x] **Step 1: Define the authored contract once**
 
 Near the existing authored copy constants in `src/game.ts`, add:
 
@@ -323,7 +323,7 @@ export const AWAY_PLAN_TUTORIAL = {
 } as const;
 ```
 
-- [ ] **Step 2: Consume and persist the flag on Monday stand-up**
+- [x] **Step 2: Consume and persist the flag on Monday stand-up**
 
 Extend `this.host.hooks.onModeChange` after the existing crosshair/interact work:
 
@@ -349,13 +349,13 @@ if (mode === 'room' && this.night.night === 0 && !this.career.tutorials.awayPlan
 
 Keep `this.syncPauseOverlay()` in the callback and do not alter `HostApp.enterPc()` or `HostApp.exitPc()`.
 
-- [ ] **Step 3: Run focused and browser tests to verify GREEN**
+- [x] **Step 3: Run focused and browser tests to verify GREEN**
 
 Run `npm test -- src/score/career.test.ts src/game.test.ts`, `npm run typecheck`, `npm run build`, `npm run size:check`, and `npm run test:browser`.
 
 Expected: career and game unit tests pass; every isolated browser scenario and the full interaction E2E pass; CSS bytes are unchanged; the new scenario proves the exact first/second/reload/Tuesday lifecycle.
 
-- [ ] **Step 4: Commit the player-facing behavior**
+- [x] **Step 4: Commit the player-facing behavior**
 
 Run `git diff --check`, then commit `src/game.ts`, `src/game.test.ts`, and `scripts/smoke.mjs` with `feat: teach the away plan on first stand-up`.
 
@@ -369,25 +369,25 @@ Run `git diff --check`, then commit `src/game.ts`, `src/game.test.ts`, and `scri
 - Consumes: the green compatible persistence and transition behavior.
 - Produces: synchronized closure truth, ignored visual proof, and integrated-master verification.
 
-- [ ] **Step 1: Capture and critique production frames**
+- [x] **Step 1: Capture and critique production frames**
 
 Serve the standalone production build and capture the first Monday stand-up at 1440×900 and 900×400 under ignored `shots/`. Reject the result if it reads like an achievement, wraps awkwardly, exits the viewport, covers Mum's response/subtitle lanes, changes the away-plan switches, or appears in PC mode.
 
-- [ ] **Step 2: Fan out and red-team the completed change**
+- [x] **Step 2: Fan out and red-team the completed change**
 
 Enumerate every Career producer/consumer/fixture and every HostApp mode transition. Review for old-save rejection, malformed-data acceptance, lost tutorial state during `recordNight()`/`completeWeek()`, same-session repeat after storage failure, initial-room false triggers, Tuesday false triggers, toast replacement hazards, CSS drift, and false-pass browser timing. Verify every candidate against source or a reproducing test before editing.
 
-- [ ] **Step 3: Run the complete feature-worktree gate**
+- [x] **Step 3: Run the complete feature-worktree gate**
 
 Run `npm run verify`.
 
 Expected: all unit tests, standalone build, size checks, isolated browser scenarios, full interaction E2E, and mounted build pass.
 
-- [ ] **Step 4: Record exact closure evidence**
+- [x] **Step 4: Record exact closure evidence**
 
 Append exact unit-test counts, browser scenario count, bundle sizes, proof paths, and adversarial-review outcome to this plan. Add a concise closure section to `docs/superpowers/specs/2026-07-13-game-wide-jewellers-program-design.md`.
 
-- [ ] **Step 5: Commit closure truth**
+- [x] **Step 5: Commit closure truth**
 
 Run `git diff --check`, then commit the two documentation files with `docs: close away plan onboarding pass`.
 
@@ -402,4 +402,14 @@ Expected: master is clean apart from ignored proof artifacts; every plan checkbo
 - Spec coverage: exact copy, duration, tone, Monday PC-to-room trigger, in-memory-before-storage ordering, legacy absent-field migration, malformed-present rejection, full-reset behavior, fold preservation, accessibility, short-screen geometry, no-repeat lifecycle, CSS immutability, browser proof, and both verification tiers each have an explicit step.
 - Placeholder scan: no deferred implementation, unspecified validation, vague error handling, or unbounded follow-up remains.
 - Type consistency: the plan consistently uses `CareerTutorials`, `Career.tutorials.awayPlanSeen`, `AWAY_PLAN_TUTORIAL`, `durationMs: 6500`, and tone `neutral`.
+
+## Execution evidence
+
+- The persistence contract was driven from five failing assertions: fresh default, round-trip, legacy absent-block migration, night-fold preservation, and week-fold preservation. The implementation keeps Career v1 and `j5mm-career-v1`, defaults only an absent block, and rejects a present malformed block.
+- The authored experience test first failed because `AWAY_PLAN_TUTORIAL` did not exist. After the copy contract could build, the production-browser scenario failed because the first real Monday chair exit produced no toast. The implemented PC-to-room path marks memory before its storage attempt and never runs on initial room load, PC entry, or Tuesday through Friday.
+- The first 103-character production capture wrapped the orphaned fragment `before you leave.` onto a second line. A second red/green copy pass retained the promised first sentence and shortened the complete cue to the single-line 85-character `Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.`
+- Red-team and verified-finding review found no ship-blocking issue across every Career producer/consumer, both career folds, full reset, old and malformed saves, the `HostApp` mode pair, storage failure ordering, toast expiry, accessibility, short-screen stacking, or CSS drift. Game-clock expiry intentionally freezes with the rest of the HUD during pause.
+- Ignored production proof: `shots/away-plan-tutorial-1440x900.png` and `shots/away-plan-tutorial-900x400.png`. Both reviewed frames keep the neutral cue on one line; the 900x400 frame simultaneously shows the Mum prompt and subtitle with no overlap. Capture-time console: zero warnings and zero errors.
+- Exact feature-tree `npm run verify`: 19 test files / 223 tests; standalone TypeScript/Vite build; JavaScript 756,286 raw / 203,408 gzip bytes against 204,800; CSS 41,737 raw / 10,091 gzip bytes against 10,112; 28 isolated browser scenarios; full interaction E2E; mounted `/just-five-more-minutes/` build. The browser preview stopped cleanly.
+- The first combined browser invocation hit a 120-second outer command ceiling. Isolating the smoke proved all 28 scenarios passed in 108.9 seconds; rerunning the complete owned wrapper with a proportionate ceiling passed in the full verification above. No retry-driven product change was made for that harness-only limit.
 
