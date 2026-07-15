@@ -467,7 +467,7 @@ try {
     'first Monday stand-up teaches the away plan once without crowding dialogue',
     { viewport: { width: 900, height: 400 }, reducedMotion: 'reduce' },
     async (page) => {
-      const tutorialText = 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.';
+      const tutorialText = 'Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.';
       await gotoOk(page, { skipTitle: 1, seed: 13 });
       await page.waitForFunction(() => window.__game?.['host']?.mode === 'room');
       await page.locator('.hud-toast').waitFor({ state: 'hidden' });

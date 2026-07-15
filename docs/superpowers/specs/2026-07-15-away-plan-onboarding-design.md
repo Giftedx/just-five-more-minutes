@@ -37,7 +37,7 @@ The trigger is narrow:
 
 The game marks the flag in memory, attempts to save the career, then shows this neutral toast for 6,500ms:
 
-> Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.
+> Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.
 
 The promised sentence remains verbatim and the second sentence names both the control and its physical location. The feedback appears in the existing toast row above Mum's prompt/subtitle lane, so it does not cover the doorway, chores, crosshair, interaction label, or response buttons. It uses the neutral bullet treatment rather than the green success check because this is instruction, not an achievement.
 
@@ -91,7 +91,7 @@ The scenario must distinguish “still visible from the first show” from “sh
 
 - Add no CSS, asset, dependency, font, animation, timer, overlay, input binding, route, query parameter, or standalone storage key.
 - Preserve Career `version: 1` and `j5mm-career-v1`; migrate only the absent tutorial block.
-- Preserve the promised first sentence exactly and keep the complete toast under 110 characters.
+- Preserve the promised first sentence exactly and keep the complete toast at 85 characters.
 - Trigger only on Monday PC-to-room, never initial room setup or PC entry.
 - Mark in memory before attempting storage so a storage exception cannot create same-session spam.
 - Do not toggle any away-plan setting automatically; all four defaults remain off.

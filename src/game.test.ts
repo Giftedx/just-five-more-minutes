@@ -4,11 +4,11 @@ import { AWAY_PLAN_TUTORIAL, choreDoneToast, crossWorldToast } from './game';
 describe('away plan onboarding copy', () => {
   it('keeps the first stand-up lesson specific, legible, and neutral', () => {
     expect(AWAY_PLAN_TUTORIAL).toEqual({
-      text: 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.',
+      text: 'Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.',
       durationMs: 6500,
       tone: 'neutral',
     });
-    expect(AWAY_PLAN_TUTORIAL.text).toHaveLength(103);
+    expect(AWAY_PLAN_TUTORIAL.text).toHaveLength(85);
   });
 });
 

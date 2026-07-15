@@ -12,7 +12,7 @@
 
 - Add no CSS, asset, dependency, font, animation, timer, overlay, input binding, route, query parameter, or standalone storage key.
 - Preserve Career `version: 1` and `j5mm-career-v1`; migrate only the absent tutorial block.
-- Preserve `Auto-pilot engaged. This is definitely allowed.` verbatim and keep the complete toast at 103 characters.
+- Preserve `Auto-pilot engaged. This is definitely allowed.` verbatim and keep the complete toast at 85 characters.
 - Trigger only on Monday PC-to-room, never initial room setup or PC entry.
 - Mark in memory before attempting storage so a storage exception cannot create same-session spam.
 - Do not toggle any away-plan setting automatically; all four defaults remain off.
@@ -205,7 +205,7 @@ In `src/game.test.ts`, import `AWAY_PLAN_TUTORIAL` from `./game` and add:
 describe('away plan onboarding copy', () => {
   it('keeps the promised line, instruction, duration, and neutral tone together', () => {
     expect(AWAY_PLAN_TUTORIAL).toEqual({
-      text: 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.',
+      text: 'Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.',
       durationMs: 6500,
       tone: 'neutral',
     });
@@ -265,7 +265,7 @@ const overlapArea = (a, b) => (
 Assert:
 
 ```js
-assert.equal(state.text, 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.');
+assert.equal(state.text, 'Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.');
 assert.equal(state.tone, 'neutral');
 assert.deepEqual(state.live, { role: 'status', ariaLive: 'polite', ariaAtomic: 'true' });
 assert.equal(state.seen, true);
@@ -317,7 +317,7 @@ Near the existing authored copy constants in `src/game.ts`, add:
 
 ```ts
 export const AWAY_PLAN_TUTORIAL = {
-  text: 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.',
+  text: 'Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.',
   durationMs: 6500,
   tone: 'neutral',
 } as const;

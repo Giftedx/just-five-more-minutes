@@ -64,7 +64,7 @@ function roomConfigFor(spec: NightSpec): RoomNightConfig {
 const CHORE_ORDER: readonly ChoreId[] = ['mugs', 'wrappers', 'laundry'];
 
 export const AWAY_PLAN_TUTORIAL = {
-  text: 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.',
+  text: 'Auto-pilot engaged. This is definitely allowed. Set the CRT AWAY PLAN before leaving.',
   durationMs: 6500,
   tone: 'neutral',
 } as const;
