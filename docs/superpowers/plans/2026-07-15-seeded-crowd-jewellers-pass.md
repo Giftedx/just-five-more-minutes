@@ -246,7 +246,7 @@ Append the exact test counts, browser scenario count, bundle sizes, screenshot p
 
 Run `git diff --check`, then commit the two documentation files with `docs: close seeded crowd pass`.
 
-- [ ] **Step 7: Integrate and verify master**
+- [x] **Step 7: Integrate and verify master**
 
 Fast-forward local `master` to the feature branch, remove the isolated worktree/branch, restore the standalone `dist`, reload the visible local browser tab, and run `npm run verify` again from master.
 
@@ -267,4 +267,5 @@ Expected: master is clean apart from ignored proof artifacts; all gates pass wit
 - Visual QA: the standalone Mudwick dev view preserved all authored sprites, cross-bank crowd presence, chat/reaction feedback, goblin-pen separation, CRT hierarchy, and pixel treatment. Ignored proof: `shots/seeded-crowd-dev-1280x720.png`.
 - Feature-worktree `npm run verify`: 19/19 test files and 218/218 tests passed; 27 isolated browser scenarios passed; the full interaction E2E passed with rows `[0 / 40 | 30 / 30 | 20 / 20 | 4 / 10]`, total `54 / 100`, and ending `Employee of the Month (This House)`; standalone and mounted builds passed.
 - Standalone size gate: JavaScript 755,660 raw / 203,204 gzip bytes against 204,800; CSS 41,737 raw / 10,091 gzip bytes against 10,112.
+- Integrated-master `npm run verify` repeated the same 19/19 files, 218/218 tests, 27 isolated browser scenarios, full interaction E2E, standalone build, mounted build, and size results. Local `master` fast-forwarded cleanly; the temporary worktree and branch were removed; no pull, push, or deployment occurred.
 
