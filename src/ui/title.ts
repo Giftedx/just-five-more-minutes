@@ -10,7 +10,11 @@ export interface WeekView {
   night: number;
   /** Tonight's card, e.g. "TUESDAY — Bins Night". */
   card: string;
-  galleryCount: number;
+  gallery: readonly {
+    id: string;
+    title: string;
+    collected: boolean;
+  }[];
 }
 
 const TITLE_CHAT = [
@@ -264,9 +268,14 @@ export function showTitle(
         <span class="title-week-card">TONIGHT: ${week.card}</span>
       </div>`
     : '';
-  const galleryLine = week && week.galleryCount > 0
-    ? ` · ${week.galleryCount} ending${week.galleryCount === 1 ? '' : 's'} collected`
-    : '';
+  const galleryCount = week?.gallery.filter((slot) => slot.collected).length ?? 0;
+  const galleryRows = week?.gallery
+    .map((slot, index) => `
+      <div class="sc-career title-gallery-row${slot.collected ? ' title-gallery-row--collected' : ''}">
+        <span class="sc-career-stamp">FILE ${String(index + 1).padStart(2, '0')}</span>
+        <span>${slot.collected ? slot.title.toUpperCase() : 'CLASSIFIED'}</span>
+      </div>`)
+    .join('') ?? '';
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-labelledby', 'title-screen-heading');
@@ -277,7 +286,7 @@ export function showTitle(
       <div class="title-desk-glow"></div>
       <div class="title-motes"></div>
     </div>
-    <div class="title-card">
+    <div class="title-card title-main-card">
       <header class="title-header">
         <div class="title-header-meta">
           <span class="title-kicker">A domestic incident in one act</span>
@@ -333,14 +342,25 @@ export function showTitle(
       </p>
       <footer class="title-footer">
         <button type="button" class="title-begin">Begin</button>
-        <p class="title-footer-note">LEGENDARY GOALS · 2,147,483,647 gp · 99 all stats${galleryLine} · <kbd>Enter</kbd></p>
-        ${onFullReset ? '<button type="button" class="title-reset">Full reset (forget the week and the character)</button>' : ''}
+        <p class="title-footer-note">LEGENDARY GOALS · 2,147,483,647 gp · 99 all stats · <kbd>Enter</kbd></p>
+        ${week ? `<button type="button" class="title-reset title-gallery-action">ENDING ARCHIVE · ${galleryCount}/${week.gallery.length}</button>` : ''}
+        ${onFullReset ? '<button type="button" class="title-reset title-full-reset">Full reset (forget the week and the character)</button>' : ''}
       </footer>
     </div>
+    ${week ? `
+      <section class="sc-card title-gallery-card" hidden aria-labelledby="ending-archive-title">
+        <div class="sc-header">
+          <div class="sc-stamp">ARCHIVED</div>
+          <div class="sc-title" id="ending-archive-title" tabindex="-1">ENDING ARCHIVE</div>
+          <div class="sc-subtitle">Mudwick remembers every completed week. ${galleryCount} / ${week.gallery.length} collected.</div>
+        </div>
+        <div class="sc-body">${galleryRows}</div>
+        <button class="sc-restart title-gallery-return" type="button">Return to title</button>
+      </section>` : ''}
   `;
   parent.appendChild(el);
 
-  const resetButton = el.querySelector<HTMLButtonElement>('.title-reset');
+  const resetButton = el.querySelector<HTMLButtonElement>('.title-full-reset');
   let resetArmed = false;
   resetButton?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -362,10 +382,42 @@ export function showTitle(
   if (quote && !reducedMotion) disposers.push(startMumKnocks(quote, audio));
 
   const beginButton = el.querySelector<HTMLButtonElement>('.title-begin');
+  const mainCard = el.querySelector<HTMLElement>('.title-main-card');
+  const galleryCard = el.querySelector<HTMLElement>('.title-gallery-card');
+  const galleryAction = el.querySelector<HTMLButtonElement>('.title-gallery-action');
+  const galleryHeading = el.querySelector<HTMLElement>('#ending-archive-title');
+  const galleryReturn = el.querySelector<HTMLButtonElement>('.title-gallery-return');
   let done = false;
   let disposed = false;
   let activityStopped = false;
+  let galleryOpen = false;
   let removalTimer = 0;
+
+  const openGallery = (): void => {
+    if (!mainCard || !galleryCard || !galleryHeading) return;
+    galleryOpen = true;
+    mainCard.hidden = true;
+    galleryCard.hidden = false;
+    el.setAttribute('aria-labelledby', 'ending-archive-title');
+    galleryHeading.focus({ preventScroll: true });
+  };
+  const closeGallery = (): void => {
+    if (!mainCard || !galleryCard) return;
+    galleryOpen = false;
+    galleryCard.hidden = true;
+    mainCard.hidden = false;
+    el.setAttribute('aria-labelledby', 'title-screen-heading');
+    beginButton?.focus({ preventScroll: true });
+  };
+  const onGalleryActionClick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    openGallery();
+  };
+  const onGalleryCardClick = (e: MouseEvent): void => e.stopPropagation();
+  const onGalleryReturnClick = (e: MouseEvent): void => {
+    e.stopPropagation();
+    closeGallery();
+  };
 
   const stopActivity = (): void => {
     if (activityStopped) return;
@@ -375,6 +427,9 @@ export function showTitle(
   const removeInputListeners = (): void => {
     document.removeEventListener('keydown', onKey);
     beginButton?.removeEventListener('click', onBeginClick);
+    galleryAction?.removeEventListener('click', onGalleryActionClick);
+    galleryCard?.removeEventListener('click', onGalleryCardClick);
+    galleryReturn?.removeEventListener('click', onGalleryReturnClick);
     el.removeEventListener('click', onScreenClick);
   };
   const finish = (): void => {
@@ -389,8 +444,16 @@ export function showTitle(
     removalTimer = window.setTimeout(() => el.remove(), 520);
   };
   const onKey = (e: KeyboardEvent): void => {
+    if (galleryOpen) {
+      if (e.code === 'Escape' || e.code === 'Enter') {
+        e.preventDefault();
+        closeGallery();
+      }
+      return;
+    }
     if (e.code !== 'Enter' && e.code !== 'Space') return;
     const target = e.target;
+    if (target instanceof Element && target.closest('.title-gallery-action, .title-full-reset')) return;
     if (
       e.code === 'Space' &&
       target instanceof Element &&
@@ -405,10 +468,16 @@ export function showTitle(
     e.stopPropagation();
     finish();
   };
-  const onScreenClick = (): void => finish();
+  const onScreenClick = (): void => {
+    if (galleryOpen) closeGallery();
+    else finish();
+  };
 
   document.addEventListener('keydown', onKey);
   beginButton?.addEventListener('click', onBeginClick);
+  galleryAction?.addEventListener('click', onGalleryActionClick);
+  galleryCard?.addEventListener('click', onGalleryCardClick);
+  galleryReturn?.addEventListener('click', onGalleryReturnClick);
   el.addEventListener('click', onScreenClick);
   beginButton?.focus({ preventScroll: true });
 

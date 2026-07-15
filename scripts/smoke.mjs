@@ -1155,6 +1155,115 @@ try {
     assert.ok(strip.reset, 'full reset control missing');
   });
 
+  await scenario('title exposes a truthful keyboard-safe ending archive', { viewport: { width: 1000, height: 700 } }, async (page) => {
+    await page.addInitScript((career) => {
+      localStorage.setItem('j5mm-career-v1', JSON.stringify(career));
+    }, {
+      version: 1,
+      character: {
+        coins: 286,
+        xp: { woodcutting: 12_000, attack: 8_500, foraging: 6_200, fishing: 4_100 },
+        bridgePass: true,
+        awayPlan: { keepWorking: true, eatBread: true, runHome: false, autoSell: true },
+      },
+      week: { night: 0, suspicionCarry: 0, lieDebt: 0, archivistUsed: false, reports: [] },
+      gallery: [
+        'lostWeek',
+        'goblinWidow',
+        'groundedWorthIt',
+        'quietDecline',
+        'negotiator',
+        'doubleAgent',
+        'employeeOfTheMonth',
+        'responsibleOne',
+        'lostWeek',
+        'legacyMystery',
+      ],
+      weeksCompleted: [],
+    });
+    await gotoOk(page, { seed: 62 });
+    await page.locator('.title-begin').waitFor({ state: 'visible' });
+
+    const initial = await page.evaluate(() => {
+      const main = document.querySelector('.title-main-card');
+      const archive = document.querySelector('.title-gallery-card');
+      const begin = document.querySelector('.title-begin');
+      return {
+        archiveAction: document.querySelector('.title-gallery-action')?.textContent?.trim() ?? '',
+        mainHidden: main?.hidden,
+        archiveHidden: archive?.hidden,
+        beginFocused: document.activeElement === begin,
+        overflow: main ? main.scrollHeight > main.clientHeight : true,
+      };
+    });
+    assert.deepEqual(initial, {
+      archiveAction: 'ENDING ARCHIVE · 8/10',
+      mainHidden: false,
+      archiveHidden: true,
+      beginFocused: true,
+      overflow: false,
+    });
+
+    await page.locator('.title-gallery-action').click();
+    const open = await page.evaluate(() => {
+      const screen = document.querySelector('.title-screen');
+      const main = document.querySelector('.title-main-card');
+      const archive = document.querySelector('.title-gallery-card');
+      const heading = document.querySelector('#ending-archive-title');
+      const text = archive?.textContent ?? '';
+      const rect = archive?.getBoundingClientRect();
+      return {
+        mainHidden: main?.hidden,
+        archiveHidden: archive?.hidden,
+        dialogLabelledBy: screen?.getAttribute('aria-labelledby'),
+        headingFocused: document.activeElement === heading,
+        rows: archive?.querySelectorAll('.title-gallery-row').length,
+        collectedRows: archive?.querySelectorAll('.title-gallery-row--collected').length,
+        classifiedRows: archive?.querySelectorAll('.title-gallery-row:not(.title-gallery-row--collected)').length,
+        hasKnownTitle: text.includes('THE LOST WEEK'),
+        revealsLockedTitle: text.includes('TIME WIZARD') || text.includes('GROUNDED (FOR NOTHING)'),
+        overflow: rect ? rect.top < 20 || rect.bottom > innerHeight - 20 : true,
+      };
+    });
+    assert.deepEqual(open, {
+      mainHidden: true,
+      archiveHidden: false,
+      dialogLabelledBy: 'ending-archive-title',
+      headingFocused: true,
+      rows: 10,
+      collectedRows: 8,
+      classifiedRows: 2,
+      hasKnownTitle: true,
+      revealsLockedTitle: false,
+      overflow: false,
+    });
+
+    await page.locator('.title-gallery-card .sc-subtitle').click();
+    assert.equal(await page.locator('.title-gallery-card').isVisible(), true, 'paper click began the game');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.title-main-card').isVisible(), true, 'Escape did not return to title');
+    assert.equal(
+      await page.locator('.title-begin').evaluate((button) => document.activeElement === button),
+      true,
+      'Escape did not restore Begin focus',
+    );
+
+    await page.locator('.title-gallery-action').click();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('.title-main-card').isVisible(), true, 'Enter did not return to title');
+    await page.locator('.title-gallery-action').click();
+    await page.mouse.click(4, 4);
+    assert.equal(await page.locator('.title-main-card').isVisible(), true, 'archive backdrop did not return to title');
+    await page.locator('.title-gallery-action').click();
+    await page.locator('.title-gallery-return').click();
+    assert.equal(await page.locator('.title-main-card').isVisible(), true, 'Return button did not return to title');
+    assert.equal(
+      await page.locator('.title-begin').evaluate((button) => document.activeElement === button),
+      true,
+      'Return button did not restore Begin focus',
+    );
+  });
+
   await scenario('title stays fully composed on a short desktop', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await gotoOk(page, { seed: 61 });
     await page.locator('.title-begin').waitFor({ state: 'visible' });
@@ -1185,16 +1294,19 @@ try {
     assert.equal(geometry.beginFocused, true, 'Begin did not retain initial keyboard focus');
 
     await page.keyboard.press('Tab');
-    const reset = page.locator('.title-reset');
-    assert.equal(await reset.evaluate((button) => document.activeElement === button), true);
+    const archive = page.locator('.title-gallery-action');
+    assert.equal(await archive.evaluate((button) => document.activeElement === button), true);
     assert.deepEqual(
-      await reset.evaluate((button) => {
+      await archive.evaluate((button) => {
         const style = getComputedStyle(button);
         return { width: style.outlineWidth, offset: style.outlineOffset };
       }),
       { width: '2px', offset: '3px' },
-      'full-reset control did not use the intentional keyboard focus treatment',
+      'ending archive control did not use the intentional keyboard focus treatment',
     );
+    await page.keyboard.press('Tab');
+    const reset = page.locator('.title-full-reset');
+    assert.equal(await reset.evaluate((button) => document.activeElement === button), true);
   });
 
   await scenario('scorecard is semantic, focused, and short-screen reachable', { viewport: { width: 900, height: 400 } }, async (page) => {
