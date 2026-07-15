@@ -46,6 +46,7 @@ describe('freshCareer', () => {
     expect(c.character.coins).toBe(0);
     expect(c.character.bridgePass).toBe(false);
     expect(c.character.awayPlan).toEqual(DEFAULT_AWAY_PLAN);
+    expect(c.tutorials.awayPlanSeen).toBe(false);
     for (const skill of SKILL_NAMES) expect(c.character.xp[skill]).toBe(0);
   });
 });
@@ -57,9 +58,21 @@ describe('save / load round trip', () => {
     c.character.coins = 137;
     c.character.xp.woodcutting = 512;
     c.character.bridgePass = true;
+    c.tutorials.awayPlanSeen = true;
     c.gallery.push('timeWizard');
     expect(saveCareer(storage, c)).toBe(true);
     expect(loadCareer(storage)).toEqual(c);
+  });
+
+  it('migrates a legacy v1 career without tutorial progress', () => {
+    const legacy = freshCareer() as unknown as Record<string, unknown>;
+    delete legacy.tutorials;
+    const storage = memoryStorage({ 'j5mm-career-v1': JSON.stringify(legacy) });
+
+    expect(loadCareer(storage)).toEqual({
+      ...freshCareer(),
+      tutorials: { awayPlanSeen: false },
+    });
   });
 
   it('returns a fresh career when nothing is stored', () => {
@@ -77,6 +90,10 @@ describe('save / load round trip', () => {
       JSON.stringify(withWeek({ night: 2, reports: [report(50)] })),
     ],
     ['suspicion out of range', JSON.stringify(withWeek({ suspicionCarry: 11 }))],
+    [
+      'malformed tutorial progress',
+      JSON.stringify({ ...freshCareer(), tutorials: { awayPlanSeen: 'yes' } }),
+    ],
   ])('rejects malformed careers (%s) with a fresh one', (_name, raw) => {
     const storage = memoryStorage({ 'j5mm-career-v1': raw });
     expect(loadCareer(storage)).toEqual(freshCareer());
@@ -115,6 +132,13 @@ describe('recordNight', () => {
     expect(completeWeek(done, 'lostWeek', 250).week.archivistUsed).toBe(false);
   });
 
+  it('preserves tutorial progress while recording a night', () => {
+    const c = freshCareer();
+    c.tutorials.awayPlanSeen = true;
+
+    expect(recordNight(c, report(50), 0, 0).tutorials.awayPlanSeen).toBe(true);
+  });
+
   it('clamps out-of-domain suspicion into 0..10 before halving', () => {
     const c = freshCareer();
     expect(recordNight(c, report(10), 25, 0).week.suspicionCarry).toBe(5);
@@ -144,6 +168,13 @@ describe('completeWeek', () => {
     const c = completeWeek(completeWeek(freshCareer(), 'lostWeek', 90), 'lostWeek', 95);
     expect(c.gallery).toEqual(['lostWeek']);
     expect(c.weeksCompleted).toHaveLength(2);
+  });
+
+  it('preserves tutorial progress when completing a week', () => {
+    const c = freshCareer();
+    c.tutorials.awayPlanSeen = true;
+
+    expect(completeWeek(c, 'lostWeek', 95).tutorials.awayPlanSeen).toBe(true);
   });
 
   it('round-trips the Friday-complete verdict-pending state', () => {
