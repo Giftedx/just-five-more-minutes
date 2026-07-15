@@ -39,7 +39,7 @@
 - Consumes: current `MmoRenderer.awayPlanButtonAt(cx, cy): keyof AwayPlan | null` and `MmoGame` click branch.
 - Produces: fresh baseline evidence only; no file changes.
 
-- [ ] **Step 1: Run the focused renderer and simulation tests**
+- [x] **Step 1: Run the focused renderer and simulation tests**
 
 Run:
 
@@ -49,7 +49,7 @@ npm test -- src/mmo/render/renderer.test.ts src/mmo/sim/sim.depth.test.ts
 
 Expected before changes: both files pass and all current away-plan simulation behavior remains green.
 
-- [ ] **Step 2: Record the current bundle and CSS hashes**
+- [x] **Step 2: Record the current bundle and CSS hashes**
 
 Run:
 
@@ -73,7 +73,7 @@ Expected before changes: JavaScript is inside 204,800 gzip bytes, CSS is 41,737 
 - Consumes: planned exports `AWAY_PLAN_UI` and `AWAY_PLAN_COLORS` from `./renderer`.
 - Produces: failing copy/layout/hit/contrast and real-Canvas contracts that the renderer implementation must satisfy.
 
-- [ ] **Step 1: Add the exact authored contract test**
+- [x] **Step 1: Add the exact authored contract test**
 
 Extend the import surface through the existing `rendererModule` namespace and add:
 
@@ -109,7 +109,7 @@ describe('away plan command strip', () => {
 });
 ```
 
-- [ ] **Step 2: Add hit-boundary and render-purity tests**
+- [x] **Step 2: Add hit-boundary and render-purity tests**
 
 Inside the same describe block add:
 
@@ -133,7 +133,7 @@ it('maps every drawn chip and excludes caption, gaps, and right/bottom edges', (
 });
 ```
 
-- [ ] **Step 3: Add opaque palette contrast tests**
+- [x] **Step 3: Add opaque palette contrast tests**
 
 Add a local luminance helper in the describe block and assert every text state:
 
@@ -164,7 +164,7 @@ it('keeps caption, OFF, ON, and hover text above 4.5:1', () => {
 });
 ```
 
-- [ ] **Step 4: Run the unit test to verify RED**
+- [x] **Step 4: Run the unit test to verify RED**
 
 Run:
 
@@ -174,7 +174,7 @@ npm test -- src/mmo/render/renderer.test.ts
 
 Expected: the copy/layout and palette tests fail because both exports are absent; hit assertions also fail against the old `y = 4`, `22x11`, abbreviated layout.
 
-- [ ] **Step 5: Add a minimal failing production-browser contract**
+- [x] **Step 5: Add a minimal failing production-browser contract**
 
 Add this scenario after the document-icon check:
 
@@ -195,7 +195,7 @@ await scenario(
 );
 ```
 
-- [ ] **Step 6: Run the production browser contract to verify RED**
+- [x] **Step 6: Run the production browser contract to verify RED**
 
 Run:
 
@@ -206,7 +206,7 @@ npm run test:browser
 
 Expected: the new scenario fails at the plate pixel because the old renderer draws world terrain at `(132, 3)` and has no labelled opaque strip.
 
-- [ ] **Step 7: Commit both red contracts**
+- [x] **Step 7: Commit both red contracts**
 
 Run `git diff --check`, then:
 
@@ -225,7 +225,7 @@ git commit -m "test: expose weak away plan controls"
 - Produces: `AWAY_PLAN_UI`, `AWAY_PLAN_COLORS`, shared hit geometry, and hover-aware drawing.
 - Preserves: `awayPlanButtonAt(cx, cy): keyof AwayPlan | null` and every `MmoGame` consumer.
 
-- [ ] **Step 1: Add immutable copy, layout, and opaque palette exports**
+- [x] **Step 1: Add immutable copy, layout, and opaque palette exports**
 
 After `DOUBLE_XP_COPY`, add:
 
@@ -267,7 +267,7 @@ export const AWAY_PLAN_UI = {
 };
 ```
 
-- [ ] **Step 2: Make hit-testing consume the exported chip rectangles**
+- [x] **Step 2: Make hit-testing consume the exported chip rectangles**
 
 Replace `awayPlanButtons()` and the current hit loop with:
 
@@ -285,7 +285,7 @@ awayPlanButtonAt(cx: number, cy: number): keyof AwayPlan | null {
 
 Delete the private abbreviated-layout helper so no second geometry source remains.
 
-- [ ] **Step 3: Replace the four floating slots with the command strip**
+- [x] **Step 3: Replace the four floating slots with the command strip**
 
 Replace `drawAwayPlanChips()` with:
 
@@ -325,7 +325,7 @@ private drawAwayPlanChips(): void {
 }
 ```
 
-- [ ] **Step 4: Run focused tests and typecheck to verify GREEN**
+- [x] **Step 4: Run focused tests and typecheck to verify GREEN**
 
 Run:
 
@@ -336,7 +336,7 @@ npm run typecheck
 
 Expected: both focused files pass, all four hit mappings are exact, and TypeScript reports no unused old layout helper.
 
-- [ ] **Step 5: Build and enforce budgets**
+- [x] **Step 5: Build and enforce budgets**
 
 Run:
 
@@ -347,7 +347,7 @@ npm run size:check
 
 Expected: JavaScript remains at or below 204,800 gzip bytes and CSS remains 41,737 raw / 10,091 gzip bytes.
 
-- [ ] **Step 6: Commit the renderer repair**
+- [x] **Step 6: Commit the renderer repair**
 
 Run `git diff --check`, then:
 
@@ -366,7 +366,7 @@ git commit -m "polish: clarify the away plan strip"
 - Consumes: native 320x240 `canvas`, the shared chip rectangles, and existing `.crt-screen` scaling.
 - Produces: one isolated browser scenario proving authored OFF/hover/ON pixels and real click alignment.
 
-- [ ] **Step 1: Expand the minimal red scenario with pixel and client-coordinate helpers**
+- [x] **Step 1: Expand the minimal red scenario with pixel and client-coordinate helpers**
 
 Replace the minimal scenario body after its initial navigation with:
 
@@ -386,7 +386,7 @@ Replace the minimal scenario body after its initial navigation with:
     };
 ```
 
-- [ ] **Step 2: Pin the opaque plate and OFF-state pixels**
+- [x] **Step 2: Pin the opaque plate and OFF-state pixels**
 
 Continue the scenario:
 
@@ -400,7 +400,7 @@ Continue the scenario:
 
 The sample points are opaque fill anchors, not anti-aliased glyph pixels.
 
-- [ ] **Step 3: Prove hover and each real click**
+- [x] **Step 3: Prove hover and each real click**
 
 Continue:
 
@@ -428,11 +428,11 @@ Continue:
     assert.deepEqual(await rgbaAt(240, 12), panelBefore, 'strip entered the stats panel');
 ```
 
-- [ ] **Step 4: Preserve the observed red-test teeth**
+- [x] **Step 4: Preserve the observed red-test teeth**
 
 Confirm the original Task 2 browser run failed at `(132, 3)`. The expanded assertions must remain stricter: the old renderer has no plate, uses chip `x = 142` and `y = 4`, has no hover edge or state bar, and cannot satisfy the full-word shared contract. Do not weaken the assertions to match old pixels.
 
-- [ ] **Step 5: Run browser, build, and size checks**
+- [x] **Step 5: Run browser, build, and size checks**
 
 Run:
 
@@ -444,7 +444,7 @@ npm run test:browser
 
 Expected: 29 isolated browser scenarios and the full interaction E2E pass; CSS bytes remain unchanged.
 
-- [ ] **Step 6: Commit the browser guard**
+- [x] **Step 6: Commit the browser guard**
 
 Run `git diff --check`, then:
 
@@ -463,7 +463,7 @@ git commit -m "test: guard the away plan command strip"
 - Consumes: the green renderer and browser contract.
 - Produces: ignored visual proof, synchronized program truth, and integrated-master evidence.
 
-- [ ] **Step 1: Capture OFF, hover, and mixed-state production frames**
+- [x] **Step 1: Capture OFF, hover, and mixed-state production frames**
 
 Serve the standalone production build and capture `?dev=mmo&speed=0.1` at 1280x720 under ignored `shots/`:
 
@@ -473,7 +473,7 @@ Serve the standalone production build and capture `?dev=mmo&speed=0.1` at 1280x7
 
 Reject the result if the caption is not readable, full labels blur together, the plate looks like a modern web card, the strip covers the side panel, hover is weaker than OFF borders, or ON depends on green without the state bar.
 
-- [ ] **Step 2: Red-team and verify findings**
+- [x] **Step 2: Red-team and verify findings**
 
 Review and source-verify:
 
@@ -490,7 +490,7 @@ Review and source-verify:
 
 Only source- or reproduction-confirmed findings become fixes.
 
-- [ ] **Step 3: Run the complete feature-worktree gate**
+- [x] **Step 3: Run the complete feature-worktree gate**
 
 Run:
 
@@ -500,11 +500,11 @@ npm run verify
 
 Expected: all unit tests, standalone build, size checks, 29 isolated browser scenarios, full interaction E2E, and mounted build pass.
 
-- [ ] **Step 4: Record exact closure evidence**
+- [x] **Step 4: Record exact closure evidence**
 
 Append unit count, browser scenario count, JS/CSS sizes, CSS hash comparison, capture paths, and red-team outcome to this plan. Add a concise closure section to `docs/superpowers/specs/2026-07-13-game-wide-jewellers-program-design.md`.
 
-- [ ] **Step 5: Commit closure truth**
+- [x] **Step 5: Commit closure truth**
 
 Run `git diff --check`, then:
 
@@ -518,6 +518,16 @@ git commit -m "docs: close away plan strip pass"
 Fast-forward local `master`, run `npm run verify` again from the integrated tree, restore standalone `dist`, copy ignored proof into the main checkout, remove the owned worktree and merged branch, and confirm a clean repository.
 
 Expected: the integrated master gate independently passes; no pull, push, PR, or deployment occurs.
+
+## Feature-worktree execution evidence
+
+- Baseline: 37 focused tests passed. Standalone artifacts were 756,286 raw / 203,408 gzip bytes of JavaScript and 41,737 raw / 10,091 gzip bytes of CSS. `src/ui/style.css` SHA-256 was `E1E4706C5B04D8A5B4E3E754B25E1F2B03FBB5BDDBC7139FEE6C61090A3933B3`.
+- RED: the renderer test failed three intended contracts because `AWAY_PLAN_UI` and `AWAY_PLAN_COLORS` were absent and `(135, 10)` missed the old abbreviated geometry. The production browser read terrain `[45, 75, 31, 255]` at the planned plate anchor instead of `[23, 32, 18, 255]`.
+- GREEN: 40 focused renderer/simulation tests and typecheck passed. The real browser pinned the plate, every OFF/hover/ON state, all four scaled clicks, the ON state bar, and the `x = 240` panel boundary.
+- Adversarial review: one candidate survived verification. A live `+25 Woodcutting` drop changed 243 pixels inside the plate because XP text was drawn after the strip at the same coordinates. The regression failed before repair and now requires zero changed plate pixels; XP motion begins below the plate. Side-panel bleed, hit-edge drift, caption interactivity, stale mouseleave hover, default-state mutation, overlay ownership, and CSS drift were rejected by source evidence and passing runtime guards. Security, persistence, migration, and external-service categories do not apply to this renderer-only change.
+- Full feature-tree gate: 19 test files / 226 tests passed, followed by standalone build, size check, 29 isolated browser scenarios, full interaction E2E (`TOTAL54 / 100`, ending `Employee of the Month (This House)`), and the mounted `/just-five-more-minutes/` build.
+- Final standalone artifacts: 756,895 raw / 203,637 gzip bytes of JavaScript and 41,737 raw / 10,091 gzip bytes of CSS, leaving 1,163 gzip bytes of JavaScript headroom and 21 gzip bytes of CSS headroom. The stylesheet hash remained exactly `E1E4706C5B04D8A5B4E3E754B25E1F2B03FBB5BDDBC7139FEE6C61090A3933B3`.
+- Ignored visual proof: `shots/away-plan-strip-off.png`, `shots/away-plan-strip-hover.png`, `shots/away-plan-strip-mixed.png`, `shots/away-plan-strip-900x400.png`, and `shots/away-plan-strip-xp-clear.png`. All were reviewed from the production build; no curated repository asset changed.
 
 ## Self-review
 
