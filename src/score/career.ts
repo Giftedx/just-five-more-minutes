@@ -42,10 +42,15 @@ export interface CareerWeek {
   reports: NightReportSummary[];
 }
 
+export interface CareerTutorials {
+  awayPlanSeen: boolean;
+}
+
 export interface Career {
   version: 1;
   character: CareerCharacter;
   week: CareerWeek;
+  tutorials: CareerTutorials;
   /** Ending ids collected across all completed weeks. */
   gallery: string[];
   weeksCompleted: { endingId: string; total: number }[];
@@ -58,6 +63,7 @@ export function freshCareer(): Career {
     version: 1,
     character: { coins: 0, xp, bridgePass: false, awayPlan: { ...DEFAULT_AWAY_PLAN } },
     week: { night: 0, suspicionCarry: 0, lieDebt: 0, archivistUsed: false, reports: [] },
+    tutorials: { awayPlanSeen: false },
     gallery: [],
     weeksCompleted: [],
   };
@@ -94,6 +100,17 @@ function parseAwayPlan(raw: unknown): AwayPlan | undefined {
     runHome: plan.runHome,
     autoSell: plan.autoSell,
   };
+}
+
+function parseTutorials(raw: unknown): CareerTutorials | undefined {
+  // The tutorials block was added without bumping the save envelope. Its
+  // absence therefore means a legitimate legacy v1 career, while a present
+  // malformed block remains a corrupt save and must fail closed.
+  if (raw === undefined) return { awayPlanSeen: false };
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const tutorials = raw as Record<string, unknown>;
+  if (!isBoolean(tutorials.awayPlanSeen)) return undefined;
+  return { awayPlanSeen: tutorials.awayPlanSeen };
 }
 
 function parseCharacter(raw: unknown): CareerCharacter | undefined {
@@ -175,7 +192,8 @@ function parseCareer(raw: string | null): Career | undefined {
     if (record.version !== 1) return undefined;
     const character = parseCharacter(record.character);
     const week = parseWeek(record.week);
-    if (!character || !week) return undefined;
+    const tutorials = parseTutorials(record.tutorials);
+    if (!character || !week || !tutorials) return undefined;
     if (!Array.isArray(record.gallery) || !record.gallery.every((g) => typeof g === 'string')) {
       return undefined;
     }
@@ -191,6 +209,7 @@ function parseCareer(raw: string | null): Career | undefined {
       version: 1,
       character,
       week,
+      tutorials,
       gallery: record.gallery.slice(),
       weeksCompleted,
     };
