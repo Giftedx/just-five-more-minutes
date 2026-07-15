@@ -161,12 +161,47 @@ try {
       await gotoOk(page, { dev: 'mmo', speed: 0.1 });
       const canvas = page.locator('canvas');
       await canvas.waitFor({ state: 'visible' });
-      const platePixel = await canvas.evaluate((element) => {
+      const rgbaAt = (x, y) => canvas.evaluate((element, point) => {
         const ctx = element.getContext('2d');
         if (!ctx) throw new Error('Mudwick canvas has no 2D context');
-        return [...ctx.getImageData(132, 3, 1, 1).data];
-      });
-      assert.deepEqual(platePixel, [23, 32, 18, 255]);
+        return [...ctx.getImageData(point.x, point.y, 1, 1).data];
+      }, { x, y });
+      const clientPoint = async (x, y) => {
+        const box = await canvas.boundingBox();
+        assert.ok(box, 'Mudwick canvas has no client bounds');
+        return {
+          x: box.x + ((x + 0.5) / 320) * box.width,
+          y: box.y + ((y + 0.5) / 240) * box.height,
+        };
+      };
+
+      assert.deepEqual(await rgbaAt(132, 3), [23, 32, 18, 255]);
+      for (const x of [137, 163, 189, 215]) {
+        assert.deepEqual(await rgbaAt(x, 11), [48, 51, 40, 255]);
+      }
+      const panelBefore = await rgbaAt(240, 12);
+
+      for (const x of [135, 161, 187, 213]) {
+        const hoverPoint = await clientPoint(x + 1, 10);
+        await page.mouse.move(hoverPoint.x, hoverPoint.y);
+        await page.waitForTimeout(50);
+        const hoveredEdge = await rgbaAt(x, 10);
+        assert.ok(
+          hoveredEdge[0] > 180 && hoveredEdge[1] > 170 && hoveredEdge[2] > 130,
+          `chip at ${x} did not gain a parchment hover edge: ${hoveredEdge}`,
+        );
+
+        const clickPoint = await clientPoint(x + 12, 15);
+        await page.mouse.click(clickPoint.x, clickPoint.y);
+        await page.waitForTimeout(50);
+        assert.deepEqual(await rgbaAt(x + 2, 11), [49, 90, 44, 255]);
+        assert.deepEqual(await rgbaAt(x + 4, 19), [139, 232, 107, 255]);
+
+        await page.mouse.click(clickPoint.x, clickPoint.y);
+        await page.waitForTimeout(50);
+        assert.deepEqual(await rgbaAt(x + 2, 11), [48, 51, 40, 255]);
+      }
+      assert.deepEqual(await rgbaAt(240, 12), panelBefore, 'strip entered the stats panel');
     },
   );
 
