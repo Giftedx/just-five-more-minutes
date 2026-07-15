@@ -335,3 +335,76 @@ describe('hover action readout', () => {
     expect(contrast(ui.colors.detail!, ui.colors.plate!)).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe('inventory panel finish', () => {
+  it('pins the pack band, grid, count badge, and authored palette', () => {
+    const ui = (rendererModule as typeof rendererModule & {
+      INVENTORY_UI?: {
+        capacity: number;
+        divider: { x: number; y: number; w: number; h: number };
+        headerBacking: { x: number; y: number; w: number; h: number };
+        header: { centerX: number; y: number; font: string };
+        grid: { x: number; y: number; columns: number; rows: number; pitch: number; cell: number };
+        badge: { w: number; h: number; font: string };
+        colors: Record<string, string>;
+      };
+    }).INVENTORY_UI;
+
+    expect(ui).toEqual({
+      capacity: 28,
+      divider: { x: 248, y: 82, w: 64, h: 1 },
+      headerBacking: { x: 253, y: 79, w: 54, h: 7 },
+      header: { centerX: 280, y: 79, font: 'bold 6px monospace' },
+      grid: { x: 255, y: 86, columns: 4, rows: 7, pitch: 13, cell: 11 },
+      badge: { w: 8, h: 6, font: 'bold 5px monospace' },
+      colors: {
+        panel: '#c8b088',
+        divider: '#8a754f',
+        header: '#4a3a26',
+        fullHeader: '#7a2020',
+        emptyBg: '#b09a74',
+        emptyBorder: '#8a754f',
+        occupiedBg: '#927b58',
+        occupiedBorder: '#5c4a32',
+        sheen: 'rgba(255,255,255,0.18)',
+        badgeBg: '#3a2c18',
+        badgeText: '#ffe96b',
+      },
+    });
+  });
+
+  it('formats capacity truthfully at empty, partial, and full states', () => {
+    const frame = (rendererModule as typeof rendererModule & {
+      inventoryFrame?: (count: number) => { label: string; full: boolean };
+    }).inventoryFrame;
+
+    expect(frame).toBeTypeOf('function');
+    if (!frame) return;
+    expect(frame(0)).toEqual({ label: 'PACK 0/28', full: false });
+    expect(frame(14)).toEqual({ label: 'PACK 14/28', full: false });
+    expect(frame(28)).toEqual({ label: 'PACK 28/28', full: true });
+  });
+
+  it('keeps inventory text roles above 4.5:1', () => {
+    const ui = (rendererModule as typeof rendererModule & {
+      INVENTORY_UI?: { colors: Record<string, string> };
+    }).INVENTORY_UI;
+    expect(ui).toBeDefined();
+    if (!ui) return;
+
+    const luminance = (hex: string): number => {
+      const channels = [1, 3, 5]
+        .map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)
+        .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+    };
+    const contrast = (a: string, b: string): number => {
+      const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (values[0]! + 0.05) / (values[1]! + 0.05);
+    };
+
+    expect(contrast(ui.colors.header!, ui.colors.panel!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ui.colors.fullHeader!, ui.colors.panel!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ui.colors.badgeText!, ui.colors.badgeBg!)).toBeGreaterThanOrEqual(4.5);
+  });
+});

@@ -205,6 +205,68 @@ try {
 
       await gotoOk(page, { skipTitle: 1, seed: 13 });
       await page.waitForFunction(() => window.__game?.host?.mmo?.canvas);
+      const inventoryFinish = await page.evaluate(() => {
+        const mmo = window.__game.host.mmo;
+        const ctx = mmo.canvas.getContext('2d');
+        if (!ctx) throw new Error('Mudwick canvas has no 2D context');
+        const originalInventory = [...mmo.sim.player.inventory];
+        const changedPixels = (before, after) => {
+          let changed = 0;
+          for (let index = 0; index < before.length; index += 4) {
+            if (
+              before[index] !== after[index]
+              || before[index + 1] !== after[index + 1]
+              || before[index + 2] !== after[index + 2]
+              || before[index + 3] !== after[index + 3]
+            ) changed++;
+          }
+          return changed;
+        };
+
+        mmo.renderer.mouse = null;
+        mmo.sim.player.inventory = [];
+        mmo.renderer.render(1_000, 0);
+        const emptySlot = [...ctx.getImageData(264, 94, 1, 1).data];
+        const worldBefore = ctx.getImageData(0, 0, 240, 240).data;
+        const skillsBefore = ctx.getImageData(240, 178, 80, 62).data;
+
+        mmo.sim.player.inventory = ['log'];
+        mmo.renderer.render(1_000, 0);
+        const occupiedSlot = [...ctx.getImageData(264, 94, 1, 1).data];
+        const nextEmptySlot = [...ctx.getImageData(276, 94, 1, 1).data];
+
+        mmo.sim.player.inventory = Array.from({ length: 28 }, () => 'log');
+        mmo.renderer.render(1_000, 0);
+        const badgeCorner = [...ctx.getImageData(258, 91, 1, 1).data];
+        const worldAfter = ctx.getImageData(0, 0, 240, 240).data;
+        const skillsAfter = ctx.getImageData(240, 178, 80, 62).data;
+        ctx.font = 'bold 6px monospace';
+        const headerWidth = ctx.measureText('PACK 28/28').width;
+        ctx.font = 'bold 5px monospace';
+        const countWidth = ctx.measureText('28').width;
+        mmo.sim.player.inventory = originalInventory;
+        mmo.renderer.render(1_000, 0);
+
+        return {
+          emptySlot,
+          occupiedSlot,
+          nextEmptySlot,
+          badgeCorner,
+          changedWorldPixels: changedPixels(worldBefore, worldAfter),
+          changedSkillsPixels: changedPixels(skillsBefore, skillsAfter),
+          headerWidth,
+          countWidth,
+        };
+      });
+      assert.deepEqual(inventoryFinish.emptySlot, [176, 154, 116, 255]);
+      assert.deepEqual(inventoryFinish.occupiedSlot, [146, 123, 88, 255]);
+      assert.deepEqual(inventoryFinish.nextEmptySlot, [176, 154, 116, 255]);
+      assert.deepEqual(inventoryFinish.badgeCorner, [58, 44, 24, 255]);
+      assert.equal(inventoryFinish.changedWorldPixels, 0, 'inventory finish entered the world viewport');
+      assert.equal(inventoryFinish.changedSkillsPixels, 0, 'inventory finish entered the skills band');
+      assert.ok(inventoryFinish.headerWidth <= 54, JSON.stringify(inventoryFinish));
+      assert.ok(inventoryFinish.countWidth <= 8, JSON.stringify(inventoryFinish));
+
       const bridgeReadout = await page.evaluate(() => {
         const mmo = window.__game.host.mmo;
         const ctx = mmo.canvas.getContext('2d');
