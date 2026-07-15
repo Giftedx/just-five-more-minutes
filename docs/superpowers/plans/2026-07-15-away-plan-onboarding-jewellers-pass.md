@@ -391,7 +391,7 @@ Append exact unit-test counts, browser scenario count, bundle sizes, proof paths
 
 Run `git diff --check`, then commit the two documentation files with `docs: close away plan onboarding pass`.
 
-- [ ] **Step 6: Integrate and verify master**
+- [x] **Step 6: Integrate and verify master**
 
 Fast-forward local `master`, run `npm run verify` again from the integrated tree, remove the feature worktree/branch, restore standalone `dist`, leave the verified Monday proof visible in the in-app browser, and confirm no current console/page errors.
 
@@ -412,4 +412,5 @@ Expected: master is clean apart from ignored proof artifacts; every plan checkbo
 - Ignored production proof: `shots/away-plan-tutorial-1440x900.png` and `shots/away-plan-tutorial-900x400.png`. Both reviewed frames keep the neutral cue on one line; the 900x400 frame simultaneously shows the Mum prompt and subtitle with no overlap. Capture-time console: zero warnings and zero errors.
 - Exact feature-tree `npm run verify`: 19 test files / 223 tests; standalone TypeScript/Vite build; JavaScript 756,286 raw / 203,408 gzip bytes against 204,800; CSS 41,737 raw / 10,091 gzip bytes against 10,112; 28 isolated browser scenarios; full interaction E2E; mounted `/just-five-more-minutes/` build. The browser preview stopped cleanly.
 - The first combined browser invocation hit a 120-second outer command ceiling. Isolating the smoke proved all 28 scenarios passed in 108.9 seconds; rerunning the complete owned wrapper with a proportionate ceiling passed in the full verification above. No retry-driven product change was made for that harness-only limit.
+- Local `master` fast-forwarded from `d8ab562` to the verified feature tip without a merge commit. A fresh integrated-tree `npm run verify` independently passed 19 test files / 223 tests, all 28 isolated browser scenarios, full interaction E2E, standalone build and mounted build; JavaScript remained 756,286 raw / 203,408 gzip and CSS remained 41,737 raw / 10,091 gzip. No pull, push, PR, or deployment occurred.
 
