@@ -40,7 +40,7 @@
 - Consumes: the ten existing ending IDs/titles/blurbs and unchanged `weekVerdict(reports, lieDebt, fridaySuspicion)` inputs.
 - Produces: `ENDING_ARCHIVE`, `EndingGallerySlot`, and `endingGallery(ids: readonly string[]): EndingGallerySlot[]`.
 
-- [ ] **Step 1: Write the failing canonical-metadata contract**
+- [x] **Step 1: Write the failing canonical-metadata contract**
 
 Import `ENDING_ARCHIVE` and `endingGallery` in `src/score/week.test.ts`, then add:
 
@@ -63,7 +63,7 @@ it('keeps every ending in one stable unique archive', () => {
 });
 ```
 
-- [ ] **Step 2: Write the failing projection truth contract**
+- [x] **Step 2: Write the failing projection truth contract**
 
 Add:
 
@@ -78,13 +78,13 @@ it('projects known endings once and ignores unknown persisted ids', () => {
 });
 ```
 
-- [ ] **Step 3: Run the focused test to verify RED**
+- [x] **Step 3: Run the focused test to verify RED**
 
 Run `npm test -- src/score/week.test.ts`.
 
 Expected: FAIL because `ENDING_ARCHIVE` and `endingGallery` are not exported.
 
-- [ ] **Step 4: Define canonical records and reuse them in verdict selection**
+- [x] **Step 4: Define canonical records and reuse them in verdict selection**
 
 In `src/score/week.ts`, define each existing ending object exactly once, export the ordered list, and make the matrix/override reference those objects:
 
@@ -148,13 +148,13 @@ export function endingGallery(ids: readonly string[]): EndingGallerySlot[] {
 
 Keep `WeekVerdict.endingId`, every title/blurb, all thresholds, and the Friday override unchanged.
 
-- [ ] **Step 5: Run the focused test to verify GREEN**
+- [x] **Step 5: Run the focused test to verify GREEN**
 
 Run `npm test -- src/score/week.test.ts`.
 
 Expected: all week tests pass, including the pre-existing 3×3 matrix, override, stamp, and grade contracts.
 
-- [ ] **Step 6: Commit the canonical data seam**
+- [x] **Step 6: Commit the canonical data seam**
 
 Run `git diff --check`, then commit `src/score/week.ts` and `src/score/week.test.ts` with `refactor: canonicalize ending archive data`.
 
@@ -169,7 +169,7 @@ Run `git diff --check`, then commit `src/score/week.ts` and `src/score/week.test
 - Consumes: `endingGallery(ids)` and `EndingGallerySlot[]` from Task 1.
 - Produces: `WeekView.gallery: readonly EndingGallerySlot[]`, a title `ENDING ARCHIVE · n/10` action, a hidden paper archive card, and truthful prospective Week Verdict counts.
 
-- [ ] **Step 1: Add the failing production-browser archive contract**
+- [x] **Step 1: Add the failing production-browser archive contract**
 
 In `scripts/smoke.mjs`, add an isolated `title exposes a truthful keyboard-safe ending archive` scenario at `{ viewport: { width: 1000, height: 700 } }`. Seed `j5mm-career-v1` with eight known IDs, one duplicate, and one unknown ID before navigation. Assert before interaction:
 
@@ -197,13 +197,13 @@ assert.equal(state.overflow, false);
 
 Click the paper card away from its button and prove the title has not begun. Press Escape, prove the main title returns and Begin regains focus, reopen the archive, press Enter, and prove the same return behavior. Retain the existing short-desktop title geometry scenario.
 
-- [ ] **Step 2: Build and run browser checks to verify RED**
+- [x] **Step 2: Build and run browser checks to verify RED**
 
 Run `npm run build` and `npm run test:browser`.
 
 Expected: the new scenario fails because no archive action or archive card exists.
 
-- [ ] **Step 3: Pass projected slots through the title contract**
+- [x] **Step 3: Pass projected slots through the title contract**
 
 Change `WeekView` in `src/ui/title.ts` from `galleryCount: number` to:
 
@@ -217,7 +217,7 @@ gallery: readonly {
 
 In `src/game.ts`, import `endingGallery`, build the projection once for the title, and pass it as `gallery: endingGallery(this.career.gallery)`.
 
-- [ ] **Step 4: Render the archive using only existing classes**
+- [x] **Step 4: Render the archive using only existing classes**
 
 In `showTitle`, derive `collectedCount`, render a secondary `.title-reset` archive button after the footer note, and render a sibling `.sc-card` with `hidden`, `aria-labelledby="ending-archive-title"`, one `.sc-career` row per slot, and a `.sc-restart` return button. Collected rows include the real title; locked rows include only their ordinal and `CLASSIFIED`. Remove the old `galleryLine` footer suffix.
 
@@ -235,11 +235,11 @@ The archive card structure must remain:
 </section>
 ```
 
-- [ ] **Step 5: Implement view, focus, click, and keyboard lifecycle**
+- [x] **Step 5: Implement view, focus, click, and keyboard lifecycle**
 
 Keep references to the main card, archive card, archive action, archive heading, and return button. Add `openArchive()` and `closeArchive()` that toggle `hidden`, update the dialog's `aria-labelledby`, and focus the correct target with `{ preventScroll: true }`. Stop propagation on archive action, archive paper, and return button. While the archive is open, backdrop click closes it, Enter/Escape close it, and no key can call `finish()`. On the main title, preserve the existing Enter/Space rules exactly. Remove the new listeners in `removeInputListeners()`.
 
-- [ ] **Step 6: Correct prospective Week Verdict progress**
+- [x] **Step 6: Correct prospective Week Verdict progress**
 
 Replace `this.career.gallery.length + 1` with:
 
@@ -249,23 +249,23 @@ endingGallery([...this.career.gallery, verdict.endingId]).filter((slot) => slot.
 
 This must count a newly discovered ending once, keep the count stable for a replay, and ignore unknown legacy IDs without rewriting storage.
 
-- [ ] **Step 7: Run focused and browser checks to verify GREEN**
+- [x] **Step 7: Run focused and browser checks to verify GREEN**
 
 Run `npm test -- src/score/week.test.ts`, `npm run build`, and `npm run test:browser`.
 
 Expected: unit tests pass; every isolated browser scenario and the full interaction E2E pass; the new archive scenario proves 8/10 truth, redaction, focus, click containment, keyboard return, and 1000×700 geometry.
 
-- [ ] **Step 8: Capture and critique real production frames**
+- [x] **Step 8: Capture and critique real production frames**
 
 Capture populated archive frames at 1440×900 and 1000×700 under ignored `shots/`. Reject the result if rows look like generic achievement pills, locked titles leak, the card requires scrolling at 1000×700, the backdrop begins play, the archive competes with the title's primary Begin action, or focus is not obvious.
 
-- [ ] **Step 9: Perform the restraint edit and verify budgets**
+- [x] **Step 9: Perform the restraint edit and verify budgets**
 
 Remove any duplicate copy, unnecessary row ornament, or interaction that does not improve collection comprehension. Run `git diff -- src/ui/style.css` and require no output. Then run `npm run size:check` and `git diff --check`.
 
 Expected: JavaScript is at or below 204,800 gzip bytes; CSS remains byte-for-byte unchanged at or below 10,112 gzip bytes; no whitespace errors.
 
-- [ ] **Step 10: Commit the archive experience**
+- [x] **Step 10: Commit the archive experience**
 
 Commit `src/ui/title.ts`, `src/game.ts`, and `scripts/smoke.mjs` with `feat: add the ending archive`.
 
@@ -280,21 +280,21 @@ Commit `src/ui/title.ts`, `src/game.ts`, and `scripts/smoke.mjs` with `feat: add
 - Consumes: final captures, unit/browser evidence, artifact sizes, and feature commits.
 - Produces: current program truth, a verified feature tree, and a clean locally integrated master.
 
-- [ ] **Step 1: Record the confirmed closure**
+- [x] **Step 1: Record the confirmed closure**
 
 Append a dated closure to the game-wide program describing the counter-only defect, duplicate-count bug, selected filed-paper archive, canonical projection, redaction and focus contracts, preserved CSS, final artifact sizes, test counts, browser scenario count, and ignored proof paths.
 
-- [ ] **Step 2: Mark only completed checklist items**
+- [x] **Step 2: Mark only completed checklist items**
 
 Change each successful `- [ ]` in this plan to `- [x]`. Retain any failed or skipped item unchecked with a concrete explanation.
 
-- [ ] **Step 3: Self-review the documents and diff**
+- [x] **Step 3: Self-review the documents and diff**
 
 Run `rg -n "[T]BD|[T]ODO|[F]IXME" docs/superpowers/specs/2026-07-15-ending-archive-design.md docs/superpowers/plans/2026-07-15-ending-archive-pass.md`, `git diff --check`, and `git status --short`.
 
 Expected: no placeholders, whitespace defects, or staged browser artifacts.
 
-- [ ] **Step 4: Run the complete feature-tree gate**
+- [x] **Step 4: Run the complete feature-tree gate**
 
 Run `npm run verify`.
 
