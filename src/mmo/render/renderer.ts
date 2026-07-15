@@ -80,6 +80,41 @@ export const DOUBLE_XP_COPY = {
   label: 'DOUBLE XP',
   detail: 'FRIDAY EVENT',
 } as const;
+export const AWAY_PLAN_COLORS = {
+  plate: '#172012',
+  plateBorder: '#6f7f54',
+  caption: '#e8c33f',
+  offBg: '#303328',
+  offBorder: '#8a8f78',
+  offText: '#f0ead8',
+  onBg: '#315a2c',
+  onBorder: '#8be86b',
+  onText: '#f0ffe8',
+  hover: '#fff4d0',
+  stateBar: '#8be86b',
+} as const;
+
+export const AWAY_PLAN_UI = {
+  plate: { x: 131, y: 1, w: 108, h: 22 },
+  caption: 'AWAY PLAN',
+  chips: [
+    { key: 'keepWorking', label: 'WORK', x: 135, y: 10, w: 24, h: 11 },
+    { key: 'eatBread', label: 'EAT', x: 161, y: 10, w: 24, h: 11 },
+    { key: 'runHome', label: 'HOME', x: 187, y: 10, w: 24, h: 11 },
+    { key: 'autoSell', label: 'SELL', x: 213, y: 10, w: 24, h: 11 },
+  ],
+} as const satisfies {
+  plate: { x: number; y: number; w: number; h: number };
+  caption: string;
+  chips: readonly {
+    key: keyof AwayPlan;
+    label: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }[];
+};
 
 export interface DisconnectFrame {
   retryLabel: string;
@@ -737,25 +772,13 @@ export class MmoRenderer {
 
   /** Away-plan toggle under the crosshair, if any (viewport overlay row). */
   awayPlanButtonAt(cx: number, cy: number): keyof AwayPlan | null {
-    for (const b of this.awayPlanButtons()) {
-      if (cx >= b.x && cx < b.x + b.w && cy >= b.y && cy < b.y + b.h) return b.key;
+    for (const chip of AWAY_PLAN_UI.chips) {
+      if (
+        cx >= chip.x && cx < chip.x + chip.w
+        && cy >= chip.y && cy < chip.y + chip.h
+      ) return chip.key;
     }
     return null;
-  }
-
-  private awayPlanButtons(): { key: keyof AwayPlan; label: string; x: number; y: number; w: number; h: number }[] {
-    const defs: [keyof AwayPlan, string][] = [
-      ['keepWorking', 'wrk'],
-      ['eatBread', 'eat'],
-      ['runHome', 'run'],
-      ['autoSell', 'sel'],
-    ];
-    const w = 22;
-    const h = 11;
-    const gap = 2;
-    const total = defs.length * w + (defs.length - 1) * gap;
-    const x0 = VIEW_W - total - 4;
-    return defs.map(([key, label], i) => ({ key, label, x: x0 + i * (w + gap), y: 4, w, h }));
   }
 
   /** Shared trade-dialog geometry so draw + hit tests stay aligned. */
@@ -964,19 +987,36 @@ export class MmoRenderer {
   /** Standing orders row, top-right of the world view. */
   private drawAwayPlanChips(): void {
     const ctx = this.ctx;
-    const plan = this.sim.awayPlan;
-    ctx.font = '6px monospace';
-    ctx.textAlign = 'center';
-    for (const b of this.awayPlanButtons()) {
-      const on = plan[b.key];
-      ctx.fillStyle = on ? 'rgba(60,110,60,0.85)' : 'rgba(30,30,36,0.7)';
-      ctx.fillRect(b.x, b.y, b.w, b.h);
-      ctx.strokeStyle = on ? '#8be86b' : '#5a5a66';
-      ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
-      ctx.fillStyle = on ? '#d8ffd0' : '#9a9aa6';
-      ctx.fillText(b.label, b.x + b.w / 2, b.y + 8);
-    }
+    const { plate, caption, chips } = AWAY_PLAN_UI;
+    const colors = AWAY_PLAN_COLORS;
+
+    ctx.save();
+    ctx.fillStyle = colors.plate;
+    ctx.fillRect(plate.x, plate.y, plate.w, plate.h);
+    ctx.strokeStyle = colors.plateBorder;
+    ctx.strokeRect(plate.x + 0.5, plate.y + 0.5, plate.w - 1, plate.h - 1);
+    ctx.font = 'bold 6px monospace';
     ctx.textAlign = 'left';
+    ctx.fillStyle = colors.caption;
+    ctx.fillText(caption, plate.x + 4, plate.y + 6);
+
+    ctx.textAlign = 'center';
+    for (const chip of chips) {
+      const on = this.sim.awayPlan[chip.key];
+      const hovered = this.mouse !== null
+        && this.awayPlanButtonAt(this.mouse.x, this.mouse.y) === chip.key;
+      ctx.fillStyle = on ? colors.onBg : colors.offBg;
+      ctx.fillRect(chip.x, chip.y, chip.w, chip.h);
+      ctx.strokeStyle = hovered ? colors.hover : on ? colors.onBorder : colors.offBorder;
+      ctx.strokeRect(chip.x + 0.5, chip.y + 0.5, chip.w - 1, chip.h - 1);
+      ctx.fillStyle = hovered ? colors.hover : on ? colors.onText : colors.offText;
+      ctx.fillText(chip.label, chip.x + chip.w / 2, chip.y + 7);
+      if (on) {
+        ctx.fillStyle = colors.stateBar;
+        ctx.fillRect(chip.x + 3, chip.y + chip.h - 3, chip.w - 6, 2);
+      }
+    }
+    ctx.restore();
   }
 
   private drawTerrain(): void {
