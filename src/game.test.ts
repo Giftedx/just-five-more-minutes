@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { choreDoneToast, crossWorldToast } from './game';
+import { AWAY_PLAN_TUTORIAL, choreDoneToast, crossWorldToast } from './game';
+
+describe('away plan onboarding copy', () => {
+  it('keeps the first stand-up lesson specific, legible, and neutral', () => {
+    expect(AWAY_PLAN_TUTORIAL).toEqual({
+      text: 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.',
+      durationMs: 6500,
+      tone: 'neutral',
+    });
+    expect(AWAY_PLAN_TUTORIAL.text).toHaveLength(103);
+  });
+});
 
 describe('cross-world feedback copy', () => {
   it('reports deaths only when the avatar died while the player was away', () => {

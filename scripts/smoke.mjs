@@ -463,6 +463,117 @@ try {
     },
   );
 
+  await scenario(
+    'first Monday stand-up teaches the away plan once without crowding dialogue',
+    { viewport: { width: 900, height: 400 }, reducedMotion: 'reduce' },
+    async (page) => {
+      const tutorialText = 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.';
+      await gotoOk(page, { skipTitle: 1, seed: 13 });
+      await page.waitForFunction(() => window.__game?.['host']?.mode === 'room');
+      await page.locator('.hud-toast').waitFor({ state: 'hidden' });
+
+      await page.evaluate(() => {
+        const host = window.__game['host'];
+        const player = host.player;
+        const position = [0.9, 0, -0.9];
+        const target = [0.9, 0.99, -1.72];
+        player.pos.set(...position);
+        const dx = target[0] - position[0];
+        const dy = target[1] - 1.55;
+        const dz = target[2] - position[2];
+        player.yaw = Math.atan2(-dx, -dz);
+        player.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+        player['apply']();
+      });
+      await page.waitForFunction(() => /Sit down/.test(window.__game?.['host']?.prompt?.label ?? ''));
+      await page.keyboard.press('KeyE');
+      await page.waitForFunction(() => window.__game?.['host']?.mode === 'pc');
+
+      await page.evaluate(() => {
+        const game = window.__game;
+        const now = game['gameNow'];
+        game['hud'].showSubtitle('Dinner is not a self-hosting service.', now, 20_000);
+        game['hud'].openPrompt(now, 20_000);
+        game['host'].exitPc();
+      });
+      await page.locator('.hud-toast').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('.hud-toast').textContent(), tutorialText);
+
+      const state = await page.evaluate(() => {
+        const rect = (element) => {
+          const value = element.getBoundingClientRect();
+          return { left: value.left, top: value.top, right: value.right, bottom: value.bottom };
+        };
+        const overlapArea = (a, b) => (
+          Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+          * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+        );
+        const toast = document.querySelector('.hud-toast');
+        const prompt = document.querySelector('.hud-prompt');
+        const subtitle = document.querySelector('.hud-subtitle');
+        const toastRect = rect(toast);
+        const stored = JSON.parse(localStorage.getItem('j5mm-career-v1'));
+        return {
+          tone: toast.dataset.tone,
+          role: toast.getAttribute('role'),
+          live: toast.getAttribute('aria-live'),
+          atomic: toast.getAttribute('aria-atomic'),
+          toastRect,
+          promptOverlap: overlapArea(toastRect, rect(prompt)),
+          subtitleOverlap: overlapArea(toastRect, rect(subtitle)),
+          viewport: { width: innerWidth, height: innerHeight },
+          awayPlanSeen: stored.tutorials.awayPlanSeen,
+        };
+      });
+      assert.deepEqual(
+        { tone: state.tone, role: state.role, live: state.live, atomic: state.atomic },
+        { tone: 'neutral', role: 'status', live: 'polite', atomic: 'true' },
+      );
+      assert.equal(state.awayPlanSeen, true);
+      assert.ok(state.toastRect.left >= 8 && state.toastRect.top >= 8, JSON.stringify(state));
+      assert.ok(state.toastRect.right <= state.viewport.width - 8, JSON.stringify(state));
+      assert.ok(state.toastRect.bottom <= state.viewport.height - 8, JSON.stringify(state));
+      assert.equal(state.promptOverlap, 0, JSON.stringify(state));
+      assert.equal(state.subtitleOverlap, 0, JSON.stringify(state));
+
+      await page.evaluate(() => {
+        const game = window.__game;
+        game['hud'].update(game['gameNow'] + 7000);
+      });
+      await page.locator('.hud-toast').waitFor({ state: 'hidden' });
+      await page.evaluate(() => {
+        const host = window.__game['host'];
+        host.enterPc();
+        host.exitPc();
+      });
+      await page.locator('.hud-toast').waitFor({ state: 'hidden' });
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => window.__game?.['host']?.mode === 'room');
+      await page.evaluate(() => {
+        const host = window.__game['host'];
+        host.enterPc();
+        host.exitPc();
+      });
+      await page.locator('.hud-toast').waitFor({ state: 'hidden' });
+
+      await page.evaluate(() => localStorage.removeItem('j5mm-career-v1'));
+      await gotoOk(page, { night: 1, skipTitle: 1, seed: 13 });
+      await page.waitForFunction(() => window.__game?.['host']?.mode === 'room');
+      const tuesdayState = await page.evaluate(() => {
+        const game = window.__game;
+        const host = game['host'];
+        host.enterPc();
+        host.exitPc();
+        return {
+          visible: getComputedStyle(document.querySelector('.hud-toast')).display !== 'none',
+          awayPlanSeen: game['career'].tutorials.awayPlanSeen,
+        };
+      });
+      assert.deepEqual(tuesdayState, { visible: false, awayPlanSeen: false });
+    },
+  );
+
   await scenario('dialogue staging keeps Mum visible and controls separated', { viewport: { width: 900, height: 600 } }, async (page) => {
     await gotoOk(page, { speed: 1, t: 37, skipTitle: 1, seed: 3 });
     await page.waitForFunction(() => {
@@ -1167,6 +1278,7 @@ try {
         awayPlan: { keepWorking: true, eatBread: true, runHome: false, autoSell: true },
       },
       week: { night: 0, suspicionCarry: 0, lieDebt: 0, archivistUsed: false, reports: [] },
+      tutorials: { awayPlanSeen: false },
       gallery: [
         'lostWeek',
         'goblinWidow',
