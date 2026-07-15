@@ -26,13 +26,13 @@ export class MmoGame {
     speed = 1,
     simOpts: { character?: SimCharacter | undefined; doubleXp?: boolean | undefined } = {},
   ) {
-    const opts: ConstructorParameters<typeof MudwickSim>[0] = {};
-    if (seed !== undefined) opts.seed = seed;
+    const resolvedSeed = seed ?? 0xc0ffee;
+    const opts: ConstructorParameters<typeof MudwickSim>[0] = { seed: resolvedSeed };
     if (simOpts.character !== undefined) opts.character = simOpts.character;
     if (simOpts.doubleXp !== undefined) opts.doubleXp = simOpts.doubleXp;
     this.sim = new MudwickSim(opts);
     this.speed = speed;
-    this.renderer = new MmoRenderer(this.sim, BASE_TICK_MS / speed);
+    this.renderer = new MmoRenderer(this.sim, BASE_TICK_MS / speed, resolvedSeed);
   }
 
   get canvas(): HTMLCanvasElement {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MudwickSim } from '../sim/sim';
+import type { SimEvent } from '../sim/types';
 import * as rendererModule from './renderer';
 import { MmoRenderer } from './renderer';
 
@@ -76,7 +77,7 @@ describe('seeded crowd isolation', () => {
       crowdHarness(b).updateGhosts(now);
       crowdHarness(other).updateGhosts(now);
     }
-    const death = [{ type: 'playerDied', coinsLost: 0, whileAway: false }] as const;
+    const death: SimEvent[] = [{ type: 'playerDied', coinsLost: 0, whileAway: false }];
     a.consumeEvents(death, 92_000);
     b.consumeEvents(death, 92_000);
     other.consumeEvents(death, 92_000);

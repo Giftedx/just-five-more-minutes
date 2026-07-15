@@ -13,6 +13,7 @@ import {
   PLAYER_MAX_HP,
   xpForLevel,
 } from '../sim/sim';
+import { Rng } from '../sim/rng';
 import type {
   AwayPlan,
   ItemKind,
@@ -242,10 +243,12 @@ export class MmoRenderer {
   private vignette: HTMLCanvasElement | null = null;
   private camX = 0;
   private tickMs: number;
+  private crowdRng: Rng;
 
-  constructor(sim: MudwickSim, tickMs: number) {
+  constructor(sim: MudwickSim, tickMs: number, crowdSeed = 0xc0ffee) {
     this.sim = sim;
     this.tickMs = tickMs;
+    this.crowdRng = new Rng((crowdSeed ^ 0x5eed) >>> 0);
     this.canvas = document.createElement('canvas');
     this.canvas.width = CANVAS_W;
     this.canvas.height = CANVAS_H;
@@ -438,7 +441,7 @@ export class MmoRenderer {
           );
           const d = this.disp.get('player');
           if (d) this.spawnBurst(d.x + 8, d.y + 8, ['#c0c0c0', '#8a8a8a'], 8, now, 550);
-          this.ghostReact(Math.random() < 0.5 ? 'lol' : 'F', now);
+          this.ghostReact(this.crowdRng.chance(0.5) ? 'lol' : 'F', now);
           break;
         }
         case 'invFull':
@@ -610,7 +613,7 @@ export class MmoRenderer {
   /** Wander + chatter for the cosmetic players. */
   /** A bystander comments. They always comment. */
   private ghostReact(line: string, now: number): void {
-    const g = this.ghosts[Math.floor(Math.random() * this.ghosts.length)];
+    const g = this.ghosts[this.crowdRng.int(0, this.ghosts.length - 1)];
     if (!g) return;
     g.say = line;
     g.sayUntil = now + 2600;
@@ -627,15 +630,15 @@ export class MmoRenderer {
     }
     for (const g of this.ghosts) {
       if (now >= g.nextMoveAt) {
-        g.nextMoveAt = now + 900 + Math.random() * 1500;
-        if (Math.random() < 0.7) {
+        g.nextMoveAt = now + 900 + this.crowdRng.next() * 1500;
+        if (this.crowdRng.chance(0.7)) {
           const dirs = [
             { x: 0, y: -1 },
             { x: 0, y: 1 },
             { x: -1, y: 0 },
             { x: 1, y: 0 },
           ];
-          const d = dirs[Math.floor(Math.random() * 4)];
+          const d = dirs[this.crowdRng.int(0, dirs.length - 1)];
           if (d) {
             const nx = g.pos.x + d.x;
             const ny = g.pos.y + d.y;
@@ -646,8 +649,8 @@ export class MmoRenderer {
         }
       }
       if (now >= g.nextSayAt) {
-        g.nextSayAt = now + 16000 + Math.random() * 24000;
-        const line = GHOST_CHATTER[Math.floor(Math.random() * GHOST_CHATTER.length)] ?? 'grats';
+        g.nextSayAt = now + 16000 + this.crowdRng.next() * 24000;
+        const line = GHOST_CHATTER[this.crowdRng.int(0, GHOST_CHATTER.length - 1)] ?? 'grats';
         g.say = line;
         g.sayUntil = now + 3400;
         this.postMessage(`${g.name}: ${line}`, now, '#8fb8ff');
