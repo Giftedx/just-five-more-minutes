@@ -63,6 +63,12 @@ function roomConfigFor(spec: NightSpec): RoomNightConfig {
 
 const CHORE_ORDER: readonly ChoreId[] = ['mugs', 'wrappers', 'laundry'];
 
+export const AWAY_PLAN_TUTORIAL = {
+  text: 'Auto-pilot engaged. This is definitely allowed. Set the AWAY PLAN switches on the CRT before you leave.',
+  durationMs: 6500,
+  tone: 'neutral',
+} as const;
+
 export function crossWorldToast(event: SimEvent): string | null {
   if (event.type === 'playerDied' && event.whileAway) {
     return 'Mudwick: you died while unsupervised.';
@@ -413,6 +419,30 @@ export class Game {
     this.host.hooks.onModeChange = (mode) => {
       this.hud.setCrosshairVisible(mode === 'room' && this.state === 'playing');
       if (mode === 'pc') this.hud.setInteractLabel(null);
+      if (
+        mode === 'room'
+        && this.state === 'playing'
+        && this.night.night === 0
+        && !this.career.tutorials.awayPlanSeen
+      ) {
+        // Mark before touching storage or HUD: even privacy modes and exhausted
+        // quotas must not turn the lesson into same-session nagging.
+        this.career = {
+          ...this.career,
+          tutorials: { ...this.career.tutorials, awayPlanSeen: true },
+        };
+        try {
+          saveCareer(localStorage, this.career);
+        } catch {
+          // Persistence is optional; the in-memory mark still suppresses spam.
+        }
+        this.hud.showToast(
+          AWAY_PLAN_TUTORIAL.text,
+          this.gameNow,
+          AWAY_PLAN_TUTORIAL.durationMs,
+          AWAY_PLAN_TUTORIAL.tone,
+        );
+      }
       this.syncPauseOverlay();
     };
 
