@@ -32,7 +32,7 @@ import {
   weekComplete,
   type Career,
 } from './score/career';
-import { endingGallery, gradeFor, weekVerdict } from './score/week';
+import { collectedEndingCount, endingGallery, gradeFor, weekVerdict } from './score/week';
 import { levelOf } from './mmo/sim/osrs';
 import type { SimEvent } from './mmo/sim/types';
 import { createSessionSeed } from './session';
@@ -364,8 +364,7 @@ export class Game {
       this.career.week.lieDebt,
       this.career.week.suspicionCarry * 2,
     );
-    const galleryCount = endingGallery([...this.career.gallery, verdict.endingId])
-      .filter((slot) => slot.collected).length;
+    const galleryCount = collectedEndingCount([...this.career.gallery, verdict.endingId]);
     const card = showWeekVerdict(this.root, verdict, galleryCount, () => {
       this.career = completeWeek(this.career, verdict.endingId, verdict.weekTotal);
       try {

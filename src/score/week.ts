@@ -87,6 +87,10 @@ export function endingGallery(ids: readonly string[]): EndingGallerySlot[] {
   return ENDING_ARCHIVE.map(({ endingId: id, title }) => ({ id, title, collected: collected.has(id) }));
 }
 
+export function collectedEndingCount(ids: readonly string[]): number {
+  return endingGallery(ids).filter((slot) => slot.collected).length;
+}
+
 function houseBand(avg: number): Band {
   if (avg < 15) return 'low';
   if (avg < 24) return 'mid';

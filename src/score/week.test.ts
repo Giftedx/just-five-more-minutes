@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { NightReportSummary } from './career';
-import { ENDING_ARCHIVE, endingGallery, gradeFor, weekVerdict } from './week';
+import {
+  collectedEndingCount,
+  ENDING_ARCHIVE,
+  endingGallery,
+  gradeFor,
+  weekVerdict,
+} from './week';
 
 function night(
   mmo: number,
@@ -97,5 +103,11 @@ describe('ending archive', () => {
       'lostWeek',
       'timeWizard',
     ]);
+  });
+
+  it('keeps prospective collection counts stable for replays and legacy ids', () => {
+    expect(collectedEndingCount([])).toBe(0);
+    expect(collectedEndingCount(['lostWeek', 'lostWeek', 'legacyMystery'])).toBe(1);
+    expect(collectedEndingCount(['lostWeek', 'lostWeek', 'legacyMystery', 'timeWizard'])).toBe(2);
   });
 });
