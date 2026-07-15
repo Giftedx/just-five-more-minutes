@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MudwickSim } from '../sim/sim';
 import * as rendererModule from './renderer';
+import { MmoRenderer } from './renderer';
 
 type DisconnectFrame = { retryLabel: string; activeSegments: number };
 type DisconnectFrameFn = (now: number) => DisconnectFrame;
@@ -8,6 +10,95 @@ type XpDropLabelFn = (
   skill: 'woodcutting' | 'attack' | 'foraging' | 'fishing',
   multiplier: 1 | 2,
 ) => string;
+
+interface CrowdGhostSnapshot {
+  id: string;
+  pos: { x: number; y: number };
+  nextMoveAt: number;
+  say: string | null;
+  sayUntil: number;
+  nextSayAt: number;
+}
+
+interface CrowdHarness {
+  ghosts: CrowdGhostSnapshot[];
+  updateGhosts(now: number): void;
+}
+
+function crowdHarness(renderer: MmoRenderer): CrowdHarness {
+  return renderer as unknown as CrowdHarness;
+}
+
+function crowdSnapshot(renderer: MmoRenderer): CrowdGhostSnapshot[] {
+  return crowdHarness(renderer).ghosts.map(({ id, pos, nextMoveAt, say, sayUntil, nextSayAt }) => ({
+    id,
+    pos: { ...pos },
+    nextMoveAt,
+    say,
+    sayUntil,
+    nextSayAt,
+  }));
+}
+
+beforeEach(() => {
+  const gradient = { addColorStop: vi.fn() };
+  const context = {
+    imageSmoothingEnabled: false,
+    createRadialGradient: vi.fn(() => gradient),
+    fillRect: vi.fn(),
+    fillStyle: '',
+  };
+  vi.stubGlobal('document', {
+    createElement: vi.fn(() => ({
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => context),
+    })),
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('seeded crowd isolation', () => {
+  it('replays the same crowd timeline for the same seed and diverges for another seed', () => {
+    const timeline = [1_000, 6_000, 18_000, 30_000, 46_000, 91_000];
+    const make = (crowdSeed: number): MmoRenderer => (
+      new MmoRenderer(new MudwickSim({ seed: 0xc0ffee }), 600, crowdSeed)
+    );
+    const a = make(13);
+    const b = make(13);
+    const other = make(14);
+
+    for (const now of timeline) {
+      crowdHarness(a).updateGhosts(now);
+      crowdHarness(b).updateGhosts(now);
+      crowdHarness(other).updateGhosts(now);
+    }
+    const death = [{ type: 'playerDied', coinsLost: 0, whileAway: false }] as const;
+    a.consumeEvents(death, 92_000);
+    b.consumeEvents(death, 92_000);
+    other.consumeEvents(death, 92_000);
+
+    expect(crowdSnapshot(a)).toEqual(crowdSnapshot(b));
+    expect(crowdSnapshot(other)).not.toEqual(crowdSnapshot(a));
+  });
+
+  it('does not perturb simulation outcomes while the crowd advances', () => {
+    const withCrowd = new MudwickSim({ seed: 0xc0ffee });
+    const withoutCrowd = new MudwickSim({ seed: 0xc0ffee });
+    const renderer = new MmoRenderer(withCrowd, 600, 13);
+
+    for (let tick = 1; tick <= 200; tick++) {
+      crowdHarness(renderer).updateGhosts(tick * 600);
+      withCrowd.step({ playerAway: true });
+      withoutCrowd.step({ playerAway: true });
+    }
+
+    expect(JSON.parse(JSON.stringify(withCrowd))).toEqual(JSON.parse(JSON.stringify(withoutCrowd)));
+  });
+});
 
 describe('modem outage presentation', () => {
   it('advances retry copy and activity from renderer time without mutable state', () => {
