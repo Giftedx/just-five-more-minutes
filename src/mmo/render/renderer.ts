@@ -144,7 +144,7 @@ export const INVENTORY_UI = {
     fullHeader: '#7a2020',
     emptyBg: '#b09a74',
     emptyBorder: '#8a754f',
-    occupiedBg: '#927b58',
+    occupiedBg: '#98815d',
     occupiedBorder: '#5c4a32',
     sheen: 'rgba(255,255,255,0.18)',
     badgeBg: '#3a2c18',

@@ -259,7 +259,7 @@ try {
         };
       });
       assert.deepEqual(inventoryFinish.emptySlot, [176, 154, 116, 255]);
-      assert.deepEqual(inventoryFinish.occupiedSlot, [146, 123, 88, 255]);
+      assert.deepEqual(inventoryFinish.occupiedSlot, [152, 129, 93, 255]);
       assert.deepEqual(inventoryFinish.nextEmptySlot, [176, 154, 116, 255]);
       assert.deepEqual(inventoryFinish.badgeCorner, [58, 44, 24, 255]);
       assert.equal(inventoryFinish.changedWorldPixels, 0, 'inventory finish entered the world viewport');

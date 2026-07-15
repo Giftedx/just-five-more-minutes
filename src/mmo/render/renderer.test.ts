@@ -364,7 +364,7 @@ describe('inventory panel finish', () => {
         fullHeader: '#7a2020',
         emptyBg: '#b09a74',
         emptyBorder: '#8a754f',
-        occupiedBg: '#927b58',
+        occupiedBg: '#98815d',
         occupiedBorder: '#5c4a32',
         sheen: 'rgba(255,255,255,0.18)',
         badgeBg: '#3a2c18',
@@ -385,7 +385,7 @@ describe('inventory panel finish', () => {
     expect(frame(28)).toEqual({ label: 'PACK 28/28', full: true });
   });
 
-  it('keeps inventory text roles above 4.5:1', () => {
+  it('keeps text above 4.5:1 and the darkest item above 3:1', () => {
     const ui = (rendererModule as typeof rendererModule & {
       INVENTORY_UI?: { colors: Record<string, string> };
     }).INVENTORY_UI;
@@ -406,5 +406,6 @@ describe('inventory panel finish', () => {
     expect(contrast(ui.colors.header!, ui.colors.panel!)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(ui.colors.fullHeader!, ui.colors.panel!)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(ui.colors.badgeText!, ui.colors.badgeBg!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ui.colors.occupiedBg!, '#3a3630')).toBeGreaterThanOrEqual(3);
   });
 });

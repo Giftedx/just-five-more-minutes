@@ -66,10 +66,12 @@ Authored colours:
 - Normal header: `#4a3a26` — 5.21:1 against the panel.
 - Full header: `#7a2020` — 4.88:1 against the panel.
 - Empty well: `#b09a74`.
-- Occupied well: `#927b58`.
+- Occupied well: `#98815d`.
 - Occupied border: `#5c4a32`.
 - Count badge: `#3a2c18`.
 - Count text: `#ffe96b` — 11.02:1 against the badge.
+
+Production calibration raised the occupied well from the initially planned `#927b58` to `#98815d`. The first candidate reduced the flat burnt-shrimp glyph to 2.969:1; the final well restores 3.219:1 graphical contrast while remaining visibly distinct from the empty well.
 
 The maximum authored header, `PACK 28/28`, measures 32.9883px in the production browser and fits inside its 54px backing. The maximum two-digit count measures 5.4980px at the new font size and fits inside its 8px badge.
 

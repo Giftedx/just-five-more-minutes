@@ -75,7 +75,7 @@ describe('inventory panel finish', () => {
         fullHeader: '#7a2020',
         emptyBg: '#b09a74',
         emptyBorder: '#8a754f',
-        occupiedBg: '#927b58',
+        occupiedBg: '#98815d',
         occupiedBorder: '#5c4a32',
         sheen: 'rgba(255,255,255,0.18)',
         badgeBg: '#3a2c18',
@@ -117,6 +117,7 @@ describe('inventory panel finish', () => {
     expect(contrast(ui.colors.header!, ui.colors.panel!)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(ui.colors.fullHeader!, ui.colors.panel!)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(ui.colors.badgeText!, ui.colors.badgeBg!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ui.colors.occupiedBg!, '#3a3630')).toBeGreaterThanOrEqual(3);
   });
 });
 ```
@@ -190,7 +191,7 @@ const inventoryFinish = await page.evaluate(() => {
   };
 });
 assert.deepEqual(inventoryFinish.emptySlot, [176, 154, 116, 255]);
-assert.deepEqual(inventoryFinish.occupiedSlot, [146, 123, 88, 255]);
+assert.deepEqual(inventoryFinish.occupiedSlot, [152, 129, 93, 255]);
 assert.deepEqual(inventoryFinish.nextEmptySlot, [176, 154, 116, 255]);
 assert.deepEqual(inventoryFinish.badgeCorner, [58, 44, 24, 255]);
 assert.equal(inventoryFinish.changedWorldPixels, 0, 'inventory finish entered the world viewport');
@@ -208,7 +209,7 @@ npm run build
 npm run test:browser
 ```
 
-Expected: build succeeds; the existing Mudwick panel scenario fails because an occupied slot still paints `[176, 154, 116, 255]` instead of `[146, 123, 88, 255]`, and the old count path does not paint the dark badge corner.
+Expected: build succeeds; the existing Mudwick panel scenario fails because an occupied slot still paints `[176, 154, 116, 255]` instead of `[152, 129, 93, 255]`, and the old count path does not paint the dark badge corner.
 
 - [ ] **Step 5: Commit the red contracts**
 
@@ -262,7 +263,7 @@ export const INVENTORY_UI = {
     fullHeader: '#7a2020',
     emptyBg: '#b09a74',
     emptyBorder: '#8a754f',
-    occupiedBg: '#927b58',
+    occupiedBg: '#98815d',
     occupiedBorder: '#5c4a32',
     sheen: 'rgba(255,255,255,0.18)',
     badgeBg: '#3a2c18',
