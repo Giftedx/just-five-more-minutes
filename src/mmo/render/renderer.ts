@@ -6,6 +6,7 @@ import {
 } from '../sim/osrs';
 import {
   BREAD_PRICE,
+  INVENTORY_SIZE,
   ITEM_PRICES,
   levelOf,
   MudwickSim,
@@ -128,6 +129,40 @@ export const HOVER_ACTION_UI = {
     detail: '#d8c79d',
   },
 } as const;
+
+export const INVENTORY_UI = {
+  capacity: INVENTORY_SIZE,
+  divider: { x: 248, y: 82, w: 64, h: 1 },
+  headerBacking: { x: 253, y: 79, w: 54, h: 7 },
+  header: { centerX: 280, y: 79, font: 'bold 6px monospace' },
+  grid: { x: 255, y: 86, columns: 4, rows: 7, pitch: 13, cell: 11 },
+  badge: { w: 8, h: 6, font: 'bold 5px monospace' },
+  colors: {
+    panel: '#c8b088',
+    divider: '#8a754f',
+    header: '#4a3a26',
+    fullHeader: '#7a2020',
+    emptyBg: '#b09a74',
+    emptyBorder: '#8a754f',
+    occupiedBg: '#927b58',
+    occupiedBorder: '#5c4a32',
+    sheen: 'rgba(255,255,255,0.18)',
+    badgeBg: '#3a2c18',
+    badgeText: '#ffe96b',
+  },
+} as const;
+
+export interface InventoryFrame {
+  label: string;
+  full: boolean;
+}
+
+export function inventoryFrame(count: number): InventoryFrame {
+  return {
+    label: `PACK ${count}/${INVENTORY_SIZE}`,
+    full: count >= INVENTORY_SIZE,
+  };
+}
 
 export interface HoverActionFrame {
   verb: string;
@@ -1634,8 +1669,6 @@ export class MmoRenderer {
       coinCy: 52,
       hpR1: 63,
       hpR2: 75,
-      invY: 86,
-      slot: 13,
       skillDiv: 178,
       wcY: 181,
       atkY: 193,
@@ -1644,9 +1677,6 @@ export class MmoRenderer {
       questY: 230,
     } as const;
 
-    const invCols = 4;
-    const invGridW = (invCols - 1) * PL.slot + (PL.slot - 2);
-    const invX = x0 + Math.floor((PANEL_W - invGridW) / 2);
     const hpPitch = 13;
     const hpSpan = 4 * hpPitch;
     const hpX = x0 + Math.floor((PANEL_W - hpSpan) / 2);
@@ -1658,7 +1688,6 @@ export class MmoRenderer {
     // dividers frame the status cluster (coin + HP)
     ctx.fillStyle = '#8a754f';
     ctx.fillRect(x0 + 8, 44, PANEL_W - 16, 1);
-    ctx.fillRect(x0 + 8, 82, PANEL_W - 16, 1);
 
     // coin — icon + amount, centred as a pair
     ctx.font = '8px monospace';
@@ -1690,34 +1719,55 @@ export class MmoRenderer {
 
     // inventory 4×7
     const inv = this.sim.player.inventory;
-    const { slot } = PL;
-    const gx = invX;
-    const gy = PL.invY;
+    const frame = inventoryFrame(inv.length);
+    const { divider, headerBacking, header, grid, badge, colors } = INVENTORY_UI;
+    ctx.fillStyle = colors.divider;
+    ctx.fillRect(divider.x, divider.y, divider.w, divider.h);
+    ctx.fillStyle = colors.panel;
+    ctx.fillRect(headerBacking.x, headerBacking.y, headerBacking.w, headerBacking.h);
+    ctx.font = header.font;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = frame.full ? colors.fullHeader : colors.header;
+    ctx.fillText(frame.label, header.centerX, header.y);
+    ctx.textAlign = 'left';
+
     ctx.font = '6px monospace';
-    for (let i = 0; i < 28; i++) {
-      const sx = gx + (i % 4) * slot;
-      const sy = gy + Math.floor(i / 4) * slot;
-      ctx.fillStyle = '#b09a74';
-      ctx.fillRect(sx, sy, slot - 2, slot - 2);
-      ctx.strokeStyle = '#8a754f';
-      ctx.strokeRect(sx + 0.5, sy + 0.5, slot - 3, slot - 3);
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.fillRect(sx + 1, sy + 1, slot - 4, 1);
+    for (let i = 0; i < grid.columns * grid.rows; i++) {
+      const sx = grid.x + (i % grid.columns) * grid.pitch;
+      const sy = grid.y + Math.floor(i / grid.columns) * grid.pitch;
       const item = inv[i];
+      const occupied = item !== undefined;
+      ctx.fillStyle = occupied ? colors.occupiedBg : colors.emptyBg;
+      ctx.fillRect(sx, sy, grid.cell, grid.cell);
+      ctx.strokeStyle = occupied ? colors.occupiedBorder : colors.emptyBorder;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, grid.cell - 1, grid.cell - 1);
+      ctx.fillStyle = colors.sheen;
+      ctx.fillRect(sx + 1, sy + 1, grid.cell - 2, 1);
       if (item !== undefined) this.drawItemGlyph(item, sx, sy);
     }
-    // one stack count per distinct kind, drawn at its first occurrence
+
+    // one bounded count badge per distinct kind, drawn at its first occurrence
     const counted = new Set<ItemKind>();
     for (let i = 0; i < inv.length; i++) {
       const kind = inv[i];
       if (kind === undefined || counted.has(kind)) continue;
       counted.add(kind);
-      const count = inv.filter((k) => k === kind).length;
+      const count = inv.filter((item) => item === kind).length;
       if (count <= 1) continue;
-      const fx = gx + (i % 4) * slot;
-      const fy = gy + Math.floor(i / 4) * slot;
-      ctx.fillStyle = '#ffe96b';
-      ctx.fillText(String(count), fx + slot - 8, fy + 9);
+      const sx = grid.x + (i % grid.columns) * grid.pitch;
+      const sy = grid.y + Math.floor(i / grid.columns) * grid.pitch;
+      const bx = sx + grid.cell - badge.w;
+      const by = sy + grid.cell - badge.h;
+      ctx.fillStyle = colors.badgeBg;
+      ctx.fillRect(bx, by, badge.w, badge.h);
+      ctx.save();
+      ctx.font = badge.font;
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = colors.badgeText;
+      ctx.fillText(String(count), bx + badge.w - 1, by + 1);
+      ctx.restore();
     }
 
     // skills (user said these are perfect — keep spacing)
