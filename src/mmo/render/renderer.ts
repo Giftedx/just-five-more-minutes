@@ -116,6 +116,37 @@ export const AWAY_PLAN_UI = {
   }[];
 };
 
+export const HOVER_ACTION_UI = {
+  plate: { x: 1, y: 1, w: 128, h: 22 },
+  primary: { x: 4, y: 3, font: '7px monospace' },
+  detail: { x: 4, y: 13, font: 'bold 6px monospace' },
+  colors: {
+    plate: '#172012',
+    border: '#6f7f54',
+    verb: '#f0ead8',
+    target: '#9be8e0',
+    detail: '#d8c79d',
+  },
+} as const;
+
+export interface HoverActionFrame {
+  verb: string;
+  target: string | null;
+  detail: string;
+}
+
+export function hoverActionFrame(label: string, extra: number): HoverActionFrame {
+  if (label === 'Walk here' || label === 'Cancel') {
+    return { verb: label, target: null, detail: `${extra} MORE · RIGHT-CLICK` };
+  }
+  const splitAt = label.indexOf(' ');
+  return {
+    verb: splitAt < 0 ? label : label.slice(0, splitAt),
+    target: splitAt < 0 ? null : label.slice(splitAt + 1),
+    detail: `${extra} MORE · RIGHT-CLICK`,
+  };
+}
+
 export interface DisconnectFrame {
   retryLabel: string;
   activeSegments: number;
@@ -1486,14 +1517,6 @@ export class MmoRenderer {
     ctx.textAlign = 'left';
   }
 
-  /** "Attack Goblin" → ['Attack', 'Goblin'] — verb plain, target colored. */
-  private static splitLabel(label: string): [string, string | null] {
-    if (label === 'Walk here' || label === 'Cancel') return [label, null];
-    const i = label.indexOf(' ');
-    if (i < 0) return [label, null];
-    return [label.slice(0, i), label.slice(i + 1)];
-  }
-
   private drawHoverText(): void {
     if (this.menu || this.tradeOpen) return;
     const m = this.mouse;
@@ -1503,27 +1526,28 @@ export class MmoRenderer {
     const opts = this.sim.optionsAt(tile.x, tile.y);
     const first = opts[0];
     if (!first) return;
-    const extra = opts.length - 1;
-    const [verb, target] = MmoRenderer.splitLabel(first.label);
-    const suffix = extra > 0 ? ` / ${extra} more` : '';
+
+    const frame = hoverActionFrame(first.label, opts.length - 1);
+    const { plate, primary, detail, colors } = HOVER_ACTION_UI;
     const ctx = this.ctx;
-    ctx.font = '7px monospace';
+    ctx.save();
+    ctx.fillStyle = colors.plate;
+    ctx.fillRect(plate.x, plate.y, plate.w, plate.h);
+    ctx.strokeStyle = colors.border;
+    ctx.strokeRect(plate.x + 0.5, plate.y + 0.5, plate.w - 1, plate.h - 1);
     ctx.textBaseline = 'top';
-    const verbW = ctx.measureText(`${verb} `).width;
-    const targetW = target ? ctx.measureText(`${target}`).width : 0;
-    const w = verbW + targetW + ctx.measureText(suffix).width + 6;
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    ctx.fillRect(0, 0, w, 11);
-    ctx.fillStyle = '#e8e2d4';
-    ctx.fillText(`${verb} `, 3, 2);
-    if (target) {
-      ctx.fillStyle = '#9be8e0';
-      ctx.fillText(target, 3 + verbW, 2);
+    ctx.font = primary.font;
+    const verbText = frame.target ? `${frame.verb} ` : frame.verb;
+    ctx.fillStyle = colors.verb;
+    ctx.fillText(verbText, primary.x, primary.y);
+    if (frame.target) {
+      ctx.fillStyle = colors.target;
+      ctx.fillText(frame.target, primary.x + ctx.measureText(verbText).width, primary.y);
     }
-    if (suffix) {
-      ctx.fillStyle = '#a8a094';
-      ctx.fillText(suffix, 3 + verbW + targetW, 2);
-    }
+    ctx.font = detail.font;
+    ctx.fillStyle = colors.detail;
+    ctx.fillText(frame.detail, detail.x, detail.y);
+    ctx.restore();
   }
 
   private drawMinimap(): void {
@@ -1818,7 +1842,7 @@ export class MmoRenderer {
         ctx.fillStyle = '#a89060';
         ctx.fillRect(m.x + 1, oy - 1, m.w - 2, 10);
       }
-      const [verb, target] = MmoRenderer.splitLabel(opt.label);
+      const { verb, target } = hoverActionFrame(opt.label, 0);
       ctx.fillStyle = '#2a2018';
       ctx.fillText(`${verb} `, m.x + 4, oy);
       if (target) {
