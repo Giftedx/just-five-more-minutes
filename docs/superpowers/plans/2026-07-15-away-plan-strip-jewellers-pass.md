@@ -513,7 +513,7 @@ git add docs/superpowers/specs/2026-07-13-game-wide-jewellers-program-design.md 
 git commit -m "docs: close away plan strip pass"
 ```
 
-- [ ] **Step 6: Integrate and verify master**
+- [x] **Step 6: Integrate and verify master**
 
 Fast-forward local `master`, run `npm run verify` again from the integrated tree, restore standalone `dist`, copy ignored proof into the main checkout, remove the owned worktree and merged branch, and confirm a clean repository.
 
@@ -528,6 +528,10 @@ Expected: the integrated master gate independently passes; no pull, push, PR, or
 - Full feature-tree gate: 19 test files / 226 tests passed, followed by standalone build, size check, 29 isolated browser scenarios, full interaction E2E (`TOTAL54 / 100`, ending `Employee of the Month (This House)`), and the mounted `/just-five-more-minutes/` build.
 - Final standalone artifacts: 756,895 raw / 203,637 gzip bytes of JavaScript and 41,737 raw / 10,091 gzip bytes of CSS, leaving 1,163 gzip bytes of JavaScript headroom and 21 gzip bytes of CSS headroom. The stylesheet hash remained exactly `E1E4706C5B04D8A5B4E3E754B25E1F2B03FBB5BDDBC7139FEE6C61090A3933B3`.
 - Ignored visual proof: `shots/away-plan-strip-off.png`, `shots/away-plan-strip-hover.png`, `shots/away-plan-strip-mixed.png`, `shots/away-plan-strip-900x400.png`, and `shots/away-plan-strip-xp-clear.png`. All were reviewed from the production build; no curated repository asset changed.
+
+## Integrated-master evidence
+
+Local `master` fast-forwarded from `8b8ee40` to `bbc4092`. A fresh integrated `npm run verify` independently repeated all 19 test files / 226 tests, both production builds, the size gate, all 29 isolated browser scenarios, and the full interaction E2E. A final standalone rebuild restored root-relative `dist` and repeated the 203,637-byte JavaScript and 10,091-byte CSS gzip figures. The five ignored proof captures were copied into the main checkout, the owned `.worktrees/away-plan-strip` worktree was removed, its merged branch was deleted, and the repository returned clean. No pull, push, PR, deployment, dependency install, lockfile change, or live-route claim occurred.
 
 ## Self-review
 
