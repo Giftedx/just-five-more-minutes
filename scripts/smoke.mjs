@@ -205,6 +205,49 @@ try {
 
       await gotoOk(page, { skipTitle: 1, seed: 13 });
       await page.waitForFunction(() => window.__game?.host?.mmo?.canvas);
+      const bridgeReadout = await page.evaluate(() => {
+        const mmo = window.__game.host.mmo;
+        const ctx = mmo.canvas.getContext('2d');
+        if (!ctx) throw new Error('Mudwick canvas has no 2D context');
+        mmo.sim.player.pos = { x: 21, y: 4 };
+        mmo.renderer.mouse = null;
+        mmo.renderer.render(1_000, 0);
+        const beforeAway = ctx.getImageData(131, 1, 108, 22).data;
+        const beforeGap = ctx.getImageData(129, 1, 2, 22).data;
+        const panelBefore = [...ctx.getImageData(240, 12, 1, 1).data];
+        const camX = mmo.renderer.camX;
+        mmo.renderer.mouse = { x: 22 * 16 - camX + 8, y: 4 * 16 + 8 };
+        mmo.renderer.render(1_000, 0);
+        const afterAway = ctx.getImageData(131, 1, 108, 22).data;
+        const afterGap = ctx.getImageData(129, 1, 2, 22).data;
+        const changedPixels = (before, after) => {
+          let changed = 0;
+          for (let index = 0; index < before.length; index += 4) {
+            if (
+              before[index] !== after[index]
+              || before[index + 1] !== after[index + 1]
+              || before[index + 2] !== after[index + 2]
+              || before[index + 3] !== after[index + 3]
+            ) changed++;
+          }
+          return changed;
+        };
+        ctx.font = '7px monospace';
+        return {
+          actionPlate: [...ctx.getImageData(3, 3, 1, 1).data],
+          changedAwayPixels: changedPixels(beforeAway, afterAway),
+          changedGapPixels: changedPixels(beforeGap, afterGap),
+          panelBefore,
+          panelAfter: [...ctx.getImageData(240, 12, 1, 1).data],
+          bridgeLabelWidth: ctx.measureText('Cross bridge (10gp toll)').width,
+        };
+      });
+      assert.deepEqual(bridgeReadout.actionPlate, [23, 32, 18, 255]);
+      assert.equal(bridgeReadout.changedAwayPixels, 0, 'bridge hover overwrote the away plan strip');
+      assert.equal(bridgeReadout.changedGapPixels, 0, 'bridge hover consumed the two-pixel gutter');
+      assert.deepEqual(bridgeReadout.panelAfter, bridgeReadout.panelBefore, 'bridge hover entered the stats panel');
+      assert.ok(bridgeReadout.bridgeLabelWidth <= 122, JSON.stringify(bridgeReadout));
+
       const changedStripPixels = await page.evaluate(() => {
         const mmo = window.__game.host.mmo;
         const ctx = mmo.canvas.getContext('2d');

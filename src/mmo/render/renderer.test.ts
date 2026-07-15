@@ -258,3 +258,80 @@ describe('away plan command strip', () => {
     expect(contrast(colors.hover!, colors.onBg!)).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe('hover action readout', () => {
+  it('pins the bounded plate and authored palette', () => {
+    const ui = (rendererModule as typeof rendererModule & {
+      HOVER_ACTION_UI?: {
+        plate: { x: number; y: number; w: number; h: number };
+        primary: { x: number; y: number; font: string };
+        detail: { x: number; y: number; font: string };
+        colors: Record<string, string>;
+      };
+    }).HOVER_ACTION_UI;
+
+    expect(ui).toEqual({
+      plate: { x: 1, y: 1, w: 128, h: 22 },
+      primary: { x: 4, y: 3, font: '7px monospace' },
+      detail: { x: 4, y: 13, font: 'bold 6px monospace' },
+      colors: {
+        plate: '#172012',
+        border: '#6f7f54',
+        verb: '#f0ead8',
+        target: '#9be8e0',
+        detail: '#d8c79d',
+      },
+    });
+  });
+
+  it('preserves the bridge action and separates the context-menu cue', () => {
+    const frame = (rendererModule as typeof rendererModule & {
+      hoverActionFrame?: (label: string, extra: number) => {
+        verb: string;
+        target: string | null;
+        detail: string;
+      };
+    }).hoverActionFrame;
+
+    expect(frame).toBeTypeOf('function');
+    if (!frame) return;
+    expect(frame('Cross bridge (10gp toll)', 2)).toEqual({
+      verb: 'Cross',
+      target: 'bridge (10gp toll)',
+      detail: '2 MORE · RIGHT-CLICK',
+    });
+    expect(frame('Walk here', 2)).toEqual({
+      verb: 'Walk here',
+      target: null,
+      detail: '2 MORE · RIGHT-CLICK',
+    });
+    expect(frame('Examine Fence', 1)).toEqual({
+      verb: 'Examine',
+      target: 'Fence',
+      detail: '1 MORE · RIGHT-CLICK',
+    });
+  });
+
+  it('keeps every small text role above 4.5:1 against the plate', () => {
+    const ui = (rendererModule as typeof rendererModule & {
+      HOVER_ACTION_UI?: { colors: Record<string, string> };
+    }).HOVER_ACTION_UI;
+    expect(ui).toBeDefined();
+    if (!ui) return;
+
+    const luminance = (hex: string): number => {
+      const channels = [1, 3, 5]
+        .map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)
+        .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+    };
+    const contrast = (a: string, b: string): number => {
+      const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (values[0]! + 0.05) / (values[1]! + 0.05);
+    };
+
+    expect(contrast(ui.colors.verb!, ui.colors.plate!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ui.colors.target!, ui.colors.plate!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ui.colors.detail!, ui.colors.plate!)).toBeGreaterThanOrEqual(4.5);
+  });
+});
