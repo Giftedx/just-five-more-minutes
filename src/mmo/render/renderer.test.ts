@@ -185,3 +185,76 @@ describe('Friday double XP presentation', () => {
     expect(copy).toEqual({ badge: '2×', label: 'DOUBLE XP', detail: 'FRIDAY EVENT' });
   });
 });
+
+describe('away plan command strip', () => {
+  it('pins the exact caption, chip order, and native geometry', () => {
+    const ui = (rendererModule as typeof rendererModule & {
+      AWAY_PLAN_UI?: {
+        plate: { x: number; y: number; w: number; h: number };
+        caption: string;
+        chips: readonly {
+          key: 'keepWorking' | 'eatBread' | 'runHome' | 'autoSell';
+          label: string;
+          x: number;
+          y: number;
+          w: number;
+          h: number;
+        }[];
+      };
+    }).AWAY_PLAN_UI;
+
+    expect(ui).toEqual({
+      plate: { x: 131, y: 1, w: 108, h: 22 },
+      caption: 'AWAY PLAN',
+      chips: [
+        { key: 'keepWorking', label: 'WORK', x: 135, y: 10, w: 24, h: 11 },
+        { key: 'eatBread', label: 'EAT', x: 161, y: 10, w: 24, h: 11 },
+        { key: 'runHome', label: 'HOME', x: 187, y: 10, w: 24, h: 11 },
+        { key: 'autoSell', label: 'SELL', x: 213, y: 10, w: 24, h: 11 },
+      ],
+    });
+  });
+
+  it('maps every drawn chip and excludes caption, gaps, and right/bottom edges', () => {
+    const sim = new MudwickSim({ seed: 13 });
+    const renderer = new MmoRenderer(sim, 600, 13);
+
+    expect(renderer.awayPlanButtonAt(135, 10)).toBe('keepWorking');
+    expect(renderer.awayPlanButtonAt(158.99, 20.99)).toBe('keepWorking');
+    expect(renderer.awayPlanButtonAt(161, 10)).toBe('eatBread');
+    expect(renderer.awayPlanButtonAt(187, 10)).toBe('runHome');
+    expect(renderer.awayPlanButtonAt(236.99, 20.99)).toBe('autoSell');
+    expect(renderer.awayPlanButtonAt(134.99, 10)).toBeNull();
+    expect(renderer.awayPlanButtonAt(159, 10)).toBeNull();
+    expect(renderer.awayPlanButtonAt(135, 9.99)).toBeNull();
+    expect(renderer.awayPlanButtonAt(237, 10)).toBeNull();
+    expect(renderer.awayPlanButtonAt(213, 21)).toBeNull();
+    expect(renderer.awayPlanButtonAt(140, 6)).toBeNull();
+    expect(sim.awayPlan).toEqual({ keepWorking: false, eatBread: false, runHome: false, autoSell: false });
+  });
+
+  it('keeps caption, OFF, ON, and hover text above 4.5:1', () => {
+    const colors = (rendererModule as typeof rendererModule & {
+      AWAY_PLAN_COLORS?: Record<string, string>;
+    }).AWAY_PLAN_COLORS;
+    expect(colors).toBeDefined();
+    if (!colors) return;
+
+    const luminance = (hex: string): number => {
+      const channels = [1, 3, 5]
+        .map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255)
+        .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+    };
+    const contrast = (a: string, b: string): number => {
+      const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (values[0]! + 0.05) / (values[1]! + 0.05);
+    };
+
+    expect(contrast(colors.caption!, colors.plate!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.offText!, colors.offBg!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.onText!, colors.onBg!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.hover!, colors.offBg!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.hover!, colors.onBg!)).toBeGreaterThanOrEqual(4.5);
+  });
+});

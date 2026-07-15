@@ -154,6 +154,22 @@ try {
     assert.deepEqual(failedResponses, [], `failed document resources: ${failedResponses.join(', ')}`);
   });
 
+  await scenario(
+    'Mudwick away plan strip is labelled, stateful, and hit-aligned',
+    { viewport: { width: 1280, height: 720 }, reducedMotion: 'reduce' },
+    async (page) => {
+      await gotoOk(page, { dev: 'mmo', speed: 0.1 });
+      const canvas = page.locator('canvas');
+      await canvas.waitFor({ state: 'visible' });
+      const platePixel = await canvas.evaluate((element) => {
+        const ctx = element.getContext('2d');
+        if (!ctx) throw new Error('Mudwick canvas has no 2D context');
+        return [...ctx.getImageData(132, 3, 1, 1).data];
+      });
+      assert.deepEqual(platePixel, [23, 32, 18, 255]);
+    },
+  );
+
   await scenario('first pointer-lock rejection freezes time', { viewport: { width: 1000, height: 700 } }, async (page) => {
     await page.addInitScript(() => {
       // Pin the permissions policy to "allowed": this scenario tests the
