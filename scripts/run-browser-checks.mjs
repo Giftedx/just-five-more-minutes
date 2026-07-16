@@ -1,18 +1,31 @@
 /** Own a strict, short-lived preview and run browser checks against its build. */
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseBrowserCheckArgs } from './browser-check-config.mjs';
 import { findAvailableLoopbackPort } from './available-port.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const viteBin = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url));
 const smokeScript = fileURLToPath(new URL('./smoke.mjs', import.meta.url));
 const e2eScript = fileURLToPath(new URL('./e2e-full.mjs', import.meta.url));
+const options = parseBrowserCheckArgs(process.argv.slice(2));
 const previewPort = await findAvailableLoopbackPort(4173);
-const previewUrl = `http://127.0.0.1:${previewPort}/`;
+const previewOrigin = `http://127.0.0.1:${previewPort}`;
+const previewUrl = new URL(options.base, `${previewOrigin}/`).href;
 
 const preview = spawn(
   process.execPath,
-  [viteBin, 'preview', '--host', '127.0.0.1', '--port', String(previewPort), '--strictPort'],
+  [
+    viteBin,
+    'preview',
+    '--host',
+    '127.0.0.1',
+    '--port',
+    String(previewPort),
+    '--strictPort',
+    '--base',
+    options.base,
+  ],
   { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] },
 );
 
