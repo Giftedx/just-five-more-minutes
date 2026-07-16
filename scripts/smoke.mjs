@@ -525,8 +525,11 @@ try {
     'room interaction lockup exposes authored target states',
     { viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' },
     async (page) => {
-      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE' });
+      await gotoOk(page, { skipTitle: 1, seed: '0xC0FFEE', speed: 0.5 });
       await page.waitForFunction(() => window.__game?.['host']?.mode === 'room');
+      await page.locator('.hud-prompt').waitFor({ state: 'visible' });
+      await page.keyboard.press('Digit1');
+      await page.locator('.hud-prompt').waitFor({ state: 'hidden' });
 
       const aimAt = async (position, target, promptPattern) => {
         await page.evaluate(({ position, target }) => {
