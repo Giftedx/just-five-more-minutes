@@ -230,3 +230,11 @@ The program is complete when:
 - keyboard, focus, reduced-motion, short-screen, storage-failure, pointer-lock, visibility and repeated-restart paths pass;
 - README, scripts, tests, specifications and shipped behavior agree;
 - residual risks, skipped checks, hardware limits and undeployed local artifacts are reported without borrowing stronger language than the evidence supports.
+
+## 2026-07-16 Tranche 1 release-artifact closure
+
+The release gate now treats artifact mode as an observable contract. The managed Vite preview accepts an explicit normalized base, and a focused Playwright probe rejects failed resources, external requests, console/page errors, or a missing title/game/room boot state. The same owned preview lifecycle serves the full standalone suite and the focused standalone or mounted artifact probes.
+
+`npm run verify` now validates the mounted build at `/just-five-more-minutes/`, rebuilds standalone output, repeats the size gate, validates the root artifact, and leaves that standalone `dist/` for `npm run preview`. CI installs Chromium and runs this same command. No dependency, lockfile, gameplay, visual, audio, input, persistence, scoring, or size ceiling changed.
+
+Fresh local verification passed 20 test files / 238 tests, all 29 isolated browser scenarios, the full interaction E2E with `54 / 100` and `Employee of the Month (This House)`, both artifact probes, and clean preview teardown. The final standalone artifact remained 204,183 JavaScript gzip bytes and 10,091 CSS gzip bytes against unchanged 204,800-byte and 10,112-byte ceilings. This is local artifact evidence, not a live deployment claim.
