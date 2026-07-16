@@ -6,6 +6,7 @@ import { findAvailableLoopbackPort } from './available-port.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const viteBin = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url));
+const artifactScript = fileURLToPath(new URL('./artifact-smoke.mjs', import.meta.url));
 const smokeScript = fileURLToPath(new URL('./smoke.mjs', import.meta.url));
 const e2eScript = fileURLToPath(new URL('./e2e-full.mjs', import.meta.url));
 const options = parseBrowserCheckArgs(process.argv.slice(2));
@@ -139,13 +140,17 @@ function formatExit(result) {
 let exitCode = 0;
 try {
   await waitForPreview();
-  exitCode = await runCheck('isolated browser smoke', smokeScript, previewUrl);
-  if (exitCode === 0) {
-    const fullUrl = new URL(previewUrl);
-    fullUrl.searchParams.set('speed', '10');
-    fullUrl.searchParams.set('skipTitle', '1');
-    fullUrl.searchParams.set('seed', String(0x00c0ffee));
-    exitCode = await runCheck('full interaction E2E', e2eScript, fullUrl.href);
+  if (options.artifactOnly) {
+    exitCode = await runCheck('artifact resource smoke', artifactScript, previewUrl);
+  } else {
+    exitCode = await runCheck('isolated browser smoke', smokeScript, previewUrl);
+    if (exitCode === 0) {
+      const fullUrl = new URL(previewUrl);
+      fullUrl.searchParams.set('speed', '10');
+      fullUrl.searchParams.set('skipTitle', '1');
+      fullUrl.searchParams.set('seed', String(0x00c0ffee));
+      exitCode = await runCheck('full interaction E2E', e2eScript, fullUrl.href);
+    }
   }
 } catch (error) {
   exitCode = 1;
@@ -154,5 +159,9 @@ try {
   await stopPreview();
 }
 
-if (exitCode === 0) console.log('\nBROWSER CHECKS PASS — preview stopped cleanly');
+if (exitCode === 0) {
+  console.log(options.artifactOnly
+    ? '\nARTIFACT CHECK PASS — preview stopped cleanly'
+    : '\nBROWSER CHECKS PASS — preview stopped cleanly');
+}
 process.exitCode = exitCode;
