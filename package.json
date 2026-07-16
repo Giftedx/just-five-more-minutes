@@ -11,10 +11,12 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:browser": "node scripts/run-browser-checks.mjs",
+    "test:artifact": "node scripts/run-browser-checks.mjs --artifact-only --base=/",
+    "test:artifact:hub": "node scripts/run-browser-checks.mjs --artifact-only --base=/just-five-more-minutes/",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "size:check": "node scripts/check-dist-size.mjs",
-    "verify": "npm test && npm run build && npm run size:check && npm run test:browser && npm run build:hub"
+    "verify": "npm test && npm run build && npm run size:check && npm run test:browser && npm run build:hub && npm run test:artifact:hub && npm run build && npm run size:check && npm run test:artifact"
   },
   "dependencies": {
     "three": "0.185.1"

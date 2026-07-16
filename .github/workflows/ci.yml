@@ -18,9 +18,5 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm test
-      - run: npm run build
-      - run: npm run size:check
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
-      - run: npm run build:hub
+      - run: npm run verify

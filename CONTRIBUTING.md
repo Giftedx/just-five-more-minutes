@@ -10,7 +10,7 @@ npm run dev
 npm test
 ```
 
-All tests should pass before you open a PR. CI runs `npm test` and `npm run build` on every push.
+Run `npm run verify` before opening a PR. CI installs Chromium and runs the same authoritative gate: unit tests, type checks, standalone build and size budgets, production browser scenarios, full interaction E2E, mounted-base artifact smoke, and a final root-previewable standalone artifact.
 
 ## What to work on
 

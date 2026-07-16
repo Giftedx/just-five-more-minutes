@@ -77,9 +77,10 @@ npm run dev        # dev server at http://localhost:5173
 npm test           # vitest — director, nights, score, week, career, sim, chores, input
 npm run build      # tsc --noEmit && vite build -> dist/
 npm run size:check # verify compressed JS/CSS budgets for the current dist/
-npm run test:browser # managed preview + isolated smoke + full interaction E2E
-npm run verify     # unit, standalone build, size, browser, and mounted build gates
-npm run preview    # manually serve the current production build
+npm run test:browser  # managed standalone preview + isolated smoke + full interaction E2E
+npm run test:artifact # focused resource/boot smoke for the current standalone dist/
+npm run verify        # full standalone + browser + mounted + final standalone artifact gate
+npm run preview       # serve the standalone dist/ left by build or verify
 ```
 
 Dev affordances (query params):
@@ -95,7 +96,7 @@ Dev affordances (query params):
 | `?dev=room` | Standalone bedroom dev route |
 | `?dev=host` | Standalone mode-switching dev route |
 
-Browser checks need Playwright's Chromium installed once (`npx playwright install chromium`). `npm run test:browser` then starts and owns a strict local preview of the current `dist/`, runs both browser suites, and stops the preview even if a check fails. For the complete local release gate, use `npm run verify`.
+Browser checks need Playwright's Chromium installed once (`npx playwright install chromium`). `npm run test:browser` starts and owns a strict local preview of the current standalone `dist/`, runs both browser suites, and stops the preview even if a check fails. `npm run test:artifact` is the focused resource and boot probe for a current standalone build. The complete `npm run verify` gate validates standalone behavior, validates a mounted `/just-five-more-minutes/` build at its real base path, then rebuilds and revalidates standalone `dist/` so `npm run preview` works at the documented root afterward.
 
 ## Deploying
 
