@@ -81,7 +81,7 @@ Bread becomes purchasable from Wyn (3 gp) so the eat rule has fuel. First stand-
 
 ### Gravestones
 
-On death, non-coin inventory drops into a **gravestone** at the death tile (coins keep the existing partial-loss rule). It lasts **100 ticks (60 s)**; walk onto it to reclaim everything. A second death while one stands replaces it — the first is gone (comedy fact `doubleBereavement`). Reclaiming grants milestone `gravestoneReclaimed`. The scorecard's existing remote-death comedy is unchanged; gravestones make the *decision* after the death (rush the recovery vs. do the laundry) the interesting part.
+On death, non-coin inventory drops into a **gravestone** at the death tile (coins keep the existing partial-loss rule). It lasts **100 ticks (60 s)**; walk onto it to reclaim everything. A second death while one stands replaces it — the first is gone (comedy fact `doubleBereavement`). Reclaiming grants milestone `undertaker`. The scorecard's existing remote-death comedy is unchanged; gravestones make the *decision* after the death (rush the recovery vs. do the laundry) the interesting part.
 
 ### The crowd (cosmetic layer, hard boundary)
 
