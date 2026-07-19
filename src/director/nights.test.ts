@@ -63,6 +63,10 @@ describe('NIGHTS data', () => {
     expect(nightSpec(-3).night).toBe(0);
     expect(nightSpec(9).night).toBe(4);
   });
+
+  it('floors fractional night lookups', () => {
+    expect(nightSpec(1.5).night).toBe(1);
+  });
 });
 
 describe('MumState', () => {
