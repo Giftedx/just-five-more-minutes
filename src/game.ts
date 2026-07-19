@@ -7,6 +7,7 @@ import {
   Director,
   PROMPT_DURATION,
   SESSION_LENGTH,
+  WARN_AT,
   type ChoreId,
   type DirectorEvent,
   type LineId,
@@ -730,6 +731,10 @@ export class Game {
   /** Wednesday's phone call and Thursday's knock, driven off the director clock. */
   private runNightBeats(): void {
     const t = this.director.t;
+    if (t >= WARN_AT + 30 && this.host.mode === 'pc') {
+      this.sayBark('postWarnClicking');
+    }
+
     const phone = this.night.beats.phone;
     if (phone && this.phonePhase === 'idle' && t >= phone.at) {
       this.phonePhase = 'down';
