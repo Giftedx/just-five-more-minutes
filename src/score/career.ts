@@ -248,6 +248,7 @@ export function recordNight(
   lieDebtDelta: number,
   archivistUsed = false,
 ): Career {
+  if (weekComplete(career)) return career;
   const nextNight = Math.min(4, career.week.night + 1) as CareerWeek['night'];
   return {
     ...career,
