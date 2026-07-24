@@ -174,7 +174,7 @@ Aggregates five nights: grade strip, totals, best category, milestone wall, and 
 | **House MID** | *Quiet Decline* — "Attendance: yes. Participation: debatable." | *The Negotiator* — "Everyone got something. Nobody got everything." | *Double Agent* — "Two lives, adequately led." |
 | **House HIGH** | *Employee of the Month (This House)* — "The fridge gets your photo." | *The Responsible One* — "Suspiciously functional." | *Time Wizard* — "We checked the clocks. Nothing was wrong with the clocks." |
 
-Overrides: Friday suspicion ≥ 8 → *Grounded* variants regardless of column; all 15 chores done → *Employee of the Month* stamp added to any ending; `dinnerFund` all five nights → *Reliable Economy* stamp; lie-debt ≥ 3 → *IT WAS NEVER ONE SEC* stamp. Endings collect into a title-screen **gallery** (career).
+Overrides: Friday suspicion ≥ 8 → *Grounded* variants regardless of column; all 15 chores done → *EVERY CHORE, EVERY NIGHT* stamp added to any ending; `dinnerFund` all five nights → *Reliable Economy* stamp; lie-debt ≥ 3 → *IT WAS NEVER ONE SEC* stamp. Endings collect into a title-screen **gallery** (career).
 
 ---
 
@@ -196,7 +196,11 @@ interface StoredCareer {
     night: 0 | 1 | 2 | 3 | 4;
     suspicionCarry: number;              // 0..10
     lieDebt: number;
+    archivistUsed: boolean;
     reports: NightReportSummary[];       // length === night
+  };
+  tutorials: {
+    awayPlanSeen: boolean;
   };
   gallery: string[];                     // ending ids
   weeksCompleted: { endingId: string; total: number }[];
