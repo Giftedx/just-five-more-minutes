@@ -2,6 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { WARN_AT } from './director/director';
 import { BarkScheduler, MumState, nightSpec } from './director/nights';
 import { AWAY_PLAN_TUTORIAL, Game, choreDoneToast, crossWorldToast } from './game';
+import {
+  freshCareer,
+  recordNight,
+  type Career,
+  type NightReportSummary,
+} from './score/career';
+
+function highScoringReport(): NightReportSummary {
+  return {
+    total: 77,
+    rows: [30, 28, 15, 4],
+    endingTitle: 'Time Wizard',
+    seed: 1,
+    milestones: [],
+    choresDone: 3,
+  };
+}
 
 function postWarnBeatHarness(mode: 'pc' | 'room'): { run: () => void; subtitles: string[] } {
   const night = nightSpec(4);
@@ -87,5 +104,26 @@ describe('chore completion copy', () => {
     expect(choreDoneToast('Mugs 3/3', true)).toBe(
       'Sorted while your avatar was in mortal danger. Efficient.',
     );
+  });
+});
+
+describe('Friday week verdict', () => {
+  it('uses the exact ending suspicion so 7 keeps the matrix ending', () => {
+    let career = freshCareer();
+    for (let night = 0; night < 4; night++) {
+      career = recordNight(career, highScoringReport(), 0, 0);
+    }
+    career = recordNight(career, highScoringReport(), 7, 0);
+
+    const game = Object.create(Game.prototype) as {
+      career: Career;
+      finishWeekSilently(): void;
+    };
+    game.career = career;
+    game.finishWeekSilently();
+
+    expect(game.career.weeksCompleted).toEqual([
+      { endingId: 'timeWizard', total: 385 },
+    ]);
   });
 });

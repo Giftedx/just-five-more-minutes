@@ -354,7 +354,7 @@ export class Game {
     const verdict = weekVerdict(
       this.career.week.reports,
       this.career.week.lieDebt,
-      this.career.week.suspicionCarry * 2,
+      this.career.week.suspicionCarry,
     );
     this.career = completeWeek(this.career, verdict.endingId, verdict.weekTotal);
     try {
@@ -369,7 +369,7 @@ export class Game {
     const verdict = weekVerdict(
       this.career.week.reports,
       this.career.week.lieDebt,
-      this.career.week.suspicionCarry * 2,
+      this.career.week.suspicionCarry,
     );
     const galleryCount = collectedEndingCount([...this.career.gallery, verdict.endingId]);
     const card = showWeekVerdict(this.root, verdict, galleryCount, () => {

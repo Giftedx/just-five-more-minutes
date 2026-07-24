@@ -239,7 +239,8 @@ export function saveCareer(storage: ReportHistoryStorage, career: Career): boole
 
 /**
  * Fold a finished night into the career: advance the night pointer, carry
- * half the suspicion forward (rounded), accumulate lie-debt. Pure.
+ * half the suspicion forward (rounded), or preserve Friday's exact ending
+ * suspicion for the pending verdict. Accumulate lie-debt. Pure.
  */
 export function recordNight(
   career: Career,
@@ -250,11 +251,13 @@ export function recordNight(
 ): Career {
   if (weekComplete(career)) return career;
   const nextNight = Math.min(4, career.week.night + 1) as CareerWeek['night'];
+  const suspicion = clampSuspicion(suspicionEnd);
+  const fridayComplete = career.week.reports.length === 4;
   return {
     ...career,
     week: {
       night: nextNight,
-      suspicionCarry: clampSuspicion(Math.round(clampSuspicion(suspicionEnd) / 2)),
+      suspicionCarry: fridayComplete ? suspicion : Math.round(suspicion / 2),
       lieDebt: career.week.lieDebt + lieDebtDelta,
       archivistUsed: career.week.archivistUsed || archivistUsed,
       reports: [...career.week.reports, report],
