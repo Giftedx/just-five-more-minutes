@@ -197,7 +197,7 @@ interface StoredCareer {
     suspicionCarry: number;              // 0..10
     lieDebt: number;
     archivistUsed: boolean;
-    reports: NightReportSummary[];       // length === night
+    reports: NightReportSummary[];       // length === night, or 5 when night === 4 and verdict pending
   };
   tutorials: {
     awayPlanSeen: boolean;
