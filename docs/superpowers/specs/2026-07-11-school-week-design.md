@@ -10,7 +10,7 @@ Locked constraints (unchanged from the original design):
 - The five-minute act is sacred: `SESSION_LENGTH`, `WARN_AT`, banner timing, and prompt invariants stay exactly as tested.
 - Everything runtime-generated. No asset files, no network, no accounts. "Social" is copyable text.
 - Max cash stack and 99-all remain absurd. The week adds rungs *below* them, never shortcuts *to* them.
-- Static bundle. JS gzip budget consciously raised 200 KB → 240 KB in `scripts/check-dist-size.mjs` (one-line change, commented); we stay under it.
+- Static bundle. JS gzip budget is 200 KB (204,800 bytes) in `scripts/check-dist-size.mjs`; we stay under it.
 
 ---
 
@@ -217,7 +217,7 @@ Seeds: production nights roll random seeds (existing behavior), `?seed=` still o
 - **Director invariants untouched**: existing `director.test.ts` must pass without edits (nights layer on top; `extendGrace` and `promptLeadIn` get new tests).
 - **Browser smoke** additions: week strip renders; disconnect overlay appears and clears; panic verb flips the CRT; prompt popup respects reduced motion.
 - **Browser E2E**: same Monday full-loop with §5's derived goldens; runs on a fresh profile (E2E already uses an isolated context). The armed-watcher prompt pattern from the CI fix is retained.
-- **Gates**: `npm run verify` green locally; CI green; JS gzip ≤ 240 KB.
+- **Gates**: `npm run verify` green locally; CI green; JS gzip ≤ 200 KB (204,800 bytes).
 
 ## 8. Out of scope (explicitly)
 
