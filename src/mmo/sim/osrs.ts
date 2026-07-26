@@ -8,26 +8,28 @@ export const MAX_LEVEL = 99;
 
 export const SKILL_NAMES: readonly SkillName[] = ['woodcutting', 'attack', 'foraging', 'fishing'];
 
+// Pre-compute XP table to avoid O(N^2) level lookups
+const XP_TABLE = new Int32Array(MAX_LEVEL + 1);
+let xpPoints = 0;
+for (let l = 1; l < MAX_LEVEL; l++) {
+  xpPoints += Math.floor(l + 300 * 2 ** (l / 7));
+  XP_TABLE[l + 1] = Math.floor(xpPoints / 4);
+}
+
 /** Cumulative XP required to reach a level (OSRS formula). Level 1 → 0. */
 export function xpForLevel(level: number): number {
   if (level <= 1) return 0;
-  if (level > MAX_LEVEL) return xpForLevel(MAX_LEVEL);
-  let points = 0;
-  for (let l = 1; l < level; l++) {
-    points += Math.floor(l + 300 * 2 ** (l / 7));
-  }
-  return Math.floor(points / 4);
+  if (level > MAX_LEVEL) return XP_TABLE[MAX_LEVEL] as number;
+  return XP_TABLE[level] as number;
 }
 
 export const XP_FOR_LEVEL_99 = xpForLevel(MAX_LEVEL);
 
 export function levelOf(xp: number): number {
-  let level = 1;
   for (let l = 2; l <= MAX_LEVEL; l++) {
-    if (xp >= xpForLevel(l)) level = l;
-    else break;
+    if (xp < (XP_TABLE[l] as number)) return l - 1;
   }
-  return level;
+  return MAX_LEVEL;
 }
 
 export function allSkillsAt99(skills: Skills): boolean {
