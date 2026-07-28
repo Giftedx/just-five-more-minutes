@@ -144,6 +144,24 @@ describe('recordNight', () => {
     expect(recordNight(c, report(10), 25, 0).week.suspicionCarry).toBe(5);
     expect(recordNight(c, report(10), -3, 0).week.suspicionCarry).toBe(0);
   });
+
+  it('refuses an extra report after Friday without destroying the saved career', () => {
+    let c = freshCareer();
+    c.character.coins = 137;
+    c.character.xp.woodcutting = 512;
+    c.gallery.push('timeWizard');
+    for (let night = 0; night < 5; night++) c = recordNight(c, report(60 + night), 4, 0);
+
+    const storage = memoryStorage();
+    const afterExtraNight = recordNight(c, report(99), 10, 3);
+    expect(saveCareer(storage, afterExtraNight)).toBe(true);
+
+    const loaded = loadCareer(storage);
+    expect(loaded.character.coins).toBe(137);
+    expect(loaded.character.xp.woodcutting).toBe(512);
+    expect(loaded.gallery).toEqual(['timeWizard']);
+    expect(loaded.week.reports).toHaveLength(5);
+  });
 });
 
 describe('completeWeek', () => {

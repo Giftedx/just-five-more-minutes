@@ -1,5 +1,76 @@
 import { describe, expect, it } from 'vitest';
-import { AWAY_PLAN_TUTORIAL, choreDoneToast, crossWorldToast } from './game';
+import { WARN_AT } from './director/director';
+import { BarkScheduler, MumState, nightSpec } from './director/nights';
+import { AWAY_PLAN_TUTORIAL, Game, choreDoneToast, crossWorldToast } from './game';
+import {
+  freshCareer,
+  recordNight,
+  type Career,
+  type NightReportSummary,
+} from './score/career';
+
+function highScoringReport(): NightReportSummary {
+  return {
+    total: 77,
+    rows: [30, 28, 15, 4],
+    endingTitle: 'Time Wizard',
+    seed: 1,
+    milestones: [],
+    choresDone: 3,
+  };
+}
+
+function postWarnBeatHarness(mode: 'pc' | 'room'): { run: () => void; subtitles: string[] } {
+  const night = nightSpec(4);
+  const subtitles: string[] = [];
+  const game = Object.assign(Object.create(Game.prototype) as object, {
+    director: { t: WARN_AT + 30, activePrompt: null },
+    night,
+    phonePhase: 'idle',
+    inspectionFired: true,
+    lampOn: true,
+    homeworkOffAt: Number.NEGATIVE_INFINITY,
+    gameNow: 0,
+    host: {
+      mode,
+      room: {
+        setDusk: () => undefined,
+        setDeskLamp: () => undefined,
+      },
+    },
+    mum: new MumState(0),
+    barks: new BarkScheduler(night.barks),
+    hud: { showSubtitle: (line: string) => subtitles.push(line) },
+    audio: { npcVoice: () => undefined },
+    opts: { speed: 1 },
+  }) as unknown as Game;
+
+  return {
+    run: () => (game as unknown as { runNightBeats(): void }).runNightBeats(),
+    subtitles,
+  };
+}
+
+describe('post-warning clicking bark', () => {
+  it("shows Friday's bespoke bark once when the player is still at the PC", () => {
+    const harness = postWarnBeatHarness('pc');
+
+    harness.run();
+    harness.run();
+
+    expect(harness.subtitles).toEqual([
+      'I can hear clicking and the Hendersons can hear clicking.',
+    ]);
+  });
+
+  it('stays silent when the player is standing in the room', () => {
+    const harness = postWarnBeatHarness('room');
+
+    harness.run();
+
+    expect(harness.subtitles).toEqual([]);
+  });
+});
 
 describe('away plan onboarding copy', () => {
   it('keeps the first stand-up lesson specific, legible, and neutral', () => {
@@ -33,5 +104,26 @@ describe('chore completion copy', () => {
     expect(choreDoneToast('Mugs 3/3', true)).toBe(
       'Sorted while your avatar was in mortal danger. Efficient.',
     );
+  });
+});
+
+describe('Friday week verdict', () => {
+  it('uses the exact ending suspicion so 7 keeps the matrix ending', () => {
+    let career = freshCareer();
+    for (let night = 0; night < 4; night++) {
+      career = recordNight(career, highScoringReport(), 0, 0);
+    }
+    career = recordNight(career, highScoringReport(), 7, 0);
+
+    const game = Object.create(Game.prototype) as {
+      career: Career;
+      finishWeekSilently(): void;
+    };
+    game.career = career;
+    game.finishWeekSilently();
+
+    expect(game.career.weeksCompleted).toEqual([
+      { endingId: 'timeWizard', total: 385 },
+    ]);
   });
 });

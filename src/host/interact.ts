@@ -186,6 +186,7 @@ export class InteractSystem {
         const carried = this.tracker.carried;
         if (!carried) {
           const def = this.defs[interact.accepts];
+          if (def.verb === 'tug') return { label: interact.name, actionable: false };
           return { label: `${interact.name} (${def.plural} go here)`, actionable: false };
         }
         const carriedName = this.carriedName();

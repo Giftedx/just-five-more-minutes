@@ -276,7 +276,7 @@ export const NIGHTS: readonly NightSpec[] = [
 ];
 
 export function nightSpec(night: number): NightSpec {
-  const spec = NIGHTS[Math.max(0, Math.min(4, night))];
+  const spec = NIGHTS[Math.floor(Math.max(0, Math.min(4, night)))];
   if (!spec) throw new Error('unreachable: NIGHTS covers 0..4');
   return spec;
 }

@@ -10,7 +10,7 @@ Locked constraints (unchanged from the original design):
 - The five-minute act is sacred: `SESSION_LENGTH`, `WARN_AT`, banner timing, and prompt invariants stay exactly as tested.
 - Everything runtime-generated. No asset files, no network, no accounts. "Social" is copyable text.
 - Max cash stack and 99-all remain absurd. The week adds rungs *below* them, never shortcuts *to* them.
-- Static bundle. JS gzip budget consciously raised 200 KB → 240 KB in `scripts/check-dist-size.mjs` (one-line change, commented); we stay under it.
+- Static bundle. JS gzip budget is 200 KB (204,800 bytes) in `scripts/check-dist-size.mjs`; we stay under it.
 
 ---
 
@@ -81,7 +81,7 @@ Bread becomes purchasable from Wyn (3 gp) so the eat rule has fuel. First stand-
 
 ### Gravestones
 
-On death, non-coin inventory drops into a **gravestone** at the death tile (coins keep the existing partial-loss rule). It lasts **100 ticks (60 s)**; walk onto it to reclaim everything. A second death while one stands replaces it — the first is gone (comedy fact `doubleBereavement`). Reclaiming grants milestone `gravestoneReclaimed`. The scorecard's existing remote-death comedy is unchanged; gravestones make the *decision* after the death (rush the recovery vs. do the laundry) the interesting part.
+On death, non-coin inventory drops into a **gravestone** at the death tile (coins keep the existing partial-loss rule). It lasts **100 ticks (60 s)**; walk onto it to reclaim everything. A second death while one stands replaces it — the first is gone (comedy fact `doubleBereavement`). Reclaiming grants milestone `undertaker`. The scorecard's existing remote-death comedy is unchanged; gravestones make the *decision* after the death (rush the recovery vs. do the laundry) the interesting part.
 
 ### The crowd (cosmetic layer, hard boundary)
 
@@ -174,7 +174,7 @@ Aggregates five nights: grade strip, totals, best category, milestone wall, and 
 | **House MID** | *Quiet Decline* — "Attendance: yes. Participation: debatable." | *The Negotiator* — "Everyone got something. Nobody got everything." | *Double Agent* — "Two lives, adequately led." |
 | **House HIGH** | *Employee of the Month (This House)* — "The fridge gets your photo." | *The Responsible One* — "Suspiciously functional." | *Time Wizard* — "We checked the clocks. Nothing was wrong with the clocks." |
 
-Overrides: Friday suspicion ≥ 8 → *Grounded* variants regardless of column; all 15 chores done → *Employee of the Month* stamp added to any ending; `dinnerFund` all five nights → *Reliable Economy* stamp; lie-debt ≥ 3 → *IT WAS NEVER ONE SEC* stamp. Endings collect into a title-screen **gallery** (career).
+Overrides: Friday suspicion ≥ 8 → *Grounded* variants regardless of column; all 15 chores done → *EVERY CHORE, EVERY NIGHT* stamp added to any ending; `dinnerFund` all five nights → *Reliable Economy* stamp; lie-debt ≥ 3 → *IT WAS NEVER ONE SEC* stamp. Endings collect into a title-screen **gallery** (career).
 
 ---
 
@@ -196,7 +196,11 @@ interface StoredCareer {
     night: 0 | 1 | 2 | 3 | 4;
     suspicionCarry: number;              // 0..10
     lieDebt: number;
-    reports: NightReportSummary[];       // length === night
+    archivistUsed: boolean;
+    reports: NightReportSummary[];       // length === night, or 5 when night === 4 and verdict pending
+  };
+  tutorials: {
+    awayPlanSeen: boolean;
   };
   gallery: string[];                     // ending ids
   weeksCompleted: { endingId: string; total: number }[];
@@ -213,7 +217,7 @@ Seeds: production nights roll random seeds (existing behavior), `?seed=` still o
 - **Director invariants untouched**: existing `director.test.ts` must pass without edits (nights layer on top; `extendGrace` and `promptLeadIn` get new tests).
 - **Browser smoke** additions: week strip renders; disconnect overlay appears and clears; panic verb flips the CRT; prompt popup respects reduced motion.
 - **Browser E2E**: same Monday full-loop with §5's derived goldens; runs on a fresh profile (E2E already uses an isolated context). The armed-watcher prompt pattern from the CI fix is retained.
-- **Gates**: `npm run verify` green locally; CI green; JS gzip ≤ 240 KB.
+- **Gates**: `npm run verify` green locally; CI green; JS gzip ≤ 200 KB (204,800 bytes).
 
 ## 8. Out of scope (explicitly)
 
