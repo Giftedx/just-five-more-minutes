@@ -23,7 +23,7 @@ export class InteractSystem {
   private hovered: THREE.Object3D | null = null;
   private highlightMats = new Map<THREE.MeshLambertMaterial, number>();
   private carriedObj: THREE.Object3D | null = null;
-  private slotByItem = new Map<string, number>();
+  private slotByItem = new Map<string, { target: 'tray' | 'bin' | 'basket'; index: number }>();
   private usedSlots: Record<'tray' | 'bin' | 'basket', Set<number>> = {
     tray: new Set(),
     bin: new Set(),
@@ -155,7 +155,7 @@ export class InteractSystem {
           this.carriedObj.position.copy(slot);
           this.carriedObj.rotation.set(0, Math.random() * Math.PI * 2, 0);
         }
-        this.slotByItem.set(carried.id, slotIdx);
+        this.slotByItem.set(carried.id, { target: interact.target, index: slotIdx });
         this.carriedObj = null;
         const events = this.tracker.placeCarried();
         this.onTrackerEvents?.(events);
@@ -216,13 +216,10 @@ export class InteractSystem {
   }
 
   private freeSlot(itemId: string): void {
-    const idx = this.slotByItem.get(itemId);
-    if (idx === undefined) return;
+    const slot = this.slotByItem.get(itemId);
+    if (!slot) return;
     this.slotByItem.delete(itemId);
-    const item = this.tracker.item(itemId);
-    if (!item) return;
-    const target = this.defs[item.chore].target as 'tray' | 'bin' | 'basket';
-    this.usedSlots[target].delete(idx);
+    this.usedSlots[slot.target].delete(slot.index);
   }
 
   private setHighlight(obj: THREE.Object3D | null): void {
