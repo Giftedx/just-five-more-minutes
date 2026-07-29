@@ -20,7 +20,7 @@ Run `npm run verify` before opening a PR. CI installs Chromium and runs the same
 
 ## Code style
 
-Match what's already there: TypeScript, minimal abstractions, no comments unless the logic is genuinely non-obvious. The game generates its own art and audio — don't add external asset dependencies.
+Match what's already there: TypeScript, minimal abstractions, no comments unless the logic is genuinely non-obvious. The game generates its own art and audio. Apart from the two existing RuneScape font files in `public/fonts/`, do not add external asset dependencies.
 
 ## Pull requests
 

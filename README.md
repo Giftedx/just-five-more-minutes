@@ -21,7 +21,7 @@ Mum, meanwhile, keeps score in her own way. Every excuse now does something: "On
 
 After each five minutes you receive a typewritten **HOUSEHOLD INCIDENT REPORT** grading MMO progress (a milestone ladder of what you earned *tonight*), household responsibility, vibe preservation, and comedy output. After Friday's report comes **THE WEEK VERDICT** — a 3×3 matrix of endings from *The Lost Week* to *Time Wizard*, with stamps for perfect chores, reliable economies, and lies that were never one sec. Endings collect in a gallery on the title screen. Everything lives in a small local career file; no account, no analytics.
 
-Everything — art, audio, goblins, the modem screech — is generated at runtime. There are no asset files and no third-party content.
+Everything except the bundled third-party fonts is generated at runtime. The only bundled runtime asset files are `public/fonts/RuneScape.woff2` and `public/fonts/RuneScape-Bold.woff2`.
 
 <p align="center">
   <img src="docs/screenshots/poster.png" alt="Mudwick Online poster — Your goblins miss you" width="480">
