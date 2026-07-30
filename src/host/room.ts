@@ -1244,6 +1244,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
       new THREE.Vector3(1.93, 0.16, -1.12),
       new THREE.Vector3(1.97, 0.22, -1.08),
       new THREE.Vector3(1.95, 0.28, -1.1),
+      new THREE.Vector3(1.93, 0.3, -1.12),
     ],
     basket: [
       new THREE.Vector3(-1.85, 0.08, 1.55),
