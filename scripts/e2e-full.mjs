@@ -36,7 +36,7 @@ try {
   const response = await page.goto(url.href);
   if (!response || response.status() !== 200) throw new Error(`status ${response?.status()}`);
 
-  await playNight(page, expectation.answers);
+  await playNight(page, expectation.answers, expectation.choreChips);
 
   await page.waitForSelector('.sc-card', { timeout: 120_000 });
   const get = (sel) => page.textContent(sel);

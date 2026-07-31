@@ -9,6 +9,7 @@ const viteBin = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import
 const artifactScript = fileURLToPath(new URL('./artifact-smoke.mjs', import.meta.url));
 const smokeScript = fileURLToPath(new URL('./smoke.mjs', import.meta.url));
 const e2eScript = fileURLToPath(new URL('./e2e-full.mjs', import.meta.url));
+const nights = [0, 1];
 const options = parseBrowserCheckArgs(process.argv.slice(2));
 const previewPort = await findAvailableLoopbackPort(4173);
 const previewOrigin = `http://127.0.0.1:${previewPort}`;
@@ -87,10 +88,10 @@ async function waitForPreview() {
   throw new Error(`preview did not become ready within 15 seconds\n${previewOutput}`);
 }
 
-async function runCheck(label, script, smokeUrl) {
+async function runCheck(label, script, smokeUrl, args = []) {
   console.log(`\n> ${label}`);
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [script], {
+    const child = spawn(process.execPath, [script, ...args], {
       cwd: root,
       env: { ...process.env, SMOKE_URL: smokeUrl },
       stdio: 'inherit',
@@ -149,7 +150,17 @@ try {
       fullUrl.searchParams.set('speed', '10');
       fullUrl.searchParams.set('skipTitle', '1');
       fullUrl.searchParams.set('seed', String(0x00c0ffee));
-      exitCode = await runCheck('full interaction E2E', e2eScript, fullUrl.href);
+      for (const night of nights) {
+        const startedAt = Date.now();
+        exitCode = await runCheck(
+          `full interaction E2E (night ${night})`,
+          e2eScript,
+          fullUrl.href,
+          [`--night=${night}`],
+        );
+        console.log(`Night ${night} wall clock: ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
+        if (exitCode !== 0) break;
+      }
     }
   }
 } catch (error) {

@@ -23,12 +23,12 @@ export function standNear(position) {
 }
 
 /** Build one action for each live chore item. Keep the host registry order. */
-export function planNight(registry) {
+export function planNight(registry, expectedVerbs = {}) {
   const targetChores = new Set(
     registry.filter((entry) => entry.type === 'target').map((entry) => entry.accepts),
   );
 
-  return registry.flatMap((entry) => {
+  const plan = registry.flatMap((entry) => {
     if (entry.type !== 'item' && entry.type !== 'tug') return [];
     if (entry.type === 'item' && !targetChores.has(entry.chore)) {
       throw new Error(`no target accepts chore ${entry.chore} for ${entry.itemId}`);
@@ -41,6 +41,25 @@ export function planNight(registry) {
       look,
     }];
   });
+
+  const itemChores = new Map(
+    registry
+      .filter((entry) => entry.type === 'item' || entry.type === 'tug')
+      .map((entry) => [entry.itemId, entry.chore]),
+  );
+  for (const [chore, expectedVerb] of Object.entries(expectedVerbs)) {
+    if (expectedVerb !== 'tug') continue;
+    const carryStep = plan.find(
+      (step) => itemChores.get(step.itemId) === chore && step.verb === PICK_UP,
+    );
+    if (carryStep) {
+      throw new Error(
+        `${chore} slot expects tug actions, but ${carryStep.itemId} planned as ${PICK_UP}`,
+      );
+    }
+  }
+
+  return plan;
 }
 
 /** Match a carry item to the live target that accepts its chore. */
@@ -87,6 +106,12 @@ const snapshotRegistry = (page) => page.evaluate(() => {
     return [{ ...interact, position: position.toArray() }];
   });
 });
+
+const snapshotExpectedVerbs = (page) => page.evaluate(() => Object.fromEntries(
+  Object.entries(window.__game['choreDefs']).map(([chore, definition]) => (
+    [chore, definition.verb]
+  )),
+));
 
 const aimAt = (page, step) => page.evaluate(({ stand, look }) => {
   const host = window.__game.host;
@@ -155,6 +180,25 @@ const performStep = async (page, registry, step) => {
   );
 };
 
+const assertInitialChoreChip = async (page, chore, expectation) => {
+  if (!expectation) return;
+  const noun = expectation.label.replace(/^the /i, '');
+  const expected = `${noun[0].toUpperCase()}${noun.slice(1)} 0/${expectation.count}`;
+  const state = await page.evaluate((slot) => {
+    const tracker = window.__game.host.interact.tracker;
+    return {
+      requested: tracker.isRequested(slot),
+      progress: tracker.progress(slot),
+      chips: [...document.querySelectorAll('.hud-chore')].map((chip) => chip.textContent),
+    };
+  }, chore);
+  if (!state.requested || state.progress.done !== 0 || !state.chips.includes(expected)) {
+    throw new Error(
+      `${chore} pre-completion HUD: got ${JSON.stringify(state)}, want ${JSON.stringify(expected)}`,
+    );
+  }
+};
+
 const dumpDirector = async (page, context) => {
   try {
     const state = await page.evaluate(() => {
@@ -202,7 +246,7 @@ const armPrompt = (page, lineId, option) => {
 };
 
 /** Answer five prompts and complete the live physical chores. */
-export async function playNight(page, answers) {
+export async function playNight(page, answers, choreChips = []) {
   if (
     !Array.isArray(answers)
     || answers.length !== 5
@@ -213,7 +257,8 @@ export async function playNight(page, answers) {
 
   await page.waitForFunction(() => window.__game?.host?.room?.interactables);
   const registry = await snapshotRegistry(page);
-  const plan = planNight(registry);
+  const expectedVerbs = await snapshotExpectedVerbs(page);
+  const plan = planNight(registry, expectedVerbs);
   const itemChores = new Map(
     registry
       .filter((entry) => entry.type === 'item' || entry.type === 'tug')
@@ -227,6 +272,7 @@ export async function playNight(page, answers) {
     const chore = CHORE_LINES[index];
     const nextLine = CHORE_LINES[index + 1] ?? 'warn';
     const nextAnswer = armPrompt(page, nextLine, answers[index + 2]);
+    await assertInitialChoreChip(page, chore, choreChips[index]);
     for (const step of plan.filter((candidate) => itemChores.get(candidate.itemId) === chore)) {
       await performStep(page, registry, step);
     }

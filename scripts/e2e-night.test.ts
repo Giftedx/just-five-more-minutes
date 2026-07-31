@@ -47,4 +47,34 @@ describe('planNight', () => {
       look: [0.05, 0, 1.72],
     });
   });
+
+  it('rejects carry steps for a slot whose night expects tug actions', () => {
+    const registry = [
+      {
+        type: 'target',
+        target: 'bin',
+        accepts: 'wrappers',
+        name: 'bin',
+        position: [1.95, 0, -1.1],
+      },
+      {
+        type: 'item',
+        itemId: 'bed0',
+        chore: 'wrappers',
+        name: 'duvet corner',
+        position: [-1.68, 0.46, 0.42],
+      },
+      {
+        type: 'item',
+        itemId: 'bed1',
+        chore: 'wrappers',
+        name: 'duvet corner',
+        position: [-2.22, 0.46, 0.32],
+      },
+    ];
+
+    expect(() => planNight(registry, { wrappers: 'tug' })).toThrow(
+      /wrappers slot.*tug.*Pick up/i,
+    );
+  });
 });
