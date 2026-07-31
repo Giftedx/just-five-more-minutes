@@ -7,6 +7,7 @@ import {
   Director,
   NPC_LINES,
   PROMPT_DURATION,
+  PROMPT_LEAD_IN,
   RESPONSE_OPTIONS,
   SESSION_LENGTH,
   WARN_AT,
@@ -80,6 +81,34 @@ describe('director timeline', () => {
     );
     expect(wrappers).toBeDefined();
     expect(near(wrappers?.t ?? -1, late + CHORE_GRACE)).toBe(true);
+  });
+
+  it('re-fires the prompt lead-in when completion reschedules the next chore', () => {
+    const d = new Director();
+    const log = run(d, CHORE_BASE_TIMES.wrappers + CHORE_GRACE + 1, 0.5, [
+      (dir, t) => {
+        if (
+          t >= CHORE_BASE_TIMES.wrappers - 1 &&
+          dir.chores.mugs.requestedAt !== null &&
+          dir.chores.mugs.completedAt === null
+        ) {
+          dir.noteChoreCompleted('mugs');
+        }
+      },
+    ]);
+    const wrappers = eventsOf(log, 'npcLine').find(
+      (e) => e.ev.type === 'npcLine' && e.ev.lineId === 'wrappers',
+    );
+    const leadIn = eventsOf(log, 'promptLeadIn').find(
+      (e) => e.ev.type === 'promptLeadIn'
+        && e.ev.lineId === 'wrappers'
+        && wrappers !== undefined
+        && e.t >= wrappers.t - PROMPT_LEAD_IN - 0.51
+        && e.t <= wrappers.t - PROMPT_LEAD_IN + 0.51,
+    );
+
+    expect(wrappers).toBeDefined();
+    expect(leadIn).toBeDefined();
   });
 
   it('keeps the base schedule when completion is early enough', () => {

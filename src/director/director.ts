@@ -196,9 +196,11 @@ export class Director {
   extendNextChore(seconds: number): boolean {
     for (const id of CHORE_ORDER) {
       if (this.chores[id].requestedAt === null) {
-        let fireAt = this.choreFireAt[id] + seconds;
+        const previousFireAt = this.choreFireAt[id];
+        let fireAt = previousFireAt + seconds;
         if (id === 'laundry') fireAt = Math.min(fireAt, CHORE3_CAP);
         this.choreFireAt[id] = fireAt;
+        if (fireAt > previousFireAt) this.leadInsFired.delete(id);
         return true;
       }
     }
@@ -242,10 +244,12 @@ export class Director {
     for (const next of CHORE_ORDER) {
       const nc = this.chores[next];
       if (nc.requestedAt === null) {
-        let fireAt = Math.max(this.choreFireAt[next], this.t + CHORE_GRACE);
+        const previousFireAt = this.choreFireAt[next];
+        let fireAt = Math.max(previousFireAt, this.t + CHORE_GRACE);
         // …but chore 3 never fires later than CHORE3_CAP.
         if (next === 'laundry') fireAt = Math.min(fireAt, CHORE3_CAP);
         this.choreFireAt[next] = fireAt;
+        if (fireAt > previousFireAt) this.leadInsFired.delete(next);
         break;
       }
     }
