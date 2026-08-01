@@ -1238,6 +1238,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
       new THREE.Vector3(-0.13, 0.035, 1.72),
       new THREE.Vector3(0.05, 0.035, 1.72),
       new THREE.Vector3(0.23, 0.035, 1.72),
+      new THREE.Vector3(0.05, 0.035, 1.61),
     ],
     bin: [
       new THREE.Vector3(1.95, 0.1, -1.1),
@@ -1250,6 +1251,7 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
       new THREE.Vector3(-1.85, 0.08, 1.55),
       new THREE.Vector3(-1.83, 0.16, 1.53),
       new THREE.Vector3(-1.87, 0.24, 1.57),
+      new THREE.Vector3(-1.85, 0.32, 1.55),
     ],
   };
 

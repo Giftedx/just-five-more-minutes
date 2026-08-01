@@ -41,33 +41,42 @@ function roomConfigFor(spec: NightSpec): RoomNightConfig {
   };
 }
 
+const TARGET_FOR_SLOT: Record<keyof NightSpec['slots'], keyof Room['slots']> = {
+  mugs: 'tray',
+  wrappers: 'bin',
+  laundry: 'basket',
+};
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe('InteractSystem placement slots', () => {
-  it('provides enough target slots for every carry chore across the week', () => {
+  it.each(NIGHTS)('$card provides enough target slots for every carry chore', (spec) => {
     stubRoomGlobals();
-    const room = buildRoom(roomConfigFor(nightSpec(4)));
+    const room = buildRoom(roomConfigFor(spec));
 
-    for (const spec of NIGHTS) {
-      for (const def of Object.values(choreDefsFor(spec))) {
-        if (def.verb !== 'carry') continue;
-        const target = def.target as keyof Room['slots'];
-        expect(
-          room.slots[target].length,
-          `${spec.card}: ${def.physical} needs ${def.count} ${target} slots`,
-        ).toBeGreaterThanOrEqual(def.count);
-      }
+    for (const slot of ['mugs', 'wrappers', 'laundry'] as const) {
+      const chore = spec.slots[slot];
+      if (chore.verb !== 'carry') continue;
+      const target = TARGET_FOR_SLOT[slot];
+      expect(
+        room.slots[target].length,
+        `${spec.card}: ${chore.id} needs ${chore.count} ${target} slots`,
+      ).toBeGreaterThanOrEqual(chore.count);
     }
   });
 
-  it('places all five Friday wrappers at pairwise-distinct bin positions', () => {
+  it.each([
+    { night: 1, slot: 'laundry', target: 'basket', count: 4, label: 'Tuesday wrappers' },
+    { night: 3, slot: 'mugs', target: 'tray', count: 4, label: 'Thursday wrappers' },
+    { night: 4, slot: 'wrappers', target: 'bin', count: 5, label: 'Friday wrappers' },
+  ] as const)('places all $label at pairwise-distinct $target positions', ({ night, slot, target, count }) => {
     stubRoomGlobals();
-    const friday = nightSpec(4);
-    const builtRoom = buildRoom(roomConfigFor(friday));
-    const wrapperItems = builtRoom.items.filter((item) => item.chore === 'wrappers');
-    const wrapperObjects = wrapperItems.map((item) => {
+    const spec = nightSpec(night);
+    const builtRoom = buildRoom(roomConfigFor(spec));
+    const carryItems = builtRoom.items.filter((item) => item.chore === slot);
+    const carryObjects = carryItems.map((item) => {
       const object = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2));
       object.position.set(0, 0, -1);
       object.userData['interact'] = {
@@ -80,34 +89,34 @@ describe('InteractSystem placement slots', () => {
       return object;
     });
 
-    const bin = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.1));
-    bin.position.set(0, 0, -2);
-    bin.userData['interact'] = {
+    const placementTarget = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.1));
+    placementTarget.position.set(0, 0, -2);
+    placementTarget.userData['interact'] = {
       type: 'target',
-      target: 'bin',
-      accepts: 'wrappers',
-      name: 'bin',
+      target,
+      accepts: slot,
+      name: target,
     };
-    bin.updateMatrixWorld(true);
+    placementTarget.updateMatrixWorld(true);
 
     const room = {
-      interactables: [...wrapperObjects, bin],
-      items: wrapperItems,
+      interactables: [...carryObjects, placementTarget],
+      items: carryItems,
       slots: builtRoom.slots,
     } as unknown as Room;
     const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 50);
     camera.updateMatrixWorld(true);
-    const interact = new InteractSystem(room, choreDefsFor(friday));
+    const interact = new InteractSystem(room, choreDefsFor(spec));
 
-    expect(wrapperObjects).toHaveLength(5);
-    for (const wrapper of wrapperObjects) {
+    expect(carryObjects).toHaveLength(count);
+    for (const object of carryObjects) {
       expect(interact.act(camera)).toBe(true);
       expect(interact.act(camera)).toBe(true);
-      wrapper.updateMatrixWorld(true);
+      object.updateMatrixWorld(true);
     }
 
-    const positions = wrapperObjects.map((wrapper) => wrapper.position.toArray().join(','));
-    expect(new Set(positions).size).toBe(5);
+    const positions = carryObjects.map((object) => object.position.toArray().join(','));
+    expect(new Set(positions).size).toBe(count);
   });
 
   it('reuses the basket slot after a Tuesday wrapper is picked back up', () => {
