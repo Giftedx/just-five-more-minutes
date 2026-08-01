@@ -759,6 +759,7 @@ export class Game {
     if (
       inspection && !this.inspectionFired && t >= inspection.at
       && this.mum.suspicion >= inspection.minSuspicion
+      && !this.director.activePrompt
     ) {
       this.inspectionFired = true;
       for (const ev of this.director.fireInspection()) this.handleDirectorEvent(ev);

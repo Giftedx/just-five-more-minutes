@@ -59,6 +59,14 @@ describe('NIGHTS data', () => {
     expect(phone.until).toBeLessThan(WARN_AT);
   });
 
+  it('schedules inspections after the base laundry answer window', () => {
+    for (const night of NIGHTS) {
+      const inspection = night.beats.inspection;
+      if (!inspection) continue;
+      expect(inspection.at).toBeGreaterThanOrEqual(CHORE_BASE_TIMES.laundry + PROMPT_DURATION);
+    }
+  });
+
   it('clamps out-of-range night lookups', () => {
     expect(nightSpec(-3).night).toBe(0);
     expect(nightSpec(9).night).toBe(4);
@@ -222,12 +230,37 @@ describe('director night hooks', () => {
     expect(d.extendNextChore(15)).toBe(false);
   });
 
-  it('fireInspection opens a real prompt that obeys the stack', () => {
+  it("fireInspection does not steal laundry's answer window", () => {
     const d = new Director();
-    collect(d, 45); // inside the mugs prompt window (38..58)
-    expect(d.activePrompt?.lineId).toBe('mugs');
+    collect(d, 180);
+    expect(d.activePrompt?.lineId).toBe('laundry');
+
     const events = d.fireInspection();
-    expect(events.some((e) => e.type === 'promptClosed' && e.lineId === 'mugs')).toBe(true);
+    expect(
+      events.some((e) => e.type === 'promptClosed' && e.lineId === 'laundry' && e.result === 'ignored'),
+    ).toBe(false);
+    expect(d.activePrompt?.lineId).toBe('laundry');
+  });
+
+  it('fireInspection also defers for runtime-shifted laundry', () => {
+    const d = new Director();
+    collect(d, CHORE_BASE_TIMES.wrappers + 1);
+    expect(d.extendNextChore(15)).toBe(true);
+    collect(d, CHORE_BASE_TIMES.laundry + 20);
+    expect(d.activePrompt?.lineId).toBe('laundry');
+
+    const events = d.fireInspection();
+
+    expect(
+      events.some((e) => e.type === 'promptClosed' && e.lineId === 'laundry' && e.result === 'ignored'),
+    ).toBe(false);
+    expect(d.activePrompt?.lineId).toBe('laundry');
+  });
+
+  it('fireInspection opens a real prompt once the prompt stack is clear', () => {
+    const d = new Director(180);
+    const events = d.fireInspection();
+    expect(events.some((e) => e.type === 'npcLine' && e.lineId === 'inspect')).toBe(true);
     expect(d.activePrompt?.lineId).toBe('inspect');
     // Never twice.
     expect(d.fireInspection()).toEqual([]);

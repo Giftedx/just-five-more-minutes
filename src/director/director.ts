@@ -208,11 +208,11 @@ export class Director {
   }
 
   /**
-   * The Thursday knock. The night layer decides when; the line obeys every
-   * existing prompt invariant (supersede, timeout, no repeats).
+   * The Thursday/Friday knock. The night layer retries while another prompt
+   * has its answer window; once clear, the line obeys timeout and no-repeat.
    */
   fireInspection(): DirectorEvent[] {
-    if (this.ended) return [];
+    if (this.ended || this.activePrompt) return [];
     return this.fireLine('inspect');
   }
 

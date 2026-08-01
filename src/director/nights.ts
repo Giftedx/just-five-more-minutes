@@ -204,7 +204,7 @@ export const NIGHTS: readonly NightSpec[] = [
     title: 'Inspection',
     card: 'THURSDAY — Inspection',
     slots: { mugs: WRAPPERS, wrappers: CURTAINS, laundry: LAUNDRY },
-    beats: { inspection: { at: 180, minSuspicion: 6 } },
+    beats: { inspection: { at: 195, minSuspicion: 6 } },
     lines: {
       intro: {
         base: "It's Thursday. I've noticed things. Tonight I'd like to un-notice them, together.",
@@ -238,7 +238,7 @@ export const NIGHTS: readonly NightSpec[] = [
     title: 'The Hendersons',
     card: 'FRIDAY — The Hendersons',
     slots: { mugs: MUGS, wrappers: WRAPPERS_FRIDAY, laundry: LAUNDRY },
-    beats: { inspection: { at: 180, minSuspicion: 6 }, doubleXp: true },
+    beats: { inspection: { at: 195, minSuspicion: 6 }, doubleXp: true },
     lines: {
       intro: {
         base: 'The Hendersons are here at seven. Whole room, best behaviour, and I mean the computer too.',

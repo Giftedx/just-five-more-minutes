@@ -72,6 +72,51 @@ describe('post-warning clicking bark', () => {
   });
 });
 
+describe('inspection beat', () => {
+  it('waits for an active prompt to clear before firing once', () => {
+    const night = nightSpec(3);
+    const fired: string[] = [];
+    const director = {
+      t: night.beats.inspection?.at ?? 0,
+      activePrompt: { lineId: 'laundry' } as { lineId: string } | null,
+      fireInspection: () => {
+        fired.push('inspect');
+        return [];
+      },
+    };
+    const game = Object.assign(Object.create(Game.prototype) as object, {
+      director,
+      night,
+      phonePhase: 'idle',
+      inspectionFired: false,
+      lampOn: false,
+      homeworkOffAt: Number.NEGATIVE_INFINITY,
+      gameNow: 0,
+      host: {
+        mode: 'room',
+        room: {
+          setDusk: () => undefined,
+          setDeskLamp: () => undefined,
+        },
+      },
+      mum: new MumState(6),
+      barks: new BarkScheduler(night.barks),
+      hud: { showSubtitle: () => undefined },
+      audio: { npcVoice: () => undefined },
+      opts: { speed: 1 },
+    }) as unknown as Game;
+    const run = () => (game as unknown as { runNightBeats(): void }).runNightBeats();
+
+    run();
+    expect(fired).toEqual([]);
+
+    director.activePrompt = null;
+    run();
+    run();
+    expect(fired).toEqual(['inspect']);
+  });
+});
+
 describe('away plan onboarding copy', () => {
   it('keeps the first stand-up lesson specific, legible, and neutral', () => {
     expect(AWAY_PLAN_TUTORIAL).toEqual({
