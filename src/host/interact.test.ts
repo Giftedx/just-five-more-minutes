@@ -52,6 +52,36 @@ afterEach(() => {
 });
 
 describe('InteractSystem placement slots', () => {
+  it('does not advertise tug chores on carry targets', () => {
+    stubRoomGlobals();
+
+    const promptForTarget = (night: 0 | 1 | 2 | 3, target: 'bin' | 'basket'): string => {
+      const spec = nightSpec(night);
+      const room = buildRoom(roomConfigFor(spec));
+      const targetObject = room.interactables.find((object) => {
+        const interact = object.userData['interact'];
+        return interact?.type === 'target' && interact.target === target;
+      });
+      expect(targetObject).toBeDefined();
+
+      const center = new THREE.Box3().setFromObject(targetObject!).getCenter(new THREE.Vector3());
+      const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 50);
+      camera.position.copy(center).add(new THREE.Vector3(0, 0, 1));
+      camera.lookAt(center);
+      camera.updateMatrixWorld(true);
+
+      const isolatedRoom = { ...room, interactables: [targetObject!] };
+      const prompt = new InteractSystem(isolatedRoom, choreDefsFor(spec)).update(camera);
+      expect(prompt).not.toBeNull();
+      return prompt!.label;
+    };
+
+    expect(promptForTarget(0, 'bin')).toBe('bin (wrappers go here)');
+    expect(promptForTarget(1, 'bin')).not.toContain('duvet corners');
+    expect(promptForTarget(2, 'basket')).not.toContain('duvet corners');
+    expect(promptForTarget(3, 'bin')).not.toContain('curtains');
+  });
+
   it.each(NIGHTS)('$card provides enough target slots for every carry chore', (spec) => {
     stubRoomGlobals();
     const room = buildRoom(roomConfigFor(spec));
