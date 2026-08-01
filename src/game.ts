@@ -168,6 +168,7 @@ export class Game {
   private deathsAtDisconnect = 0;
   private inspectionFired = false;
   private panicArmedUntil = Number.NEGATIVE_INFINITY;
+  private inspectionDefused = false;
   private homeworkOffAt = Number.NEGATIVE_INFINITY;
   private lampOn = false;
   /** Pause-frozen HUD clock (ms). Director time freezes on pause; wall-clock
@@ -633,6 +634,7 @@ export class Game {
     this.host.setHomework(true);
     this.homeworkOffAt = this.gameNow + 3000 / this.opts.speed;
     this.panicArmedUntil = this.director.t + 10;
+    if (this.director.activePrompt?.lineId === 'inspect') this.inspectionDefused = true;
     if (!this.factFlags.oldestTrick) {
       this.factFlags.oldestTrick = true;
       this.hud.showToast('homework.doc engaged. A classic.', this.gameNow);
@@ -643,6 +645,9 @@ export class Game {
   private handleDirectorEvent(ev: DirectorEvent): void {
     switch (ev.type) {
       case 'npcLine': {
+        if (ev.lineId === 'inspect') {
+          this.inspectionDefused = this.director.t <= this.panicArmedUntil;
+        }
         const text = this.lineText(ev.lineId, ev.text);
         this.hud.showSubtitle(text, this.gameNow, 6000 / this.opts.speed);
         this.hud.openPrompt(this.gameNow, (PROMPT_DURATION * 1000) / this.opts.speed);
@@ -686,7 +691,7 @@ export class Game {
         if (judgement.facts.archivist) this.factFlags.archivist = true;
 
         if (ev.lineId === 'inspect') {
-          const defused = this.director.t <= this.panicArmedUntil;
+          const defused = this.inspectionDefused;
           this.mum.onInspection(defused);
           if (!defused) this.inspectionFailed = true;
           this.later(900 / this.opts.speed, () => {

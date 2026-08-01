@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { WARN_AT } from './director/director';
-import { BarkScheduler, MumState, nightSpec } from './director/nights';
+import {
+  BarkScheduler,
+  INSPECTION_DEFUSE_DELTA,
+  MumState,
+  nightSpec,
+} from './director/nights';
 import { AWAY_PLAN_TUTORIAL, Game, choreDoneToast, crossWorldToast } from './game';
 import {
   freshCareer,
@@ -104,6 +109,68 @@ describe('chore completion copy', () => {
     expect(choreDoneToast('Mugs 3/3', true)).toBe(
       'Sorted while your avatar was in mortal danger. Efficient.',
     );
+  });
+});
+
+describe('panic inspection defuse', () => {
+  it('keeps an inspection defused when the prompt times out after the panic arm expires', () => {
+    const mum = new MumState(6);
+    const director = {
+      t: 180,
+      activePrompt: { lineId: 'inspect' },
+    };
+    const game = Object.assign(Object.create(Game.prototype) as object, {
+      state: 'playing',
+      director,
+      host: {
+        setHomework: () => undefined,
+        router: { promptActive: true },
+        mmo: { inCombat: false },
+      },
+      hud: {
+        showToast: () => undefined,
+        closePrompt: () => undefined,
+      },
+      audio: { uiClick: () => undefined },
+      opts: { speed: 1 },
+      factFlags: {
+        technicallyTrue: false,
+        evidenceBased: false,
+        archivist: false,
+        modemScream: false,
+        oldestTrick: false,
+      },
+      gameNow: 0,
+      mum,
+      lastTradeT: Number.NEGATIVE_INFINITY,
+      career: { week: { archivistUsed: false } },
+      lieDebtTonight: 0,
+      archivistSpentTonight: false,
+      inspectionFailed: false,
+      disposed: false,
+      later: () => undefined,
+    }) as unknown as {
+      panic(): void;
+      handleDirectorEvent(ev: {
+        type: 'promptClosed';
+        lineId: 'inspect';
+        result: 'ignored';
+        option: null;
+      }): void;
+      inspectionFailed: boolean;
+    };
+
+    game.panic();
+    director.t = 200;
+    game.handleDirectorEvent({
+      type: 'promptClosed',
+      lineId: 'inspect',
+      result: 'ignored',
+      option: null,
+    });
+
+    expect(mum.suspicion).toBe(6 + 2 + INSPECTION_DEFUSE_DELTA);
+    expect(game.inspectionFailed).toBe(false);
   });
 });
 
