@@ -1076,38 +1076,85 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
   };
 
   const spawnPhysical = (slot: ChoreId, physical: RoomNightConfig['chores'][number]['physical'], count: number): void => {
+    type ItemTemplate = {
+      name: string;
+      make: () => THREE.Object3D;
+      position: readonly [number, number, number];
+    };
+    type TugTemplate = ItemTemplate & { action: string };
+    const spawnItems = (idPrefix: string, templates: readonly ItemTemplate[]): void => {
+      for (let index = 0; index < count; index++) {
+        const template = templates[index % templates.length]!;
+        const offset = Math.floor(index / templates.length) * 0.08;
+        const [x, y, z] = template.position;
+        addItem(`${idPrefix}${index}`, slot, template.name, template.make(), x + offset, y, z + offset);
+      }
+    };
+    const spawnTugs = (idPrefix: string, templates: readonly TugTemplate[]): void => {
+      for (let index = 0; index < count; index++) {
+        const template = templates[index % templates.length]!;
+        const offset = Math.floor(index / templates.length) * 0.08;
+        const [x, y, z] = template.position;
+        addTug(`${idPrefix}${index}`, slot, template.name, template.action, template.make(), x + offset, y, z + offset);
+      }
+    };
+
     switch (physical) {
       case 'mugs':
-        addItem('mug0', slot, 'mug', makeMug(0x3c6e8f), 0.28, 0.78, -1.42);
-        addItem('mug1', slot, 'mug', makeMug(0x8f3c50), 1.5, 0.78, -1.38);
-        addItem('mug2', slot, 'mug', makeMug(0x4a8f3c), 1.56, 0.78, -1.74);
+        spawnItems('mug', [
+          { name: 'mug', make: () => makeMug(0x3c6e8f), position: [0.28, 0.78, -1.42] },
+          { name: 'mug', make: () => makeMug(0x8f3c50), position: [1.5, 0.78, -1.38] },
+          { name: 'mug', make: () => makeMug(0x4a8f3c), position: [1.56, 0.78, -1.74] },
+        ]);
         break;
-      case 'wrappers': {
-        addItem('wrap0', slot, 'wrapper', makeWrapper(0xd8a02a), 0.3, 0, 0.1);
-        addItem('wrap1', slot, 'wrapper', makeWrapper(0x3ca8d8), 1.5, 0, -0.4);
-        addItem('wrap2', slot, 'wrapper', makeWrapper(0xd84a8a), -0.55, 0, 1.1);
-        addItem('wrap3', slot, 'wrapper', makeWrapper(0x8ad84a), 0.32, 0.78, -1.72);
-        // Friday's fifth wrapper hides at the bed's edge, as is tradition.
-        if (count >= 5) addItem('wrap4', slot, 'wrapper', makeWrapper(0xd8d84a), -1.42, 0, 0.42);
+      case 'wrappers':
+        spawnItems('wrap', [
+          { name: 'wrapper', make: () => makeWrapper(0xd8a02a), position: [0.3, 0, 0.1] },
+          { name: 'wrapper', make: () => makeWrapper(0x3ca8d8), position: [1.5, 0, -0.4] },
+          { name: 'wrapper', make: () => makeWrapper(0xd84a8a), position: [-0.55, 0, 1.1] },
+          { name: 'wrapper', make: () => makeWrapper(0x8ad84a), position: [0.32, 0.78, -1.72] },
+          { name: 'wrapper', make: () => makeWrapper(0xd8d84a), position: [-1.42, 0, 0.42] },
+        ]);
         break;
-      }
       case 'laundry':
-        addItem('cloth0', slot, 'hoodie', makeHoodie(0x4a5a8f), -0.9, 0, -0.2);
-        addItem('cloth1', slot, 'sock', makeSock(0x8f8f3c), -0.2, 0, 1.35);
-        addItem('cloth2', slot, 'shirt', makeShirt(0x8f5a3c), -1.9, 0.48, 0.2);
+        spawnItems('cloth', [
+          { name: 'hoodie', make: () => makeHoodie(0x4a5a8f), position: [-0.9, 0, -0.2] },
+          { name: 'sock', make: () => makeSock(0x8f8f3c), position: [-0.2, 0, 1.35] },
+          { name: 'shirt', make: () => makeShirt(0x8f5a3c), position: [-1.9, 0.48, 0.2] },
+        ]);
         break;
-      case 'bed': {
-        // Rumpled duvet corners at the foot of the bed; a tug settles them.
-        addTug('bed0', slot, 'duvet corner', 'Tug the duvet straight', makeDuvetTug('left'), -1.68, 0.46, 0.42);
-        addTug('bed1', slot, 'duvet corner', 'Tug the duvet straight', makeDuvetTug('right'), -2.22, 0.46, 0.32);
+      case 'bed':
+        spawnTugs('bed', [
+          {
+            name: 'duvet corner',
+            action: 'Tug the duvet straight',
+            make: () => makeDuvetTug('left'),
+            position: [-1.68, 0.46, 0.42],
+          },
+          {
+            name: 'duvet corner',
+            action: 'Tug the duvet straight',
+            make: () => makeDuvetTug('right'),
+            position: [-2.22, 0.46, 0.32],
+          },
+        ]);
         break;
-      }
-      case 'curtains': {
-        // Bunched curtain gathers on each panel; a tug throws them open.
-        addTug('curt0', slot, 'curtain', 'Throw the curtains open', makeCurtainTug('left'), 2.33, 1.35, -0.05);
-        addTug('curt1', slot, 'curtain', 'Throw the curtains open', makeCurtainTug('right'), 2.33, 1.35, 0.85);
+      case 'curtains':
+        spawnTugs('curt', [
+          {
+            name: 'curtain',
+            action: 'Throw the curtains open',
+            make: () => makeCurtainTug('left'),
+            position: [2.33, 1.35, -0.05],
+          },
+          {
+            name: 'curtain',
+            action: 'Throw the curtains open',
+            make: () => makeCurtainTug('right'),
+            position: [2.33, 1.35, 0.85],
+          },
+        ]);
         break;
-      }
     }
   };
 

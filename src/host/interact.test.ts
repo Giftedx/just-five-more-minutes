@@ -51,6 +51,36 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('buildRoom chore counts', () => {
+  it.each(NIGHTS)('$card stages the configured count for each chore', (night) => {
+    stubRoomGlobals();
+    const spec = nightSpec(night.night);
+    const room = buildRoom(roomConfigFor(spec));
+
+    for (const slot of ['mugs', 'wrappers', 'laundry'] as const) {
+      expect(room.items.filter((item) => item.chore === slot)).toHaveLength(spec.slots[slot].count);
+    }
+
+    const decreasedConfig = roomConfigFor(spec);
+    for (const chore of decreasedConfig.chores) chore.count -= 1;
+    const decreasedRoom = buildRoom(decreasedConfig);
+
+    for (const chore of decreasedConfig.chores) {
+      expect(decreasedRoom.items.filter((item) => item.chore === chore.slot)).toHaveLength(chore.count);
+    }
+  });
+
+  it('stages two mugs when the configured count is two', () => {
+    stubRoomGlobals();
+    const room = buildRoom({
+      chores: [{ slot: 'mugs', physical: 'mugs', count: 2 }],
+      phone: false,
+    });
+
+    expect(room.items).toHaveLength(2);
+  });
+});
+
 describe('InteractSystem placement slots', () => {
   it('does not advertise tug chores on carry targets', () => {
     stubRoomGlobals();
