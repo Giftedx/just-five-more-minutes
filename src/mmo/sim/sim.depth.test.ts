@@ -292,6 +292,18 @@ describe('gravestones', () => {
     expect(sim.milestones).toContain('undertaker');
   });
 
+  it('reclaims through the default gravestone action', () => {
+    const { sim, deathPos } = dieWithLoot(19);
+    const opt = sim.optionsAt(deathPos.x, deathPos.y)[0];
+    expect(opt?.label).toBe('Reclaim items');
+    if (!opt) throw new Error('no reclaim option');
+    sim.invoke(opt);
+    const events = stepUntil(sim, (ev) => ev.some((e) => e.type === 'gravestoneReclaimed'), 150);
+    expect(events.some((e) => e.type === 'gravestoneReclaimed')).toBe(true);
+    expect(sim.gravestone).toBeNull();
+    expect(sim.player.inventory).toEqual(['log', 'flax', 'flax']);
+  });
+
   it('expires after its ticks run out', () => {
     const { sim } = dieWithLoot(19);
     let lost = false;

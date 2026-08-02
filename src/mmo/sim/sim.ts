@@ -720,7 +720,7 @@ export class MudwickSim {
       }
       // Re-path every tick — goblins move; static targets just keep the path.
       if (intent.kind === 'attack' || p.path.length === 0) {
-        const approach = nearestApproach(p.pos, target, this.walkable);
+        const approach = intent.kind === 'reclaim' ? target : nearestApproach(p.pos, target, this.walkable);
         p.path = approach ? (bfsPath(p.pos, approach, this.walkable) ?? []) : [];
         if (p.path.length === 0 && !adjacent(p.pos, target)) {
           p.intent = null; // unreachable, give up
