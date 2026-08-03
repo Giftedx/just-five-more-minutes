@@ -117,7 +117,6 @@ Crowd determinism test (completes Stage 2's guard): run sim 200 ticks with crowd
 milestones: string[]; suspicionEnd: number;
 technicallyTrue: boolean; evidenceBased: boolean; archivist: boolean;
 doubleBereavement: boolean; modemScream: boolean; oldestTrick: boolean; shrimpBurnt3: boolean;
-choreTotal: number; // household = round(24*completed/choreTotal) + 6 if any answered
 // mmo = capped sum of spec §5 milestone values; vibe = clamp(20 - 4*ignored - floor(suspicionEnd/2) + 2*quickStarts)
 // week.ts:
 export function weekVerdict(reports: NightReportSummary[], lieDebt: number, fridaySuspicion: number): { endingId: string; title: string; blurb: string; stamps: string[] }
