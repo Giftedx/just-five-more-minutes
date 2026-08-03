@@ -158,11 +158,11 @@ She has her own life running in the barks: Monday's casserole, Tuesday's bins, W
 ### Night scoring (same 40/30/20/10 frame)
 
 - **Mudwick (0–40)**: milestone-anchored: `pocketMoney` +6, `twoDinnersAhead` +6, `dinnerFund` +10, `contractor` +6, `levelFive` +6, `tollPaid` +3, `bullyTheBully` +3, `undertaker` +2, `chefActually` +2 → capped 40. An unattended session stays ~0; an attentive one lands 25–35; 40 wants the week's unlocks.
-- **Household (0–30)**: `round(24 × completed/total) + 6` if any prompt answered.
+- **Household (0–30)**: 8 points per completed chore plus 6 if any prompt answered.
 - **Vibe (0–20)**: `20 − 4×ignored − floor(suspicionEnd/2) + 2×quickStarts`, clamped. (Replaces the duplicate-option penalty — that behavior now lives in suspicion via excuse reuse.)
 - **Comedy (0–10)**: existing facts + `technicallyTrue`, `evidenceBased`, `archivist`, `doubleBereavement`, `modemScream`, `oldestTrick`, `shrimpBurnt3`, 2 points each, capped.
 
-**E2E golden derivation (Monday, fresh profile, scripted run answering 1,2,3,4,1, all chores, never sits at PC):** mmo 0/40 · household `round(24×3/3)+6 = 30/30` · vibe: ignored 0; suspicion = +1(one sec) −1(combat lie is honest) +1(economy, no trade) +1(archivist) −6(3 chores) → clamp 0 → `20 − 0 + 2×3 = 26` → **20/20** · comedy: `choresWithoutGlory` + `archivist` = **4/10** · **TOTAL 54/100**, night ending "Employee of the Month (This House)", notes include the 100 gp dinner-fund line. These are the new browser-E2E assertions — derived here, not copied from actuals.
+**E2E golden derivation (Monday, fresh profile, scripted run answering 1,2,3,4,1, all chores, never sits at PC):** mmo 0/40 · household `8×3+6 = 30/30` · vibe: ignored 0; suspicion = +1(one sec) −1(combat lie is honest) +1(economy, no trade) +1(archivist) −6(3 chores) → clamp 0 → `20 − 0 + 2×3 = 26` → **20/20** · comedy: `choresWithoutGlory` + `archivist` = **4/10** · **TOTAL 54/100**, night ending "Employee of the Month (This House)", notes include the 100 gp dinner-fund line. These are the new browser-E2E assertions — derived here, not copied from actuals.
 
 ### The Week Verdict (after Friday's report)
 
