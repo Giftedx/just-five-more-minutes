@@ -268,7 +268,7 @@ export class AudioSynth {
     this.tone(300, { at: 0.04, dur: 0.06, gain: 0.08 });
   }
 
-  /** Little success jingle for finishing a chore. */
+  /** MMO level-ups and quest completions. */
   levelUp(): void {
     if (!this.ready) return;
     this.tone(880, { type: 'square', dur: 0.08, gain: 0.08 });
@@ -276,6 +276,7 @@ export class AudioSynth {
     this.tone(1568, { at: 0.16, dur: 0.14, gain: 0.06 });
   }
 
+  /** Little success jingle for finishing a chore. */
   choreDone(): void {
     if (!this.ready) return;
     this.tone(659.25, { type: 'triangle', dur: 0.1, gain: 0.1 });
