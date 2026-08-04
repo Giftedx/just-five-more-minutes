@@ -1,34 +1,39 @@
 # Just Five More Minutes
 
+<!-- ste-lint: off -->
 [![CI](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml/badge.svg)](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<!-- ste-lint: on -->
 
-**[▶ Play in your browser](https://ha.ggis.xyz/just-five-more-minutes/)** — no install, no login, no microtransactions. Just goblins.
+**[▶ Play in your browser](https://ha.ggis.xyz/just-five-more-minutes/)**. No install, no login, no microtransactions. Just goblins.
 
 Also on [Cloudflare Pages](https://just-five-more-minutes.pages.dev/) if you prefer the direct link.
 
-Dinner is in five minutes, and your room is a mild disgrace. Unfortunately, the goblins of **Mudwick Online** — a lovingly stupid, 2004-flavoured mini-MMO that lives inside your bedroom PC — are not going to grind themselves.
+Dinner is in five minutes, and your room is a mild disgrace. Unfortunately, the goblins of **Mudwick Online**, a lovingly stupid 2004-flavoured mini-MMO inside your bedroom PC, are not going to grind themselves.
 
-Walk around your room in first person, sit at the CRT to click goblins, chop allegedly wood-bearing trees, and sell flax to a man who has seen your spreadsheet and is not impressed. Meanwhile, a very reasonable voice at the door asks you, three separate times, to do extremely small chores.
+Walk around your room in first person. Sit at the CRT to click goblins and chop allegedly wood-bearing trees. Sell flax to a man who has seen your spreadsheet and is not impressed. Meanwhile, a very reasonable voice at the door asks you, three separate times, to do extremely small chores.
 
-It's also not just one evening any more. It's **the School Week**: five weeknight acts, Monday to Friday, each five minutes long. Your Mudwick character persists between nights — coins, levels, and the bridge toll you paid on Tuesday all carry forward — and so does Mum's suspicion, at half strength, because she sleeps on it. Friday ends with the whole week stapled together and judged.
+It's also not just one evening any more. It's **the School Week**: five weeknight acts, Monday to Friday, each five minutes long. Your Mudwick character persists between nights. Coins, levels, and the bridge toll you paid on Tuesday all carry forward. So does Mum's suspicion, at half strength, because she sleeps on it. Friday ends with the whole week stapled together and judged.
 
-The week escalates. Tuesday the bed needs making. **Wednesday, Auntie Carol calls and the modem dies mid-combat** (you cannot log out in combat; those were the rules in 2004 and they are the rules now). Thursday Mum has noticed things, and if her suspicion is high enough she comes in for an inspection — press **F** to flip the CRT to `homework.doc`, the oldest trick in the book. Friday the Hendersons are coming, the wrapper count is up, and Mudwick is running double XP, which is torture.
+The week escalates. Tuesday the bed needs making. **Wednesday, Auntie Carol calls and the modem dies mid-combat.** You cannot log out in combat. Those were the rules in 2004, and they are the rules now. Thursday, Mum has noticed things. If her suspicion runs high enough, she comes in for an inspection. Press **F** to flip the CRT to `homework.doc`, the oldest trick in the book. Friday the Hendersons are coming, the wrapper count is up, and Mudwick is running double XP, which is torture.
 
-Mudwick itself grew a far bank: pay the 10 gp toll once and it's yours forever — oaks worth 15 gp (Woodcutting 5), hobgoblins that hit harder and start fights on their own, plus a fishing spot and a campfire that turns raw shrimp into either food or regret. Dying drops your inventory at a gravestone for sixty seconds; whether you rush the corpse run or do the laundry is between you and your conscience. Before you stand up, set your **standing orders** — keep working, eat at low health, run home, sell when full — four toggles of period-authentic auto-piloting, all off by default because walking away mid-combat is a personal choice.
+Mudwick itself grew a far bank. Pay the 10 gp toll once and it is yours forever. Over there: oaks worth 15 gp (Woodcutting 5), and hobgoblins that hit harder and start fights on their own. A fishing spot too, and a campfire that turns raw shrimp into either food or regret. Dying drops your inventory at a gravestone for sixty seconds. The corpse run or the laundry: that choice sits between you and your conscience. Before you leave the PC, set your **standing orders**: keep working, eat at low health, run home, sell when full. Four toggles of period-authentic auto-piloting, all off by default, because walking away mid-combat is a personal choice.
 
-Mum, meanwhile, keeps score in her own way. Every excuse now does something: "One sec!" buys you fifteen real seconds and one unit of lie-debt; "I'm in combat!" is oddly honest and calms her down; "The economy needs me!" only lands if you have receipts; the historical preservation defence works exactly once a week. Ignore her and the **MUM:** chip in the corner climbs from *unbothered* to *at the door*.
+Mum, meanwhile, keeps score in her own way. Every excuse now does something. "One sec!" buys you fifteen real seconds and one unit of lie-debt. "I'm in combat!" is oddly honest and calms her. "The economy needs me!" only lands if you have receipts. The historical preservation defence works exactly once a week. Ignore her and the **MUM:** chip in the corner climbs from *unbothered* to *at the door*.
 
-After each five minutes you receive a typewritten **HOUSEHOLD INCIDENT REPORT** grading MMO progress (a milestone ladder of what you earned *tonight*), household responsibility, vibe preservation, and comedy output. After Friday's report comes **THE WEEK VERDICT** — a 3×3 matrix of endings from *The Lost Week* to *Time Wizard*, with stamps for perfect chores, reliable economies, and lies that were never one sec. Endings collect in a gallery on the title screen. Everything lives in a small local career file; no account, no analytics.
+After each five minutes you receive a typewritten **HOUSEHOLD INCIDENT REPORT**. It grades MMO progress (a milestone ladder of what you earned *tonight*), household responsibility, vibe preservation, and comedy output. After Friday's report comes **THE WEEK VERDICT**, a 3×3 matrix of endings from *The Lost Week* to *Time Wizard*. It awards stamps for perfect chores, reliable economies, and lies that were never one sec. Endings collect in a gallery on the title screen. Everything lives in a small local career file. No account, no analytics.
 
-Everything except the bundled third-party fonts is generated at runtime. The only bundled runtime asset files are `public/fonts/RuneScape.woff2` and `public/fonts/RuneScape-Bold.woff2`.
+The game generates everything at runtime except the bundled third-party fonts. The only bundled runtime asset files are `public/fonts/RuneScape.woff2` and `public/fonts/RuneScape-Bold.woff2`.
 
+<!-- ste-lint: off -->
 <p align="center">
   <img src="docs/screenshots/poster.png" alt="Mudwick Online poster — Your goblins miss you" width="480">
 </p>
+<!-- ste-lint: on -->
 
 ## Screenshots
 
+<!-- ste-lint: off -->
 <table>
   <tr>
     <td align="center" colspan="2"><img src="docs/screenshots/title.png" alt="Just Five More Minutes title screen with its tiny live Mudwick CRT and Mum's five-minute warning" width="800"><br><sub>One domestic incident, five minutes, several terrible priorities</sub></td>
@@ -42,6 +47,7 @@ Everything except the bundled third-party fonts is generated at runtime. The onl
     <td align="center"><img src="docs/screenshots/ui-score.png" alt="End-of-session Household Incident Report scorecard" width="400"><br><sub>Scorecard — filed, stamped, judged</sub></td>
   </tr>
 </table>
+<!-- ste-lint: on -->
 
 ## Controls
 
@@ -98,7 +104,7 @@ flowchart TB
     STORE -->|"coins, xp, suspicion ÷ 2"| SCORE
 ```
 
-`game.ts` runs one evening. The director (`src/director/`) is pure code with no DOM and no timers: it scripts the five-minute timeline, fires the three chore requests, and supplies each night's beats — the Wednesday phone call, the Thursday knock, Friday's double XP. Mum's suspicion model and her ambient lines live beside it. When the clock runs out, `src/score/` grades the night and saves the career file. After Friday it computes the week verdict.
+`game.ts` runs one evening. The director (`src/director/`) is pure code with no DOM and no timers. It scripts the five-minute timeline, fires the three chore requests, and supplies each night's beats: the Wednesday phone call, the Thursday knock, Friday's double XP. Mum's suspicion model and her ambient lines live beside it. When the clock runs out, `src/score/` grades the night and saves the career file. After Friday it computes the week verdict.
 
 ```mermaid
 flowchart LR
@@ -132,7 +138,7 @@ Where things live:
 | Audio | Web Audio API · procedural synth |
 | Build | [Vite](https://vite.dev/) · TypeScript · [Vitest](https://vitest.dev/) |
 
-The game is a single static bundle — no backend, no CDN assets, no analytics.
+The game is a single static bundle: no backend, no CDN assets, no analytics.
 
 ## Local development
 
@@ -163,7 +169,7 @@ Dev affordances (query params):
 | `?dev=room` | Standalone bedroom dev route |
 | `?dev=host` | Standalone mode-switching dev route |
 
-Browser checks need Playwright's Chromium installed once (`npx playwright install chromium`). `npm run test:browser` starts and owns a strict local preview of the current standalone `dist/`, runs both browser suites, and stops the preview even if a check fails. `npm run test:artifact` is the focused resource and boot probe for a current standalone build. The complete `npm run verify` gate validates standalone behavior, validates a mounted `/just-five-more-minutes/` build at its real base path, then rebuilds and revalidates standalone `dist/` so `npm run preview` works at the documented root afterward.
+Browser checks need Playwright's Chromium installed once (`npx playwright install chromium`). `npm run test:browser` starts and owns a strict local preview of the current standalone `dist/`. It runs both browser suites and stops the preview even if a check fails. `npm run test:artifact` is the focused resource and boot probe for a current standalone build. The complete `npm run verify` gate validates standalone behavior, then a mounted `/just-five-more-minutes/` build at its real base path. It then rebuilds and revalidates standalone `dist/`, so `npm run preview` works at the documented root afterward.
 
 ## Deploying
 
@@ -186,8 +192,8 @@ npx wrangler pages deploy dist --project-name=just-five-more-minutes
 
 ## Contributing
 
-Bug reports and ideas are welcome — use the issue templates. For code changes, fork, branch, and open a PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for the short version.
+Bug reports and ideas are welcome. Use the issue templates. For code changes, fork, branch, and open a PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for the short version.
 
 ## License
 
-[MIT](LICENSE) — do what you like, but Mum would like you to tidy up after yourself.
+[MIT](LICENSE). Do what you like, but Mum would like you to tidy the place after yourself.
