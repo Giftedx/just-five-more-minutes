@@ -321,6 +321,8 @@ export class Game {
     if (weekComplete(this.career) && this.opts.night === undefined) {
       if (this.opts.skipTitle) {
         this.finishWeekSilently();
+        this.restart();
+        return;
       } else {
         this.showVerdictThenRestart();
         this.loop();

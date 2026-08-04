@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { WARN_AT } from './director/director';
 import {
   BarkScheduler,
@@ -175,6 +175,28 @@ describe('panic inspection defuse', () => {
 });
 
 describe('Friday week verdict', () => {
+  it('restarts before skipTitle begins a finished week', () => {
+    let career = freshCareer();
+    for (let night = 0; night < 5; night++) {
+      career = recordNight(career, highScoringReport(), 7, 0);
+    }
+    const onRestart = vi.fn();
+    const begin = vi.fn();
+    const game = Object.assign(Object.create(Game.prototype) as object, {
+      career,
+      opts: { speed: 1, startAt: 0, skipTitle: true },
+      disposed: false,
+      onRestart,
+      begin,
+      loop: vi.fn(),
+    }) as unknown as Game;
+
+    game.start();
+
+    expect(onRestart).toHaveBeenCalledOnce();
+    expect(begin).not.toHaveBeenCalled();
+  });
+
   it('uses the exact ending suspicion so 7 keeps the matrix ending', () => {
     let career = freshCareer();
     for (let night = 0; night < 4; night++) {
