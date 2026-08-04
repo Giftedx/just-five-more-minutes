@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { createSessionSeed, formatSessionSeed, parseSessionSeed } from './session';
+import { createSessionSeed, formatSessionSeed, parseNightOverride, parseSessionSeed } from './session';
+
+describe('night override helper', () => {
+  it('rejects absent, blank, non-numeric, non-integer, and out-of-range text', () => {
+    expect(parseNightOverride(null)).toBeUndefined();
+    expect(parseNightOverride('')).toBeUndefined();
+    expect(parseNightOverride('  ')).toBeUndefined();
+    expect(parseNightOverride('abc')).toBeUndefined();
+    expect(parseNightOverride('2.5')).toBeUndefined();
+    expect(parseNightOverride('-1')).toBeUndefined();
+    expect(parseNightOverride('5')).toBeUndefined();
+  });
+
+  it('accepts Monday and Friday overrides', () => {
+    expect(parseNightOverride('0')).toBe(0);
+    expect(parseNightOverride('4')).toBe(4);
+  });
+});
 
 describe('session seed helpers', () => {
   it('parses integer seed text as an unsigned 32-bit value', () => {

@@ -3,7 +3,7 @@ import { runMmoDev } from './devmmo';
 import { runRoomDev } from './devroom';
 import { runHostDev } from './devhost';
 import { Game, type GameOptions } from './game';
-import { parseSessionSeed } from './session';
+import { parseNightOverride, parseSessionSeed } from './session';
 import { installGate, type DeviceBlockReason } from './ui/gate';
 
 const params = new URLSearchParams(location.search);
@@ -11,8 +11,7 @@ const speed = Math.max(0.1, Number(params.get('speed') ?? '1') || 1);
 const startAt = Math.max(0, Number(params.get('t') ?? '0') || 0);
 const skipTitle = params.get('skipTitle') === '1';
 const seed = parseSessionSeed(params.get('seed'));
-const nightRaw = params.get('night');
-const night = nightRaw === null ? undefined : Math.max(0, Math.min(4, Number(nightRaw) || 0));
+const night = parseNightOverride(params.get('night'));
 
 const app = document.getElementById('app');
 if (!app) throw new Error('missing #app');

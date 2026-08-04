@@ -2,6 +2,12 @@ export interface RandomSource {
   getRandomValues(array: Uint32Array): Uint32Array;
 }
 
+export function parseNightOverride(raw: string | null): number | undefined {
+  if (raw === null || raw.trim() === '') return undefined;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 4 ? parsed : undefined;
+}
+
 export function parseSessionSeed(raw: string | null): number | undefined {
   if (raw === null || raw.trim() === '') return undefined;
   const parsed = Number(raw);
