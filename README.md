@@ -56,6 +56,73 @@ Everything except the bundled third-party fonts is generated at runtime. The onl
 | Right click (Mudwick) | Context menu, including Examine. This is non-negotiable. |
 | `AWAY PLAN` chips (Mudwick) | Toggle standing orders for while you're off doing chores |
 
+The game needs a mouse, a keyboard, and a browser window at least 900 pixels wide. On other devices it shows an equipment-check screen instead. Mudwick had system requirements in 2004 too.
+
+## How it works
+
+The page contains two games and a boundary between them.
+
+**Room Mode** is a first-person bedroom built with Three.js. All geometry and textures are procedural. **PC Mode** is Mudwick Online: a Canvas 2D renderer on top of a pure simulation that ticks every 600 ms with a seeded RNG.
+
+One canvas backs both views. In PC Mode you play Mudwick directly. In Room Mode, a `THREE.CanvasTexture` maps the same canvas onto the CRT screen, and the simulation keeps ticking while you carry mugs. That is the whole joke, and it is also the architecture.
+
+```mermaid
+flowchart TB
+    MAIN["main.ts<br/>entry, URL params, device gate"]
+    GAME["game.ts<br/>one evening, orchestrated"]
+
+    subgraph ROOM["Room Mode — the bedroom"]
+        HOST["src/host<br/>Three.js first-person room<br/>chores, props, Mum's doorway"]
+    end
+
+    subgraph CRT["PC Mode — inside the CRT"]
+        RENDER["src/mmo/render<br/>Canvas 2D renderer + input"]
+        SIM["src/mmo/sim<br/>pure tick simulation<br/>600 ms ticks, seeded RNG"]
+    end
+
+    DIRECTOR["src/director<br/>5-minute script + 5 night specs<br/>Mum's suspicion and barks"]
+    SCORE["src/score<br/>night report, week verdict, career"]
+    UI["src/ui + src/audio<br/>HUD, title, scorecard, synth"]
+    STORE["localStorage<br/>j5mm-career-v1"]
+
+    MAIN --> GAME
+    GAME --> HOST
+    GAME --> DIRECTOR
+    GAME --> UI
+    GAME --> SCORE
+    HOST -->|"CanvasTexture on the CRT"| RENDER
+    RENDER --> SIM
+    SIM -->|"sim events"| GAME
+    DIRECTOR -->|"prompts, chores, beats"| GAME
+    SCORE --> STORE
+    STORE -->|"coins, xp, suspicion ÷ 2"| SCORE
+```
+
+`game.ts` runs one evening. The director (`src/director/`) is pure code with no DOM and no timers: it scripts the five-minute timeline, fires the three chore requests, and supplies each night's beats — the Wednesday phone call, the Thursday knock, Friday's double XP. Mum's suspicion model and her ambient lines live beside it. When the clock runs out, `src/score/` grades the night and saves the career file. After Friday it computes the week verdict.
+
+```mermaid
+flowchart LR
+    TITLE["Title screen"] --> NIGHT["Weeknight<br/>5 minutes"]
+    NIGHT --> REPORT["HOUSEHOLD<br/>INCIDENT REPORT"]
+    REPORT -->|"Mon to Thu: carry coins,<br/>levels, half the suspicion"| NIGHT
+    REPORT -->|"after Friday"| VERDICT["THE WEEK VERDICT<br/>3×3 ending matrix"]
+    VERDICT --> GALLERY["Ending gallery<br/>on the title screen"]
+    GALLERY --> TITLE
+```
+
+Where things live:
+
+| Path | Contents |
+|---|---|
+| `src/game.ts` | The evening orchestrator: modes, prompts, excuses, scoring handoff |
+| `src/host/` | The Three.js bedroom: room, player, chores, interaction, Mum's doorway |
+| `src/mmo/sim/` | The Mudwick simulation: pure, seeded, fully unit-tested |
+| `src/mmo/render/` | The Canvas 2D renderer and pointer input for Mudwick |
+| `src/director/` | The five-minute script, the five night specs, Mum's suspicion model |
+| `src/score/` | Night report, week verdict, ending matrix, career persistence |
+| `src/ui/` | HUD, title screen, scorecard, device gate |
+| `src/audio/` | Procedural Web Audio synth, including an abridged 56k handshake |
+
 ## Tech
 
 | Layer | Stack |
