@@ -2721,9 +2721,9 @@ try {
       assert.equal(state.binCollider, true);
       assert.equal(state.basketCollider, true);
       assert.deepEqual(state.slots, {
-        tray: [[-0.13, 0.035, 1.72], [0.05, 0.035, 1.72], [0.23, 0.035, 1.72]],
+        tray: [[-0.13, 0.035, 1.72], [0.05, 0.035, 1.72], [0.23, 0.035, 1.72], [0.05, 0.035, 1.61]],
         bin: [[1.95, 0.1, -1.1], [1.93, 0.16, -1.12], [1.97, 0.22, -1.08], [1.95, 0.28, -1.1], [1.93, 0.3, -1.12]],
-        basket: [[-1.85, 0.08, 1.55], [-1.83, 0.16, 1.53], [-1.87, 0.24, 1.57]],
+        basket: [[-1.85, 0.08, 1.55], [-1.83, 0.16, 1.53], [-1.87, 0.24, 1.57], [-1.85, 0.32, 1.55]],
       });
       assert.ok(state.roomCalls <= 128, `room draw-call budget exceeded: ${state.roomCalls}`);
       assert.ok(state.rendererTextures <= 12, `room texture budget exceeded: ${state.rendererTextures}`);
