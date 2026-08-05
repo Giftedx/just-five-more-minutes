@@ -23,7 +23,7 @@ export async function findAvailableLoopbackPort(preferredPort) {
       !error ||
       typeof error !== 'object' ||
       !('code' in error) ||
-      error.code !== 'EADDRINUSE'
+      !['EADDRINUSE', 'EACCES', 'EPERM', 'EADDRNOTAVAIL'].includes(error.code)
     ) {
       throw error;
     }
