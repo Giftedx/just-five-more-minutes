@@ -87,10 +87,10 @@ async function waitForPreview() {
   throw new Error(`preview did not become ready within 15 seconds\n${previewOutput}`);
 }
 
-async function runCheck(label, script, smokeUrl) {
+async function runCheck(label, script, smokeUrl, scriptArgs = []) {
   console.log(`\n> ${label}`);
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [script], {
+    const child = spawn(process.execPath, [script, ...scriptArgs], {
       cwd: root,
       env: { ...process.env, SMOKE_URL: smokeUrl },
       stdio: 'inherit',
@@ -149,7 +149,15 @@ try {
       fullUrl.searchParams.set('speed', '10');
       fullUrl.searchParams.set('skipTitle', '1');
       fullUrl.searchParams.set('seed', String(0x00c0ffee));
-      exitCode = await runCheck('full interaction E2E', e2eScript, fullUrl.href);
+      for (const night of options.nights) {
+        exitCode = await runCheck(
+          `full interaction E2E night ${night}`,
+          e2eScript,
+          fullUrl.href,
+          [`--night=${night}`],
+        );
+        if (exitCode !== 0) break;
+      }
     }
   }
 } catch (error) {

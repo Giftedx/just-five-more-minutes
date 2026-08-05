@@ -29,14 +29,34 @@ describe('normalizePreviewBase', () => {
 
 describe('parseBrowserCheckArgs', () => {
   it('defaults to the full standalone browser suite', () => {
-    expect(parseBrowserCheckArgs([])).toEqual({ base: '/', artifactOnly: false });
+    expect(parseBrowserCheckArgs([])).toEqual({
+      base: '/',
+      artifactOnly: false,
+      nights: [0, 1, 2, 3, 4],
+    });
   });
 
   it('parses the mounted artifact-only mode', () => {
     expect(parseBrowserCheckArgs([
       '--artifact-only',
       '--base=/just-five-more-minutes/',
-    ])).toEqual({ base: '/just-five-more-minutes/', artifactOnly: true });
+    ])).toEqual({
+      base: '/just-five-more-minutes/',
+      artifactOnly: true,
+      nights: [0, 1, 2, 3, 4],
+    });
+  });
+
+  it('parses a selected night list', () => {
+    expect(parseBrowserCheckArgs(['--nights=1,3'])).toEqual({
+      base: '/',
+      artifactOnly: false,
+      nights: [1, 3],
+    });
+  });
+
+  it('rejects an out-of-range night', () => {
+    expect(() => parseBrowserCheckArgs(['--nights=5'])).toThrow(/night.*0.*4/i);
   });
 
   it('rejects unknown arguments', () => {

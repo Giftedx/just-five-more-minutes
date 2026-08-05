@@ -21,6 +21,7 @@ export function normalizePreviewBase(raw) {
 export function parseBrowserCheckArgs(argv) {
   let artifactOnly = false;
   let baseRaw = null;
+  let nights = null;
 
   for (const arg of argv) {
     if (arg === '--artifact-only') {
@@ -32,11 +33,21 @@ export function parseBrowserCheckArgs(argv) {
       baseRaw = arg.slice('--base='.length);
       continue;
     }
+    if (arg.startsWith('--nights=')) {
+      if (nights !== null) throw new Error('Use only one --nights argument.');
+      const values = arg.slice('--nights='.length).split(',');
+      if (values.some((value) => !/^[0-4]$/.test(value))) {
+        throw new Error('Use a comma-separated night list with integers from 0 to 4.');
+      }
+      nights = values.map(Number);
+      continue;
+    }
     throw new Error(`unknown browser-check argument: ${arg}`);
   }
 
   return {
     base: normalizePreviewBase(baseRaw ?? '/'),
     artifactOnly,
+    nights: nights ?? [0, 1, 2, 3, 4],
   };
 }
