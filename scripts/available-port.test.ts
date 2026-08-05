@@ -36,4 +36,5 @@ describe('findAvailableLoopbackPort', () => {
     expect(selected).not.toBe(address.port);
     expect(selected).toBeGreaterThan(0);
   });
+
 });
