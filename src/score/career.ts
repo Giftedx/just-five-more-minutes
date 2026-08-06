@@ -136,7 +136,16 @@ function parseReport(raw: unknown): NightReportSummary | undefined {
   if (!isCount(r.total) || r.total > 100) return undefined;
   if (!Array.isArray(r.rows) || r.rows.length !== 4) return undefined;
   const [mmo, household, vibe, comedy] = r.rows as unknown[];
-  if (!isCount(mmo) || !isCount(household) || !isCount(vibe) || !isCount(comedy)) {
+  if (
+    !isCount(mmo) ||
+    mmo > 40 ||
+    !isCount(household) ||
+    household > 30 ||
+    !isCount(vibe) ||
+    vibe > 20 ||
+    !isCount(comedy) ||
+    comedy > 10
+  ) {
     return undefined;
   }
   if (typeof r.endingTitle !== 'string') return undefined;

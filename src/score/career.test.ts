@@ -89,6 +89,10 @@ describe('save / load round trip', () => {
       'report count mismatch',
       JSON.stringify(withWeek({ night: 2, reports: [report(50)] })),
     ],
+    [
+      'report rows out of range',
+      JSON.stringify(withWeek({ night: 1, reports: [{ ...report(0), rows: [900, 900, 0, 0] }] })),
+    ],
     ['suspicion out of range', JSON.stringify(withWeek({ suspicionCarry: 11 }))],
     [
       'malformed tutorial progress',
