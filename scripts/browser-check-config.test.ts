@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getE2eNightRuns,
   normalizePreviewBase,
   parseBrowserCheckArgs,
 } from './browser-check-config.mjs';
+
+describe('getE2eNightRuns', () => {
+  it('returns one distinct run descriptor for each night', () => {
+    expect(getE2eNightRuns()).toEqual([
+      { night: 0, label: 'full interaction E2E night 0' },
+      { night: 1, label: 'full interaction E2E night 1' },
+      { night: 2, label: 'full interaction E2E night 2' },
+      { night: 3, label: 'full interaction E2E night 3' },
+      { night: 4, label: 'full interaction E2E night 4' },
+    ]);
+  });
+});
 
 describe('normalizePreviewBase', () => {
   it('keeps root and adds one trailing slash to a mounted path', () => {

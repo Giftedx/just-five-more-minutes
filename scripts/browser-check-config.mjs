@@ -1,3 +1,10 @@
+export function getE2eNightRuns(nights = [0, 1, 2, 3, 4]) {
+  return nights.map((night) => ({
+    night,
+    label: `full interaction E2E night ${night}`,
+  }));
+}
+
 /** Normalize a same-origin Vite preview mount path. */
 export function normalizePreviewBase(raw) {
   if (

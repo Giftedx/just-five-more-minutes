@@ -1,7 +1,7 @@
 /** Own a strict, short-lived preview and run browser checks against its build. */
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { parseBrowserCheckArgs } from './browser-check-config.mjs';
+import { getE2eNightRuns, parseBrowserCheckArgs } from './browser-check-config.mjs';
 import { findAvailableLoopbackPort } from './available-port.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -149,12 +149,12 @@ try {
       fullUrl.searchParams.set('speed', '10');
       fullUrl.searchParams.set('skipTitle', '1');
       fullUrl.searchParams.set('seed', String(0x00c0ffee));
-      for (const night of options.nights) {
+      for (const run of getE2eNightRuns(options.nights)) {
         exitCode = await runCheck(
-          `full interaction E2E night ${night}`,
+          run.label,
           e2eScript,
           fullUrl.href,
-          [`--night=${night}`],
+          [`--night=${run.night}`],
         );
         if (exitCode !== 0) break;
       }
