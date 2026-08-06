@@ -440,4 +440,4 @@ Capture `shots/woven-rug-final.png` from the verified candidate. Under the user'
 
 - [ ] **Step 6: Reflect and clean up**
 
-Stop ports 5179 and 5180, remove scratch `output/` only after verifying its resolved path is inside the owned worktree, and append one valid JSON line to `C:\Users\aggis\.Codex\memory\reflections.jsonl` with exact keys `date`, `task`, `outcome`, `surprise`, and `next-time`. Validate every JSONL line and confirm the final Git state.
+Stop ports 5179 and 5180, remove scratch `output/` only after verifying its resolved path is inside the owned worktree, and append one valid JSON line to `.Codex\memory\reflections.jsonl` with exact keys `date`, `task`, `outcome`, `surprise`, and `next-time`. Validate every JSONL line and confirm the final Git state.

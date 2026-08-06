@@ -394,7 +394,7 @@ Expected:
 
 - [ ] **Step 6: Append and validate the required reflection**
 
-Append one JSON object with keys `date`, `task`, `outcome`, `surprise`, and `next-time` to `C:\Users\aggis\.Codex\memory\reflections.jsonl` using `apply_patch`. Parse every non-empty line with `ConvertFrom-Json`, then select the exact task string and assert all five keys are present.
+Append one JSON object with keys `date`, `task`, `outcome`, `surprise`, and `next-time` to `.Codex\memory\reflections.jsonl` using `apply_patch`. Parse every non-empty line with `ConvertFrom-Json`, then select the exact task string and assert all five keys are present.
 
 - [ ] **Step 7: Commit final calibration if needed**
 

@@ -252,7 +252,7 @@ Expected: 16 test files / 203 tests, standalone build, JS/CSS budgets, 17 isolat
 
 - [ ] **Step 6: Record and validate the reflection**
 
-Append one JSON line with exact keys `date`, `task`, `outcome`, `surprise`, and `next-time` to `C:\Users\aggis\.Codex\memory\reflections.jsonl` using `apply_patch`. Parse every non-empty line and assert the newest entry has the exact required key set.
+Append one JSON line with exact keys `date`, `task`, `outcome`, `surprise`, and `next-time` to `.Codex\memory\reflections.jsonl` using `apply_patch`. Parse every non-empty line and assert the newest entry has the exact required key set.
 
 - [ ] **Step 7: Integrate and clean up**
 

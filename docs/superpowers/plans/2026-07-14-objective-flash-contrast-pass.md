@@ -260,4 +260,4 @@ Fast-forward the verified feature branch onto master and rerun npm run verify. D
 
 - [x] **Step 5: Clean up and reflect**
 
-Remove only the task-owned worktree and merged feature branch. Append one valid JSON line with keys date, task, outcome, surprise, and next-time to C:\Users\aggis\.Codex\memory\reflections.jsonl using apply_patch, then parse every line to validate the JSONL file.
+Remove only the task-owned worktree and merged feature branch. Append one valid JSON line with keys date, task, outcome, surprise, and next-time to .Codex\memory\reflections.jsonl using apply_patch, then parse every line to validate the JSONL file.

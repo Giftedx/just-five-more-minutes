@@ -463,7 +463,7 @@ Close the owned browser session, stop only the owned preview process tree, prese
 
 - [ ] **Step 9: Append and validate the reflection**
 
-Append one JSON object to `C:\Users\aggis\.Codex\memory\reflections.jsonl` using `apply_patch`, with exact keys `date`, `task`, `outcome`, `surprise`, and `next-time`. Parse every line with PowerShell `ConvertFrom-Json` and report the validated line count.
+Append one JSON object to `.Codex\memory\reflections.jsonl` using `apply_patch`, with exact keys `date`, `task`, `outcome`, `surprise`, and `next-time`. Parse every line with PowerShell `ConvertFrom-Json` and report the validated line count.
 
 - [ ] **Step 10: Commit evidence-driven calibration or closure docs only when needed**
 
