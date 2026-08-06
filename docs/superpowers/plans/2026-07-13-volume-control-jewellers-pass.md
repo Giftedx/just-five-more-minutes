@@ -123,10 +123,9 @@ Insert this scenario between the pointer-lock and dialogue-staging scenarios:
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
+node .\node_modules\vite\bin\vite.js build
 $env:SMOKE_URL='http://127.0.0.1:4173/'
-& $node .\scripts\smoke.mjs
+node .\scripts\smoke.mjs
 ```
 
 Use the managed preview helper instead if port 4173 is not already serving the built `dist/`.
@@ -290,9 +289,8 @@ Replace the volume CSS block with:
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\run-browser-checks.mjs
+node .\node_modules\vite\bin\vite.js build
+node .\scripts\run-browser-checks.mjs
 ```
 
 Expected: the authored-fader scenario passes, the pause slider remains interactive, reports still hide the control, and full interaction E2E passes.
@@ -300,8 +298,8 @@ Expected: the authored-fader scenario passes, the pause slider remains interacti
 - [ ] **Step 4: Run unit and type checks**
 
 ```powershell
-& $node .\node_modules\vitest\vitest.mjs run
-& $node .\node_modules\typescript\bin\tsc --noEmit
+node .\node_modules\vitest\vitest.mjs run
+node .\node_modules\typescript\bin\tsc --noEmit
 ```
 
 Expected: 203 unit tests pass and TypeScript exits 0.
@@ -352,14 +350,13 @@ Use `/red-team` against the design and implementation. Independently verify ever
 Run with the bundled Node executable and direct local tools:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vitest\vitest.mjs run
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\check-dist-size.mjs
-& $node .\scripts\run-browser-checks.mjs
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build --base /just-five-more-minutes/
+node .\node_modules\vitest\vitest.mjs run
+node .\node_modules\typescript\bin\tsc --noEmit
+node .\node_modules\vite\bin\vite.js build
+node .\scripts\check-dist-size.mjs
+node .\scripts\run-browser-checks.mjs
+node .\node_modules\typescript\bin\tsc --noEmit
+node .\node_modules\vite\bin\vite.js build --base /just-five-more-minutes/
 ```
 
 Expected: 203 unit tests, typecheck, standalone build, JS/CSS gzip budgets, all isolated browser scenarios, full interaction E2E, final typecheck, and mounted-path build all pass.

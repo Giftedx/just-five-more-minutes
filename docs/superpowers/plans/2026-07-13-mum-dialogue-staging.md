@@ -346,7 +346,7 @@ Check malformed/long dialogue copy, 900px width, short height, focus order, toas
 
 - [ ] **Step 5: Record the required reflection**
 
-Append one JSON line to `C:\Users\aggis\.Codex\memory\reflections.jsonl` with exactly `date`, `task`, `outcome`, `surprise`, and `next-time`, then parse every line and validate the final keys.
+Append one JSON line to `.Codex\memory\reflections.jsonl` with exactly `date`, `task`, `outcome`, `surprise`, and `next-time`, then parse every line and validate the final keys.
 
 - [ ] **Step 6: Integrate only after all checks pass**
 
