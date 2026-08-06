@@ -344,13 +344,20 @@ describe('standing orders (the away plan)', () => {
     ).toBe(false);
   });
 
-  it('runs home under 3hp when told to', () => {
+  it('de-aggros goblins at camp when run home starts during combat', () => {
     const sim = new MudwickSim(23);
     sim.awayPlan = { ...DEFAULT_AWAY_PLAN, runHome: true };
-    sim.player.pos = { x: 14, y: 9 }; // in the pen
+    const goblin = sim.goblins.find((g) => g.tier === 'goblin' && g.alive);
+    if (!goblin) throw new Error('no live goblin');
+    sim.player.pos = { x: goblin.pos.x - 1, y: goblin.pos.y };
     sim.player.hp = 2;
-    for (let i = 0; i < 40; i++) sim.step({ playerAway: true });
+    goblin.aggro = true;
+
+    for (let i = 0; i < 60; i++) sim.step({ playerAway: true });
+
     expect(sim.player.pos).toEqual(SPAWN_TILE);
+    expect(sim.stats.deaths).toBe(0);
+    for (const current of sim.goblins) expect(current.aggro).toBe(false);
   });
 
   it('eats carried food at low hp when told to', () => {

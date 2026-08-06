@@ -927,7 +927,9 @@ export class MudwickSim {
     for (const g of this.goblins) {
       if (!g.alive) continue;
 
-      if (g.aggro && chebyshev(g.pos, this.player.pos) > GOBLIN_DEAGGRO_DIST) {
+      const playerAtCamp = away && this.awayPlan.runHome && this.player.hp < 3
+        && this.player.pos.x === SPAWN_TILE.x && this.player.pos.y === SPAWN_TILE.y;
+      if (g.aggro && (playerAtCamp || chebyshev(g.pos, this.player.pos) > GOBLIN_DEAGGRO_DIST)) {
         g.aggro = false;
       }
 
