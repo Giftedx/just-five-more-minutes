@@ -149,6 +149,15 @@ describe('recordNight', () => {
     expect(recordNight(c, report(10), -3, 0).week.suspicionCarry).toBe(0);
   });
 
+  it("preserves Friday's ending suspicion for the verdict", () => {
+    let c = freshCareer();
+    for (let night = 0; night < 4; night++) c = recordNight(c, report(60), 0, 0);
+
+    c = recordNight(c, report(60), 8, 0);
+
+    expect(c.week.suspicionCarry).toBe(8);
+  });
+
   it('refuses an extra report after Friday without destroying the saved career', () => {
     let c = freshCareer();
     c.character.coins = 137;
