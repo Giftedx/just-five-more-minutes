@@ -820,9 +820,10 @@ export class MudwickSim {
           p.inventory.push(t.kind === 'oak' ? 'oakLog' : 'log');
           t.chopped = true;
           t.regrowTick = this.tick + TREE_REGROW_TICKS;
-          this.grantSkillXp('woodcutting', t.kind === 'oak' ? 40 : 25);
+          const amount = t.kind === 'oak' ? 40 : 25;
+          this.grantSkillXp('woodcutting', amount);
           this.bumpQuest(t.kind === 'oak' ? 'oakLogs' : 'logs');
-          this.events.push({ type: 'log' });
+          this.events.push({ type: 'log', amount });
           p.intent = null;
         }
         return;

@@ -639,10 +639,10 @@ export class MmoRenderer {
         }
         case 'log':
           this.xpDrops.push({
-            text: xpDropLabel(25, 'woodcutting', this.sim.xpMultiplier),
+            text: xpDropLabel(ev.amount, 'woodcutting', this.sim.xpMultiplier),
             until: now + 1300,
           });
-          this.postMessage('You get some logs.', now);
+          this.postMessage(ev.amount === 40 ? 'You get some oak logs.' : 'You get some logs.', now);
           break;
         case 'levelUp':
           this.postMessage(

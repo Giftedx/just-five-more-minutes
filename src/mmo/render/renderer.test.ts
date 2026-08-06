@@ -150,6 +150,7 @@ describe('Friday double XP presentation', () => {
     if (!xpDropLabel) return;
 
     expect(xpDropLabel(10, 'fishing', 1)).toBe('+10 Fishing');
+    expect(xpDropLabel(40, 'woodcutting', 1)).toBe('+40 Woodcutting');
     expect(xpDropLabel(10, 'fishing', 2)).toBe('+20 Fishing · 2×');
     expect(xpDropLabel(25, 'woodcutting', 2)).toBe('+50 Woodcutting · 2×');
   });

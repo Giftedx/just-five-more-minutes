@@ -316,7 +316,7 @@ try {
         if (!ctx) throw new Error('Mudwick canvas has no 2D context');
         mmo.renderer.render(1_600, 0);
         const before = ctx.getImageData(131, 1, 108, 22).data;
-        mmo.renderer.consumeEvents([{ type: 'log' }], 800);
+        mmo.renderer.consumeEvents([{ type: 'log', amount: 25 }], 800);
         mmo.renderer.render(1_600, 0);
         const after = ctx.getImageData(131, 1, 108, 22).data;
         let changed = 0;

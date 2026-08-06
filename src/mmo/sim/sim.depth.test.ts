@@ -143,6 +143,35 @@ describe('oaks', () => {
     expect(gained).toBe(OAK_PRICE);
     expect(sim.stats.oakLogsSold).toBe(1);
   });
+
+  it('reports the woodcutting XP granted for normal and oak logs', () => {
+    const cases = [
+      { kind: 'normal', seed: 5, startingXp: 0, bridgePass: false, amount: 25 },
+      { kind: 'oak', seed: 9, startingXp: xpForLevel(5), bridgePass: true, amount: 40 },
+    ] as const;
+
+    for (const testCase of cases) {
+      const sim = new MudwickSim({
+        seed: testCase.seed,
+        character: makeCharacter({
+          bridgePass: testCase.bridgePass,
+          xp: { woodcutting: testCase.startingXp, attack: 0, foraging: 0, fishing: 0 },
+        }),
+      });
+      const tree = sim.trees.find((candidate) => candidate.kind === testCase.kind);
+      if (!tree) throw new Error(`no ${testCase.kind} tree`);
+      sim.player.pos = { x: tree.pos.x - 1, y: tree.pos.y };
+      const chop = sim.optionsAt(tree.pos.x, tree.pos.y)[0];
+      if (!chop) throw new Error('no chop option');
+      sim.invoke(chop);
+
+      const events = stepUntil(sim, (batch) => batch.some((event) => event.type === 'log'));
+      const log = events.find((event) => event.type === 'log');
+      if (log?.type !== 'log') throw new Error('no log event');
+      expect(log.amount).toBe(testCase.amount);
+      expect(sim.player.skills.woodcutting - testCase.startingXp).toBe(log.amount);
+    }
+  });
 });
 
 describe('hobgoblins', () => {

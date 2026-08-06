@@ -95,7 +95,7 @@ export type SimEvent =
   | { type: 'goblinDied'; goblinId: string; coins: number; streakBonus: number }
   | { type: 'playerDied'; coinsLost: number; whileAway: boolean }
   | { type: 'chop' }
-  | { type: 'log' }
+  | { type: 'log'; amount: number }
   | { type: 'flax' }
   | { type: 'eat' }
   | { type: 'trade'; sold: number; gained: number; item: ItemKind }
