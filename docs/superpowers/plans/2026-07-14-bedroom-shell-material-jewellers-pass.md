@@ -117,9 +117,8 @@ Insert this scenario after `bedroom rendering has a bounded material and groundi
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\run-browser-checks.mjs
+npm run build
+npm run test:browser
 ```
 
 Expected: FAIL in `bedroom shell materials stay authored and bounded` because `room-ceiling` lacks vertex colours and the current wall colour range is below the authored-material threshold.
@@ -208,10 +207,9 @@ const ceiling = new THREE.Mesh(
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\check-dist-size.mjs
-& $node .\scripts\run-browser-checks.mjs
+npm run build
+npm run size:check
+npm run test:browser
 ```
 
 Expected: CSS/JS budgets remain unchanged enough to pass, all isolated browser scenarios pass, and full interaction E2E passes.
@@ -219,8 +217,8 @@ Expected: CSS/JS budgets remain unchanged enough to pass, all isolated browser s
 - [ ] **Step 5: Run unit and type checks**
 
 ```powershell
-& $node .\node_modules\vitest\vitest.mjs run
-& $node .\node_modules\typescript\bin\tsc --noEmit
+npm test
+npm run typecheck
 ```
 
 Expected: 203 unit tests pass and TypeScript exits 0.
@@ -269,14 +267,13 @@ Use `superpowers:requesting-code-review` for a bounded review of `scripts/smoke.
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vitest\vitest.mjs run
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\check-dist-size.mjs
-& $node .\scripts\run-browser-checks.mjs
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build --base /just-five-more-minutes/
+npm test
+npm run typecheck
+npm run build
+npm run size:check
+npm run test:browser
+npm run typecheck
+npm run build:hub
 ```
 
 Expected: unit tests, typecheck, standalone build, JS/CSS gzip budgets, all isolated browser scenarios, full interaction E2E, final typecheck, and mounted-path build pass.

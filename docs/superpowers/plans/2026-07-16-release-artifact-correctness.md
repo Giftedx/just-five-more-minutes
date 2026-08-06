@@ -584,4 +584,4 @@ Expected: no task-owned changes; recent history contains the configuration, arti
 
 - [ ] **Step 5: Record the required process reflection**
 
-Invoke the repository's `/reflect` skill with the completed Tranche 1 result, then validate every line in `C:\Users\aggis\.Codex\memory\reflections.jsonl` as JSON. The reflection must name one specific surprise and one actionable next-time change; it does not replace any verification above.
+Invoke the repository's `/reflect` skill with the completed Tranche 1 result. Validate every line in `reflections.jsonl` in the agent's own memory directory as JSON. The reflection must name one specific surprise and one actionable next-time change. It does not replace any verification above.

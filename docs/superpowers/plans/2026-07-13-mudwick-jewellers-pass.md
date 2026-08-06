@@ -421,7 +421,7 @@ Expected: 16 files / 202 unit tests, standalone build, compressed JS/CSS budgets
 
 - [ ] **Step 8: Append and validate the required reflection**
 
-Append one JSON object with exact keys `date`, `task`, `outcome`, `surprise`, and `next-time` to `C:\Users\aggis\.Codex\memory\reflections.jsonl` using `apply_patch`. Parse every non-empty line, select the exact task string, and assert all five keys.
+Use `apply_patch` to append one JSON object to `reflections.jsonl` in the agent's own memory directory. Use exact keys `date`, `task`, `outcome`, `surprise`, and `next-time`. Parse every non-empty line. Select the exact task string. Assert all five keys.
 
 - [ ] **Step 9: Commit any evidence-driven calibration**
 

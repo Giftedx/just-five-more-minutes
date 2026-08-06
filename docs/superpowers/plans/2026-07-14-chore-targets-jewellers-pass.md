@@ -155,9 +155,8 @@ Insert the scenario immediately after `bedroom hero furniture preserves gameplay
 - [ ] **Step 2: Run RED**
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\run-browser-checks.mjs
+npm run build
+npm run test:browser
 ```
 
 Expected: FAIL in `bedroom chore targets stay authored, functional, and bounded` because the named roots do not exist.
@@ -352,10 +351,9 @@ Do not change the slot block or any item spawns.
 - [ ] **Step 3: Run GREEN browser and size gates**
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\check-dist-size.mjs
-& $node .\scripts\run-browser-checks.mjs
+npm run build
+npm run size:check
+npm run test:browser
 ```
 
 Expected: size budgets pass, all browser checks pass, the target scenario reports 8 meshes, 25 or fewer instances, 500 or fewer triangles, and the existing room draw-call ceiling remains green.
@@ -363,8 +361,8 @@ Expected: size budgets pass, all browser checks pass, the target scenario report
 - [ ] **Step 4: Run unit and type checks**
 
 ```powershell
-& $node .\node_modules\vitest\vitest.mjs run
-& $node .\node_modules\typescript\bin\tsc --noEmit
+npm test
+npm run typecheck
 ```
 
 Expected: all unit tests pass and TypeScript exits 0.
@@ -434,14 +432,13 @@ Review against this plan and the design spec. Use `/verify-findings` before chan
 - [ ] **Step 4: Run the complete feature-branch release gate**
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vitest\vitest.mjs run
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\check-dist-size.mjs
-& $node .\scripts\run-browser-checks.mjs
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build --base /just-five-more-minutes/
+npm test
+npm run typecheck
+npm run build
+npm run size:check
+npm run test:browser
+npm run typecheck
+npm run build:hub
 ```
 
 Expected: unit tests, typechecks, standalone build, gzip budgets, all isolated browser scenarios, full interaction E2E, and mounted-path build pass.

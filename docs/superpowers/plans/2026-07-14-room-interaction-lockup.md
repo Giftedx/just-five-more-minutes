@@ -145,9 +145,8 @@ Insert this scenario after `volume control is an authored keyboard-safe fader`:
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\run-browser-checks.mjs
+npm run build
+npm run test:browser
 ```
 
 Expected: FAIL in `room interaction lockup exposes authored target states` because `.hud-crosshair-target` and `.hud-crosshair-passive` are not set and the reticle is still 5 by 5.
@@ -285,10 +284,9 @@ Replace the existing `.hud-interact`, `.hud-interact-passive`, and `.hud-crossha
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\check-dist-size.mjs
-& $node .\scripts\run-browser-checks.mjs
+npm run build
+npm run size:check
+npm run test:browser
 ```
 
 Expected: the lockup scenario passes, CSS gzip remains at or below 10240 bytes, all isolated scenarios and full interaction E2E pass.
@@ -336,14 +334,13 @@ Use `superpowers:requesting-code-review` for a bounded review of `scripts/smoke.
 Run:
 
 ```powershell
-$node='C:\Users\aggis\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
-& $node .\node_modules\vitest\vitest.mjs run
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build
-& $node .\scripts\check-dist-size.mjs
-& $node .\scripts\run-browser-checks.mjs
-& $node .\node_modules\typescript\bin\tsc --noEmit
-& $node .\node_modules\vite\bin\vite.js build --base /just-five-more-minutes/
+npm test
+npm run typecheck
+npm run build
+npm run size:check
+npm run test:browser
+npm run typecheck
+npm run build:hub
 ```
 
 Expected: unit tests, typecheck, standalone build, JS/CSS gzip budgets, all isolated browser scenarios, full interaction E2E, final typecheck, and mounted-path build pass.

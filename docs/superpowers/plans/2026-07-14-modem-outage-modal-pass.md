@@ -136,4 +136,4 @@ Fast-forward the verified feature branch onto `master` and rerun `npm run verify
 
 - [x] **Step 6: Clean up and reflect**
 
-Remove only the task-owned worktree and merged feature branch. Append one valid JSON line with keys `date`, `task`, `outcome`, `surprise`, and `next-time` to `C:\Users\aggis\.Codex\memory\reflections.jsonl` using `apply_patch`, then parse every line to validate the JSONL file.
+Remove only the task-owned worktree and merged feature branch. Use `apply_patch` to append one valid JSON line to `reflections.jsonl` in the agent's own memory directory. Use keys `date`, `task`, `outcome`, `surprise`, and `next-time`. Parse every line to validate the JSONL file.
