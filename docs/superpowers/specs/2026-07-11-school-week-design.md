@@ -216,7 +216,7 @@ Seeds: production nights roll random seeds (existing behavior), `?seed=` still o
 - **Pure layers first**: `career` (parse/migrate/clamp), `sim` (fishing/cooking/gravestone/away-plan/toll/hobgoblin goldens; determinism test asserting the crowd RNG does not perturb sim state), `nights` (NightSpec resolution, suspicion arithmetic, excuse effects, bark cooldowns, inspection arming), `score` (new formulas, worked examples from §5).
 - **Director invariants untouched**: existing `director.test.ts` must pass without edits (nights layer on top; `extendGrace` and `promptLeadIn` get new tests).
 - **Browser smoke** additions: week strip renders; disconnect overlay appears and clears; panic verb flips the CRT; prompt popup respects reduced motion.
-- **Browser E2E**: same Monday full-loop with §5's derived goldens; runs on a fresh profile (E2E already uses an isolated context). The armed-watcher prompt pattern from the CI fix is retained.
+- **Browser E2E**: one full interaction E2E per weeknight looping through `scripts/e2e-expectations.mjs` using `scripts/e2e-night.mjs` with §5's derived goldens; runs on a fresh profile (E2E already uses an isolated context). A subset can be tested with the `--nights=` flag. The armed-watcher prompt pattern from the CI fix is retained.
 - **Gates**: `npm run verify` green locally; CI green; JS gzip ≤ 200 KB (204,800 bytes).
 
 ## 8. Out of scope (explicitly)
