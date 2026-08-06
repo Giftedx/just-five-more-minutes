@@ -28,17 +28,18 @@
 ```ts
 export interface AwayPlan { keepWorking: boolean; eatBread: boolean; runHome: boolean; autoSell: boolean }
 export interface CareerCharacter { coins: number; xp: Record<SkillName, number>; bridgePass: boolean; awayPlan: AwayPlan }
-export interface NightReportSummary { total: number; rows: [number, number, number, number]; endingTitle: string; seed: number; milestones: string[] }
-export interface CareerWeek { night: 0|1|2|3|4; suspicionCarry: number; lieDebt: number; reports: NightReportSummary[] }
-export interface Career { version: 1; character: CareerCharacter; week: CareerWeek; gallery: string[]; weeksCompleted: { endingId: string; total: number }[] }
+export interface NightReportSummary { total: number; rows: [number, number, number, number]; endingTitle: string; seed: number; milestones: string[]; choresDone: number }
+export interface CareerWeek { night: 0|1|2|3|4; suspicionCarry: number; lieDebt: number; archivistUsed: boolean; reports: NightReportSummary[] }
+export interface CareerTutorials { awayPlanSeen: boolean }
+export interface Career { version: 1; character: CareerCharacter; week: CareerWeek; tutorials: CareerTutorials; gallery: string[]; weeksCompleted: { endingId: string; total: number }[] }
 export const DEFAULT_AWAY_PLAN: AwayPlan; // {keepWorking:true, eatBread:true, runHome:true, autoSell:false}
 export function freshCareer(): Career;
 export function loadCareer(storage: ReportHistoryStorage): Career;          // malformed → freshCareer()
 export function saveCareer(storage: ReportHistoryStorage, c: Career): boolean;
-export function recordNight(c: Career, report: NightReportSummary, suspicionEnd: number, lieDebtDelta: number): Career; // pure; advances night, halves suspicion (round), appends report
+export function recordNight(c: Career, report: NightReportSummary, suspicionEnd: number, lieDebtDelta: number, archivistUsed = false): Career; // Pure. Advances the night, appends the report, records archivist use, and carries suspicion. Friday keeps the exact suspicion. Other nights keep half (round).
 export function completeWeek(c: Career, endingId: string, total: number): Career; // archive + reset week, keep character & gallery
 ```
-Storage key `j5mm-career-v1`. Validation: clamp coins 0..MAX_COINS, xp finite ≥0, night 0..4, reports.length === night; any violation → fresh. Tests: round-trip, each malformed field → fresh, recordNight math (suspicion 7 → carry 4), completeWeek keeps character/gallery, write-failure tolerance (throwing storage). Reuse `ReportHistoryStorage` from `history.ts`.
+Storage key `j5mm-career-v1`. Validation: clamp coins 0..MAX_COINS, xp finite ≥0, night 0..4, report count equals night, or equals 5 when night is 4 and the verdict is pending. Any violation returns a fresh career. Tests: round-trip, each malformed field → fresh, recordNight math (suspicion 7 → carry 4), completeWeek keeps character/gallery, write-failure tolerance (throwing storage). Reuse `ReportHistoryStorage` from `history.ts`.
 
 ### Stage 2: Sim depth
 
