@@ -101,8 +101,8 @@ Tests: NIGHTS shape (3 slots each, Fri wrappers count 5); MumState table-driven 
 ### Stage 4: Room verbs & beats
 
 **Files:** Modify `src/host/chores.ts` (+`chores.test.ts`), `src/host/room.ts` (bed corners, curtain rods, landline prop geometry), `src/host/interact.ts` (tug verb, panic verb on monitor), `src/host/app.ts` (night wiring: slot→physical chore map, phone beat → `sim.setConnected`, homework overlay state, dusk light curve, lamp at t=210), `src/session.ts` (career load, night selection, MumState + bark wiring, SessionData assembly).
-Tug chore: N interact points, each one-shot `E`, chore completes when all tugged; reuses tracker semantics (`state: 'world'→'placed'` equivalent). Panic verb: in room mode, `E` targeting monitor while prompt active or within 10s of inspection beat → `homeworkUntil = now+3s` (render flag) + arms defuse. Dusk: key light color/intensity lerp over `director.t` (17:25→17:30), lamp emissive on at 210 with bark. Audio hooks land Stage 5.
-Tests (vitest, pure parts): chores tug completion; panic-verb arming window logic (extract to pure helper `panicWindow(t, promptActive, inspectionAt)`); session night-selection given career fixtures.
+Tug chore: N interact points, each one-shot `E`, chore completes when all tugged; reuses tracker semantics (`state: 'world'→'placed'` equivalent). Panic verb: `F` key, ungated, either mode → `homeworkUntil = now+3s` (render flag) + arms defuse. Dusk: key light color/intensity lerp over `director.t` (17:25→17:30), lamp emissive on at 210 with bark. Audio hooks land Stage 5.
+Tests (vitest, pure parts): chores tug completion; session night-selection given career fixtures.
 
 ### Stage 5: Presentation
 
@@ -125,7 +125,7 @@ Ending matrix + overrides verbatim from spec §5 (bands: house avg <15 low, <24 
 
 ### Stage 7: Gates, README, ship
 
-**Files:** Modify `scripts/check-dist-size.mjs` (240KB), `scripts/smoke.mjs` (+4 scenarios: week strip renders; disconnect overlay round-trip via `?night=2&t=` dev seams; panic verb flips CRT; MSN popup reduced-motion), `scripts/e2e-full.mjs` (Monday goldens from spec §5: rows `['0 / 40','30 / 30','20 / 20','4 / 10']`, total 54, ending unchanged, dinner-fund note retained; keep armed-watcher pattern), `README.md` (week structure, new controls, updated feature list).
+**Files:** Modify `scripts/check-dist-size.mjs` (240KB), `scripts/smoke.mjs` (+3 scenarios: week strip renders; disconnect overlay round-trip via `?night=2&t=` dev seams; MSN popup reduced-motion), `scripts/e2e-full.mjs` (Monday goldens from spec §5: rows `['0 / 40','30 / 30','20 / 20','4 / 10']`, total 54, ending unchanged, dinner-fund note retained; keep armed-watcher pattern), `README.md` (week structure, new controls, updated feature list).
 Sequence: full `npm run verify` → fix → commit → push → `gh run watch` green → refresh README screenshots via the dev server + Browser pane (title with week strip, verdict card) if time allows.
 
 ## Self-review notes

@@ -145,7 +145,7 @@ She has her own life running in the barks: Monday's casserole, Tuesday's bins, W
 ## 4. The room fights back (gently)
 
 - **New chore verbs** (reuse the interact/raycast pattern; no new carry physics): **bed** = two corner tug points, E each, completes on both; **curtains** = two rod points, E each. Both get procedural geometry on existing furniture.
-- **Panic verb**: E on the monitor *while in room mode with a prompt active or inspection incoming* flips the CRT to `homework.doc` (a believable Word-2003-ish full screen render) for 3 s. Arms the inspection defuse. First use: comedy fact `oldestTrick`. Using it costs nothing else — it's a tool and a joke, not a tax.
+- **Panic verb**: `F` key, in either mode and ungated, flips the CRT to `homework.doc` (a believable Word-2003-ish full screen render) for 3 s. Arms the inspection defuse. First use: comedy fact `oldestTrick`. Using it costs nothing else — it's a tool and a joke, not a tax.
 - **The landline** prop appears near the door Wednesday (it rings; you can't answer it; examine via nothing — it's Mum's).
 - **Dusk**: directional + ambient light lerp keyed to `director.t` (17:25 golden → 17:30 dusk); desk lamp emissive turns on at t=210 with its bark. The room ends the night lit by CRT glow and one lamp.
 - **Audio as information** (all WebAudio synth): Mudwick's tinny music/SFX routed through a panner at the monitor position with distance lowpass; kitchen-clatter layer from the door direction ramping after t=240; **footsteps 1.5 game-s before every prompt** (the skill-based early warning — new `promptLeadIn` director event); MSN-style *doonk* on prompt open; modem screech on Wednesday reconnect.
@@ -215,7 +215,7 @@ Seeds: production nights roll random seeds (existing behavior), `?seed=` still o
 
 - **Pure layers first**: `career` (parse/migrate/clamp), `sim` (fishing/cooking/gravestone/away-plan/toll/hobgoblin goldens; determinism test asserting the crowd RNG does not perturb sim state), `nights` (NightSpec resolution, suspicion arithmetic, excuse effects, bark cooldowns, inspection arming), `score` (new formulas, worked examples from §5).
 - **Director invariants untouched**: existing `director.test.ts` must pass without edits (nights layer on top; `extendGrace` and `promptLeadIn` get new tests).
-- **Browser smoke** additions: week strip renders; disconnect overlay appears and clears; panic verb flips the CRT; prompt popup respects reduced motion.
+- **Browser smoke** additions: week strip renders; disconnect overlay appears and clears; prompt popup respects reduced motion.
 - **Browser E2E**: same Monday full-loop with §5's derived goldens; runs on a fresh profile (E2E already uses an isolated context). The armed-watcher prompt pattern from the CI fix is retained.
 - **Gates**: `npm run verify` green locally; CI green; JS gzip ≤ 200 KB (204,800 bytes).
 
