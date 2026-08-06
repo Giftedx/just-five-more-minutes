@@ -2721,13 +2721,61 @@ try {
       assert.equal(state.binCollider, true);
       assert.equal(state.basketCollider, true);
       assert.deepEqual(state.slots, {
-        tray: [[-0.13, 0.035, 1.72], [0.05, 0.035, 1.72], [0.23, 0.035, 1.72]],
+        tray: [[-0.13, 0.035, 1.72], [0.05, 0.035, 1.72], [0.23, 0.035, 1.72], [0.05, 0.035, 1.61]],
         bin: [[1.95, 0.1, -1.1], [1.93, 0.16, -1.12], [1.97, 0.22, -1.08], [1.95, 0.28, -1.1], [1.93, 0.3, -1.12]],
-        basket: [[-1.85, 0.08, 1.55], [-1.83, 0.16, 1.53], [-1.87, 0.24, 1.57]],
+        basket: [[-1.85, 0.08, 1.55], [-1.83, 0.16, 1.53], [-1.87, 0.24, 1.57], [-1.85, 0.32, 1.55]],
       });
       assert.ok(state.roomCalls <= 128, `room draw-call budget exceeded: ${state.roomCalls}`);
       assert.ok(state.rendererTextures <= 12, `room texture budget exceeded: ${state.rendererTextures}`);
       assert.deepEqual(consoleProblems, []);
+    },
+  );
+
+  await scenario(
+    'Friday wrappers use distinct bin positions',
+    { viewport: { width: 1200, height: 800 } },
+    async (page) => {
+      await gotoOk(page, { skipTitle: 1, night: 4, seed: '0xC0FFEE' });
+      await page.waitForFunction(() => window.__game?.host?.room?.scene);
+
+      const state = await page.evaluate(() => {
+        const host = window.__game.host;
+        const wrapperIds = host.room.items
+          .filter((item) => item.chore === 'wrappers')
+          .map((item) => item.id);
+        const bin = host.room.scene.getObjectByName('room-chore-bin');
+        if (!bin) throw new Error('Friday room has no chore bin');
+
+        const aimAt = (object, yOffset, distance) => {
+          const target = object.getWorldPosition(object.position.clone());
+          target.y += yOffset;
+          host.camera.position.set(target.x - distance, target.y + 0.1, target.z);
+          host.camera.lookAt(target);
+          host.camera.updateMatrixWorld(true);
+          host.room.scene.updateMatrixWorld(true);
+        };
+
+        for (const itemId of wrapperIds) {
+          const wrapper = host.room.itemObjects.get(itemId);
+          if (!wrapper) throw new Error(`Friday room has no ${itemId}`);
+          aimAt(wrapper, 0.06, 0.8);
+          if (!host.interact.act(host.camera)) throw new Error(`Could not pick up ${itemId}`);
+          aimAt(bin, 0.2, 0.8);
+          if (!host.interact.act(host.camera)) throw new Error(`Could not place ${itemId}`);
+        }
+
+        return {
+          positions: wrapperIds.map((itemId) => {
+            const wrapper = host.room.itemObjects.get(itemId);
+            return wrapper?.getWorldPosition(wrapper.position.clone()).toArray();
+          }),
+          states: wrapperIds.map((itemId) => host.interact.tracker.item(itemId)?.state),
+        };
+      });
+
+      assert.equal(state.positions.length, 5);
+      assert.equal(new Set(state.positions.map((position) => JSON.stringify(position))).size, 5);
+      assert.deepEqual(state.states, ['placed', 'placed', 'placed', 'placed', 'placed']);
     },
   );
 
