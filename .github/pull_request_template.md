@@ -4,8 +4,7 @@
 
 ## Test plan
 
-- [ ] `npm test` passes locally
-- [ ] `npm run build` succeeds
+- [ ] `npm run verify` passes locally
 - [ ] Played through manually (Room Mode / PC Mode as relevant)
 
 ## Screenshots / clips
