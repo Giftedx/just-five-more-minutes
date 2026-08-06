@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [master]
 
+# A superseded run wastes a runner without this: the conveyor force-pushes
+# its branches, and each push queued a fresh complete run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
