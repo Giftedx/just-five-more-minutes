@@ -10,7 +10,14 @@ npm run dev
 npm test
 ```
 
-Run `npm run verify` before opening a PR. CI installs Chromium and runs the same authoritative gate: unit tests, type checks, standalone build and size budgets, production browser scenarios, full interaction E2E, mounted-base artifact smoke, and a final root-previewable standalone artifact.
+Run `npm run verify` before opening a PR. CI installs Chromium and runs the same authoritative gate:
+
+- unit tests and type checks
+- standalone build and size budgets
+- production browser scenarios
+- one full interaction E2E per weeknight
+- mounted-base artifact smoke
+- a final root-previewable standalone artifact
 
 ## What to work on
 

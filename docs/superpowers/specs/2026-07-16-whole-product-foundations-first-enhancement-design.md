@@ -166,6 +166,8 @@ Implementation follows test-driven development. Each behavior change begins with
 
 The expanded browser matrix must represent every weeknight and include Wednesday's modem outage, Thursday's inspection path, Friday's double XP presentation, the Friday report, the week verdict, archive return and new-week transition. It must also exercise blocked storage, pointer-lock rejection, visibility pause, unsupported devices and repeated lifecycle transitions.
 
+For each selected weeknight, the managed runner executes `scripts/e2e-full.mjs --night=N`. `scripts/e2e-night.mjs` provides the interaction plan. `scripts/e2e-expectations.mjs` provides the assertions for each night. `npm run test:browser` selects nights 0 through 4 by default. Use `npm run test:browser -- --nights=0,2` to select a subset.
+
 The final release gate includes:
 
 1. focused tests for every changed subsystem;
@@ -173,7 +175,7 @@ The final release gate includes:
 3. type checking;
 4. standalone production build;
 5. deterministic compressed-size check;
-6. standalone production-browser scenarios and full interaction E2E;
+6. standalone production-browser scenarios and one full interaction E2E per selected weeknight;
 7. mounted production build and mounted-base resource smoke;
 8. a final standalone artifact and root preview smoke;
 9. `git diff --check` and a clean attribution review.
