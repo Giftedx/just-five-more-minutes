@@ -59,6 +59,15 @@ describe('NIGHTS data', () => {
     expect(phone.until).toBeLessThan(WARN_AT);
   });
 
+  it('schedules each inspection after the laundry prompt and before its cap', () => {
+    for (const night of NIGHTS) {
+      const inspection = night.beats.inspection;
+      if (!inspection) continue;
+      expect(inspection.at).toBeGreaterThanOrEqual(CHORE_BASE_TIMES.laundry + PROMPT_DURATION);
+      expect(inspection.at).toBeLessThanOrEqual(CHORE3_CAP);
+    }
+  });
+
   it('clamps out-of-range night lookups', () => {
     expect(nightSpec(-3).night).toBe(0);
     expect(nightSpec(9).night).toBe(4);
