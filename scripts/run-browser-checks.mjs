@@ -9,6 +9,7 @@ const viteBin = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import
 const artifactScript = fileURLToPath(new URL('./artifact-smoke.mjs', import.meta.url));
 const smokeScript = fileURLToPath(new URL('./smoke.mjs', import.meta.url));
 const e2eScript = fileURLToPath(new URL('./e2e-full.mjs', import.meta.url));
+const weekE2eScript = fileURLToPath(new URL('./e2e-week.mjs', import.meta.url));
 const options = parseBrowserCheckArgs(process.argv.slice(2));
 const previewPort = await findAvailableLoopbackPort(4173);
 const previewOrigin = `http://127.0.0.1:${previewPort}`;
@@ -157,6 +158,9 @@ try {
           [`--night=${run.night}`],
         );
         if (exitCode !== 0) break;
+      }
+      if (exitCode === 0) {
+        exitCode = await runCheck('continuous school week E2E', weekE2eScript, fullUrl.href);
       }
     }
   }

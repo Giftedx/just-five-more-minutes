@@ -150,7 +150,7 @@ npm run dev        # dev server at http://localhost:5173
 npm test           # vitest — director, nights, score, week, career, sim, chores, input
 npm run build      # tsc --noEmit && vite build -> dist/
 npm run size:check # verify compressed JS/CSS budgets for the current dist/
-npm run test:browser  # managed preview + isolated smoke + one full interaction E2E per weeknight
+npm run test:browser  # managed preview + isolated smoke + per-night and continuous-week E2E
 npm run test:artifact # focused resource/boot smoke for the current standalone dist/
 npm run verify        # full standalone + browser + mounted + final standalone artifact gate
 npm run preview       # serve the standalone dist/ left by build or verify
@@ -169,7 +169,7 @@ Dev affordances (query params):
 | `?dev=room` | Standalone bedroom dev route |
 | `?dev=host` | Standalone mode-switching dev route |
 
-Browser checks need Playwright's Chromium installed once (`npx playwright install chromium`). `npm run test:browser` starts and owns a strict local preview of the current standalone `dist/`. It runs the isolated smoke and one full interaction E2E for each weeknight, then stops the preview even if a check fails. Use `npm run test:browser -- --nights=0,2` to select a subset, where 0 is Monday and 4 is Friday. `npm run test:artifact` is the focused resource and boot probe for a current standalone build. The complete `npm run verify` gate validates standalone behavior, then a mounted `/just-five-more-minutes/` build at its real base path. It then rebuilds and revalidates standalone `dist/`, so `npm run preview` works at the documented root afterward.
+Browser checks need Playwright's Chromium installed once (`npx playwright install chromium`). `npm run test:browser` starts and owns a strict local preview of the current standalone `dist/`. It runs the isolated smoke, one full interaction E2E for each weeknight, and one continuous school-week E2E. It stops the preview even if a check fails. Use `npm run test:browser -- --nights=0,2` to select individual weeknight checks, where 0 is Monday and 4 is Friday. The continuous school-week E2E still runs. `npm run test:artifact` is the focused resource and boot probe for a current standalone build. The complete `npm run verify` gate validates standalone behavior, then a mounted `/just-five-more-minutes/` build at its real base path. It then rebuilds and revalidates standalone `dist/`, so `npm run preview` works at the documented root afterward.
 
 ## Deploying
 
