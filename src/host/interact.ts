@@ -150,6 +150,7 @@ export class InteractSystem {
         const carried = this.tracker.carried;
         if (!carried || carried.chore !== interact.accepts) return false;
         const slotIdx = this.takeSlot(interact.target);
+        if (slotIdx === null) return false;
         const slot = this.room.slots[interact.target][slotIdx];
         if (slot && this.carriedObj) {
           this.carriedObj.position.copy(slot);
@@ -204,7 +205,7 @@ export class InteractSystem {
     return this.room.items.find((i) => i.id === carried.id)?.name ?? 'item';
   }
 
-  private takeSlot(target: 'tray' | 'bin' | 'basket'): number {
+  private takeSlot(target: 'tray' | 'bin' | 'basket'): number | null {
     const used = this.usedSlots[target];
     const max = this.room.slots[target].length;
     for (let i = 0; i < max; i++) {
@@ -213,7 +214,7 @@ export class InteractSystem {
         return i;
       }
     }
-    return 0;
+    return null;
   }
 
   private freeSlot(itemId: string): void {

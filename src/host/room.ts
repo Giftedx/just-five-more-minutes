@@ -1302,6 +1302,19 @@ export function buildRoom(config: RoomNightConfig = MONDAY_ROOM_CONFIG): Room {
     ],
   };
 
+  const targetForSlot: Record<ChoreId, keyof typeof slots> = {
+    mugs: 'tray',
+    wrappers: 'bin',
+    laundry: 'basket',
+  };
+  for (const chore of config.chores) {
+    if (chore.physical === 'bed' || chore.physical === 'curtains') continue;
+    const capacity = slots[targetForSlot[chore.slot]].length;
+    if (chore.count > capacity) {
+      throw new Error(`Chore slot "${chore.slot}" has ${chore.count} items. Its capacity is ${capacity}.`);
+    }
+  }
+
   // ---- lighting: a bounded warm key + non-shadowing practical and window fill
   const ambient = new THREE.AmbientLight(0x9a90b8, 0.55);
   scene.add(ambient);

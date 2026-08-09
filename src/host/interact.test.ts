@@ -79,6 +79,15 @@ describe('buildRoom chore counts', () => {
 
     expect(room.items).toHaveLength(2);
   });
+
+  it('rejects a carry count above the slot capacity', () => {
+    stubRoomGlobals();
+
+    expect(() => buildRoom({
+      chores: [{ slot: 'mugs', physical: 'wrappers', count: 5 }],
+      phone: false,
+    })).toThrow('Chore slot "mugs" has 5 items. Its capacity is 4.');
+  });
 });
 
 describe('InteractSystem placement slots', () => {
@@ -231,5 +240,55 @@ describe('InteractSystem placement slots', () => {
     expect(interact.act(camera)).toBe(true);
 
     expect(item.position.toArray()).toEqual(basketSlots[0]!.toArray());
+  });
+
+  it('keeps the carried item when the target is full', () => {
+    vi.stubGlobal('window', {
+      matchMedia: () => ({ matches: false }),
+    });
+
+    const items = ['mug-1', 'mug-2'].map((id, index) => {
+      const item = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2));
+      item.position.set(0, 0, -1 - index * 0.1);
+      item.userData['interact'] = {
+        type: 'item',
+        itemId: id,
+        chore: 'mugs',
+        name: 'mug',
+      };
+      item.updateMatrixWorld(true);
+      return item;
+    });
+
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.1));
+    tray.position.set(0, 0, -2);
+    tray.userData['interact'] = {
+      type: 'target',
+      target: 'tray',
+      accepts: 'mugs',
+      name: 'tray',
+    };
+    tray.updateMatrixWorld(true);
+
+    const room = {
+      interactables: [...items, tray],
+      items: items.map((_, index) => ({ id: 'mug-' + (index + 1), chore: 'mugs', name: 'mug' })),
+      slots: {
+        tray: [new THREE.Vector3(1, 0, -1)],
+        bin: [],
+        basket: [],
+      },
+    } as unknown as Room;
+    const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 50);
+    camera.updateMatrixWorld(true);
+    const interact = new InteractSystem(room, choreDefsFor(nightSpec(0)));
+
+    expect(interact.act(camera)).toBe(true);
+    expect(interact.act(camera)).toBe(true);
+    items[0]!.updateMatrixWorld(true);
+    expect(interact.act(camera)).toBe(true);
+
+    expect(interact.act(camera)).toBe(false);
+    expect(interact.tracker.carried?.id).toBe('mug-2');
   });
 });
