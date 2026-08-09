@@ -1,9 +1,7 @@
 # Just Five More Minutes
 
-<!-- ste-lint: off -->
 [![CI](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml/badge.svg)](https://github.com/Giftedx/just-five-more-minutes/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-<!-- ste-lint: on -->
 
 **[▶ Play in your browser](https://ha.ggis.xyz/just-five-more-minutes/)**. No install, no login, no microtransactions. Just goblins.
 
@@ -25,15 +23,12 @@ After each five minutes you receive a typewritten **HOUSEHOLD INCIDENT REPORT**.
 
 The game generates everything at runtime except the bundled third-party fonts. The only bundled runtime asset files are `public/fonts/RuneScape.woff2` and `public/fonts/RuneScape-Bold.woff2`.
 
-<!-- ste-lint: off -->
 <p align="center">
   <img src="docs/screenshots/poster.png" alt="Mudwick Online poster — Your goblins miss you" width="480">
 </p>
-<!-- ste-lint: on -->
 
 ## Screenshots
 
-<!-- ste-lint: off -->
 <table>
   <tr>
     <td align="center" colspan="2"><img src="docs/screenshots/title.png" alt="Just Five More Minutes title screen with its tiny live Mudwick CRT and Mum's five-minute warning" width="800"><br><sub>One domestic incident, five minutes, several terrible priorities</sub></td>
@@ -47,7 +42,6 @@ The game generates everything at runtime except the bundled third-party fonts. T
     <td align="center"><img src="docs/screenshots/ui-score.png" alt="End-of-session Household Incident Report scorecard" width="400"><br><sub>Scorecard — filed, stamped, judged</sub></td>
   </tr>
 </table>
-<!-- ste-lint: on -->
 
 ## Controls
 
