@@ -32,8 +32,11 @@ function week(mmo: number, household: number, opts: Parameters<typeof night>[2] 
 describe('gradeFor', () => {
   it('maps totals onto the report-card scale', () => {
     expect(gradeFor(85)).toBe('A');
+    expect(gradeFor(84)).toBe('B');
     expect(gradeFor(70)).toBe('B');
+    expect(gradeFor(69)).toBe('C');
     expect(gradeFor(55)).toBe('C');
+    expect(gradeFor(54)).toBe('D');
     expect(gradeFor(40)).toBe('D');
     expect(gradeFor(39)).toBe('F');
   });
