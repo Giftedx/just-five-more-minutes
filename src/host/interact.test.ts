@@ -58,7 +58,10 @@ describe('buildRoom chore counts', () => {
     const room = buildRoom(roomConfigFor(spec));
 
     for (const slot of ['mugs', 'wrappers', 'laundry'] as const) {
-      expect(room.items.filter((item) => item.chore === slot)).toHaveLength(spec.slots[slot].count);
+      expect(
+        room.items.filter((item) => item.chore === slot),
+        `${spec.card}: ${slot} configured item count`,
+      ).toHaveLength(spec.slots[slot].count);
     }
 
     const decreasedConfig = roomConfigFor(spec);
@@ -66,7 +69,10 @@ describe('buildRoom chore counts', () => {
     const decreasedRoom = buildRoom(decreasedConfig);
 
     for (const chore of decreasedConfig.chores) {
-      expect(decreasedRoom.items.filter((item) => item.chore === chore.slot)).toHaveLength(chore.count);
+      expect(
+        decreasedRoom.items.filter((item) => item.chore === chore.slot),
+        `${spec.card}: ${chore.slot} decreased item count`,
+      ).toHaveLength(chore.count);
     }
   });
 

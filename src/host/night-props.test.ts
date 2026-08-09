@@ -65,13 +65,19 @@ describe('night-specific household prop factories', () => {
 
     expect(left.name).toBe('room-duvet-tug-left');
     expect(right.name).toBe('room-duvet-tug-right');
-    for (const root of [left, right]) {
+    for (const [side, root] of [['left', left], ['right', right]] as const) {
       for (const name of ['room-duvet-tug-body', 'room-duvet-tug-fold', 'room-duvet-tug-shadow']) {
-        expect(root.getObjectByName(name)?.name).toBe(name);
+        expect(root.getObjectByName(name)?.name, `${side} duvet: ${name} is registered`).toBe(name);
       }
-      expect((root.getObjectByName('room-duvet-tug-body') as THREE.Mesh).geometry.type).not.toBe('BoxGeometry');
-      expect((root.getObjectByName('room-duvet-tug-fold') as THREE.Mesh).geometry.type).not.toBe('BoxGeometry');
-      expect(root.userData.interact).toBeUndefined();
+      expect(
+        (root.getObjectByName('room-duvet-tug-body') as THREE.Mesh).geometry.type,
+        `${side} duvet: body geometry`,
+      ).not.toBe('BoxGeometry');
+      expect(
+        (root.getObjectByName('room-duvet-tug-fold') as THREE.Mesh).geometry.type,
+        `${side} duvet: fold geometry`,
+      ).not.toBe('BoxGeometry');
+      expect(root.userData.interact, `${side} duvet: interaction metadata`).toBeUndefined();
     }
     expect(left.getObjectByName('room-duvet-tug-fold')?.rotation.z).toBeLessThan(0);
     expect(right.getObjectByName('room-duvet-tug-fold')?.rotation.z).toBeGreaterThan(0);
@@ -86,34 +92,49 @@ describe('night-specific household prop factories', () => {
 
     expect(curtainLeft.name).toBe('room-curtain-tug-left');
     expect(curtainRight.name).toBe('room-curtain-tug-right');
-    for (const root of [curtainLeft, curtainRight]) {
+    for (const [side, root] of [['left', curtainLeft], ['right', curtainRight]] as const) {
       for (const name of [
         'room-curtain-tug-body',
         'room-curtain-tug-pleats',
         'room-curtain-tug-band',
         'room-curtain-tug-tail',
       ]) {
-        expect(root.getObjectByName(name)?.name).toBe(name);
+        expect(root.getObjectByName(name)?.name, `${side} curtain: ${name} is registered`).toBe(name);
       }
-      expect((root.getObjectByName('room-curtain-tug-pleats') as THREE.InstancedMesh).count).toBe(3);
+      expect(
+        (root.getObjectByName('room-curtain-tug-pleats') as THREE.InstancedMesh).count,
+        `${side} curtain: pleat count`,
+      ).toBe(3);
       const body = root.getObjectByName('room-curtain-tug-body') as THREE.Mesh;
       const pleats = root.getObjectByName('room-curtain-tug-pleats') as THREE.InstancedMesh;
-      expect(body.geometry.type).not.toBe('CylinderGeometry');
-      expect((body.material as THREE.MeshLambertMaterial).vertexColors).toBe(true);
-      expect(body.geometry.getAttribute('color')).toBeDefined();
-      expect(new Set(Array.from(body.geometry.getAttribute('position').array)
-        .filter((_, index) => index % 3 === 0)
-        .map((value) => Number(value.toFixed(4)))).size).toBeGreaterThanOrEqual(3);
+      expect(body.geometry.type, `${side} curtain: body geometry`).not.toBe('CylinderGeometry');
+      expect(
+        (body.material as THREE.MeshLambertMaterial).vertexColors,
+        `${side} curtain: body vertex colors`,
+      ).toBe(true);
+      expect(body.geometry.getAttribute('color'), `${side} curtain: body color attribute`).toBeDefined();
+      expect(
+        new Set(Array.from(body.geometry.getAttribute('position').array)
+          .filter((_, index) => index % 3 === 0)
+          .map((value) => Number(value.toFixed(4)))).size,
+        `${side} curtain: body contour count`,
+      ).toBeGreaterThanOrEqual(3);
       const positions = body.geometry.getAttribute('position');
       const topY = Math.max(...Array.from({ length: positions.count }, (_, index) => positions.getY(index)));
       const topDepths = Array.from({ length: positions.count }, (_, index) => index)
         .filter((index) => positions.getY(index) === topY)
         .map((index) => positions.getX(index));
-      expect(Math.min(...topDepths)).toBeGreaterThan(-0.03);
-      expect(pleats.geometry.type).not.toBe('BoxGeometry');
-      expect(root.getObjectByName('room-curtain-tug-band')?.position.x).toBeLessThan(-0.04);
-      expect((root.getObjectByName('room-curtain-tug-tail') as THREE.Mesh).geometry.type).not.toBe('BoxGeometry');
-      expect(root.userData.interact).toBeUndefined();
+      expect(Math.min(...topDepths), `${side} curtain: top depth`).toBeGreaterThan(-0.03);
+      expect(pleats.geometry.type, `${side} curtain: pleat geometry`).not.toBe('BoxGeometry');
+      expect(
+        root.getObjectByName('room-curtain-tug-band')?.position.x,
+        `${side} curtain: band position`,
+      ).toBeLessThan(-0.04);
+      expect(
+        (root.getObjectByName('room-curtain-tug-tail') as THREE.Mesh).geometry.type,
+        `${side} curtain: tail geometry`,
+      ).not.toBe('BoxGeometry');
+      expect(root.userData.interact, `${side} curtain: interaction metadata`).toBeUndefined();
     }
     expect(curtainLeft.getObjectByName('room-curtain-tug-tail')?.rotation.x).toBeLessThan(0);
     expect(curtainRight.getObjectByName('room-curtain-tug-tail')?.rotation.x).toBeGreaterThan(0);

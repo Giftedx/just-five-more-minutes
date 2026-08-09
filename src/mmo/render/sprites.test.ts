@@ -17,8 +17,10 @@ function usedKeys(sprite: Sprite): Set<string> {
   return new Set(sprite.rows.join('').replaceAll('.', '').split(''));
 }
 
-function expectPaletteComplete(sprite: Sprite): void {
-  for (const key of usedKeys(sprite)) expect(sprite.palette[key]).toBeTypeOf('string');
+function expectPaletteComplete(sprite: Sprite, spriteName: string): void {
+  for (const key of usedKeys(sprite)) {
+    expect(sprite.palette[key], `${spriteName}: palette key "${key}" has a color`).toBeTypeOf('string');
+  }
 }
 
 describe('Mudwick sprite finish contracts', () => {
@@ -29,8 +31,8 @@ describe('Mudwick sprite finish contracts', () => {
     expect(new Set(TRADER_SPRITE.rows.map((row) => row.length))).toEqual(new Set([12]));
     expect(PLAYER_SPRITE.rows.join('')).toContain('e');
     expect(TRADER_SPRITE.rows.join('')).toContain('e');
-    expectPaletteComplete(PLAYER_SPRITE);
-    expectPaletteComplete(TRADER_SPRITE);
+    expectPaletteComplete(PLAYER_SPRITE, 'PLAYER_SPRITE');
+    expectPaletteComplete(TRADER_SPRITE, 'TRADER_SPRITE');
   });
 
   it('resolves cardinal and diagonal target deltas without inventing zero-delta movement', () => {
@@ -48,14 +50,20 @@ describe('Mudwick sprite finish contracts', () => {
     const entries = Object.entries(PLAYER_ATTACK_SPRITES) as [AttackDirection, Sprite][];
     expect(entries.map(([direction]) => direction)).toEqual(['north', 'east', 'south', 'west']);
 
-    for (const [, sprite] of entries) {
+    for (const [direction, sprite] of entries) {
       const flattened = sprite.rows.join('');
-      expect(sprite.rows).toHaveLength(14);
-      expect(new Set(sprite.rows.map((row) => row.length))).toEqual(new Set([16]));
-      expect(flattened.match(/w/g)).toHaveLength(4);
-      expect(flattened.match(/g/g)).toHaveLength(1);
-      expect(sprite.rows.map((row) => row.replaceAll(/[wg]/g, '.'))).toEqual(embeddedIdle);
-      expectPaletteComplete(sprite);
+      expect(sprite.rows, `${direction}: row count`).toHaveLength(14);
+      expect(
+        new Set(sprite.rows.map((row) => row.length)),
+        `${direction}: row width`,
+      ).toEqual(new Set([16]));
+      expect(flattened.match(/w/g), `${direction}: weapon pixel count`).toHaveLength(4);
+      expect(flattened.match(/g/g), `${direction}: grip pixel count`).toHaveLength(1);
+      expect(
+        sprite.rows.map((row) => row.replaceAll(/[wg]/g, '.')),
+        `${direction}: embedded idle body`,
+      ).toEqual(embeddedIdle);
+      expectPaletteComplete(sprite, direction);
     }
 
     const weaponPixels = (direction: AttackDirection): { x: number; y: number }[] =>
@@ -77,17 +85,23 @@ describe('Mudwick sprite finish contracts', () => {
     expect(HOB_SPRITE.rows.join('')).toContain('e');
     expect(HOB_ANGRY_SPRITE.rows).toEqual(HOB_SPRITE.rows);
     expect(HOB_ANGRY_SPRITE.palette.y).not.toBe(HOB_SPRITE.palette.y);
-    expectPaletteComplete(HOB_SPRITE);
-    expectPaletteComplete(HOB_ANGRY_SPRITE);
+    expectPaletteComplete(HOB_SPRITE, 'HOB_SPRITE');
+    expectPaletteComplete(HOB_ANGRY_SPRITE, 'HOB_ANGRY_SPRITE');
   });
 
   it('uses matching seven-pixel topology for full and empty hearts', () => {
     const topology = (sprite: Sprite): string[] => sprite.rows.map((row) =>
       [...row].map((key) => key === '.' ? '.' : '#').join(''));
-    for (const sprite of [HP_FULL_SPRITE, HP_EMPTY_SPRITE]) {
-      expect(sprite.rows).toHaveLength(7);
-      expect(new Set(sprite.rows.map((row) => row.length))).toEqual(new Set([7]));
-      expectPaletteComplete(sprite);
+    for (const [spriteName, sprite] of [
+      ['HP_FULL_SPRITE', HP_FULL_SPRITE],
+      ['HP_EMPTY_SPRITE', HP_EMPTY_SPRITE],
+    ] as const) {
+      expect(sprite.rows, `${spriteName}: row count`).toHaveLength(7);
+      expect(
+        new Set(sprite.rows.map((row) => row.length)),
+        `${spriteName}: row width`,
+      ).toEqual(new Set([7]));
+      expectPaletteComplete(sprite, spriteName);
     }
     expect(topology(HP_FULL_SPRITE)).toEqual(topology(HP_EMPTY_SPRITE));
     expect(HP_FULL_SPRITE.rows).not.toEqual(HP_EMPTY_SPRITE.rows);

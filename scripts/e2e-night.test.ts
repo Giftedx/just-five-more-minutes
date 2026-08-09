@@ -37,11 +37,12 @@ describe('planNight', () => {
     expect(plan).toHaveLength(2);
     for (const [index, item] of [registry[1], registry[2]].entries()) {
       const step = plan[index]!;
-      expect(step.look).toEqual(item!.position);
+      const sample = `step ${index} (${item!.name})`;
+      expect(step.look, `${sample}: look position`).toEqual(item!.position);
       expect(Math.hypot(
         step.stand[0] - item!.position[0]!,
         step.stand[1] - item!.position[2]!,
-      )).toBeLessThanOrEqual(1.2);
+      ), `${sample}: stand distance`).toBeLessThanOrEqual(1.2);
     }
     expect(planCarryTarget(registry, 'mug0')).toMatchObject({
       look: [0.05, 0, 1.72],

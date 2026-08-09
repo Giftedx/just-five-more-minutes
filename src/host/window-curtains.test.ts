@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeWindowCurtains } from './window-curtains';
 
-function sphereDelta(mesh: THREE.InstancedMesh): { center: number; radius: number } {
+function sphereDelta(mesh: THREE.InstancedMesh, batchName: string): { center: number; radius: number } {
   mesh.computeBoundingBox();
-  expect(mesh.boundingBox).not.toBeNull();
-  expect(mesh.boundingSphere).not.toBeNull();
+  expect(mesh.boundingBox, `${batchName}: bounding box`).not.toBeNull();
+  expect(mesh.boundingSphere, `${batchName}: bounding sphere`).not.toBeNull();
   const expected = mesh.boundingBox!.getBoundingSphere(new THREE.Sphere());
   return {
     center: mesh.boundingSphere!.center.distanceTo(expected.center),
@@ -71,10 +71,10 @@ describe('window curtain factory', () => {
     expect(interactions).toBe(0);
     expect(unsupportedMaterials).toEqual([]);
 
-    for (const batch of [rings, finials]) {
-      const delta = sphereDelta(batch);
-      expect(delta.center).toBeLessThanOrEqual(1e-9);
-      expect(delta.radius).toBeLessThanOrEqual(1e-9);
+    for (const [batchName, batch] of [['rings', rings], ['finials', finials]] as const) {
+      const delta = sphereDelta(batch, batchName);
+      expect(delta.center, `${batchName}: bounding sphere center`).toBeLessThanOrEqual(1e-9);
+      expect(delta.radius, `${batchName}: bounding sphere radius`).toBeLessThanOrEqual(1e-9);
     }
   });
 
