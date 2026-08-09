@@ -43,7 +43,7 @@ export interface SessionData {
   chores: ChoreOutcome[];
   /** Host fact: some chore was completed during combat or at <=4 HP. */
   choreCompletedInDanger: boolean;
-  /** Host fact: Thursday's knock landed with no homework.doc in sight. */
+  /** Host fact: the inspection found no homework.doc. */
   inspectionFailed?: boolean;
   /** Excuse facts, judged by Mum at the moment of answering. */
   technicallyTrue: boolean;
