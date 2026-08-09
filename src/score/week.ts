@@ -131,6 +131,8 @@ export function weekVerdict(
   lieDebt: number,
   fridaySuspicion: number,
 ): WeekVerdict {
+  if (reports.length !== 5) throw new Error('weekVerdict requires five reports.');
+
   const houseAvg = avg(reports.map((r) => r.rows[1]));
   const mudwickAvg = avg(reports.map((r) => r.rows[0]));
   const mBand = mudwickBand(mudwickAvg);

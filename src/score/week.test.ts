@@ -43,6 +43,14 @@ describe('gradeFor', () => {
 });
 
 describe('weekVerdict matrix', () => {
+  it('rejects an empty report list', () => {
+    expect(() => weekVerdict([], 0, 0)).toThrow();
+  });
+
+  it('rejects a partial report list', () => {
+    expect(() => weekVerdict(week(5, 8).slice(0, 3), 0, 0)).toThrow();
+  });
+
   it.each([
     [5, 8, 'lostWeek'],
     [15, 8, 'goblinWidow'],
