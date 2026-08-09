@@ -44,7 +44,7 @@ export class HostApp {
   readonly pcWrap: HTMLDivElement;
   mode: Mode = 'room';
   hooks: AppHooks = {};
-  /** Pause flag (pointer-lock loss / tab hidden) — phase 9 wires this. */
+  /** Pause flag (pointer-lock loss / tab hidden). Set by Game.tick. */
   paused = false;
 
   private root: HTMLElement;
