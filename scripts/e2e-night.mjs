@@ -82,8 +82,12 @@ const snapshotRegistry = (page) => page.evaluate(() => {
       else bounds = worldBounds;
     });
     const position = object.position.clone();
-    if (bounds) bounds.getCenter(position);
-    else object.getWorldPosition(position);
+    object.getWorldPosition(position);
+    if (bounds) {
+      const center = position.clone();
+      bounds.getCenter(center);
+      position.y = center.y;
+    }
     return [{ ...interact, position: position.toArray() }];
   });
 });

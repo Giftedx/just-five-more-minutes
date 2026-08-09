@@ -3,10 +3,11 @@ import { readdir, readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
-const assetsDir = fileURLToPath(new URL('../dist/assets/', import.meta.url));
+const assetsDir = fileURLToPath(new URL('../dist/', import.meta.url));
 const budgets = {
   JavaScript: { extension: '.js', gzip: 200 * 1024 },
   CSS: { extension: '.css', gzip: 10_112 },
+  Font: { extension: '.woff2', raw: 8000 },
 };
 
 async function filesBelow(directory) {
@@ -26,7 +27,7 @@ let failed = false;
 for (const [label, budget] of Object.entries(budgets)) {
   const matching = files.filter((file) => file.endsWith(budget.extension));
   if (matching.length === 0) {
-    throw new Error(`dist/assets contains no ${budget.extension} artifacts`);
+    throw new Error(`dist/ contains no ${budget.extension} artifacts`);
   }
 
   let rawTotal = 0;
@@ -37,13 +38,17 @@ for (const [label, budget] of Object.entries(budgets)) {
     gzipTotal += gzipSync(contents, { level: 9, mtime: 0 }).byteLength;
   }
 
+  const isRaw = 'raw' in budget;
+  const budgetValue = isRaw ? budget.raw : budget.gzip;
+  const currentTotal = isRaw ? rawTotal : gzipTotal;
+
   console.log(
     `${label}: ${rawTotal} raw bytes, ${gzipTotal} gzip bytes `
-      + `(${matching.length} file${matching.length === 1 ? '' : 's'}, budget ${budget.gzip})`,
+      + `(${matching.length} file${matching.length === 1 ? '' : 's'}, budget ${budgetValue})`,
   );
-  if (gzipTotal > budget.gzip) {
+  if (currentTotal > budgetValue) {
     failed = true;
-    console.error(`${label} gzip budget exceeded by ${gzipTotal - budget.gzip} bytes`);
+    console.error(`${label} ${isRaw ? 'raw' : 'gzip'} budget exceeded by ${currentTotal - budgetValue} bytes`);
   }
 }
 
