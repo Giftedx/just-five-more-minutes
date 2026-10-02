@@ -19,7 +19,7 @@
     "verify": "npm test && npm run build && npm run size:check && npm run test:browser && npm run build:hub && npm run test:artifact:hub && npm run build && npm run size:check && npm run test:artifact"
   },
   "dependencies": {
-    "three": "0.185.1"
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@types/three": "0.185.0",
